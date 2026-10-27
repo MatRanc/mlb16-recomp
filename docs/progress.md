@@ -3,6 +3,33 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (night): boot freeze fixed, display stops updating
+
+**The freeze was a leaked lock, not Bink.** The game usually hung on its first screens, at random, before ever
+opening the intro movie; one early run got through by luck. Stacks of the stuck process (`eu-stack`, function names
+are PS3 addresses) and its guest memory (`gdb`, reading `vm_base + address`) showed:
+- `DisplayFlip` (thread entry `0x692dc`) flips each frame, then waits on a condition for the flip handler
+  (`0x691b0`, registered with `cellGcmSetFlipHandler`) to clear a "flip pending" flag at `0x011203e0`.
+- MLB's lock wrappers (`0x9a2da8` lock, `0x9a2e78` unlock) record the owner's thread ID at `struct+8` and only
+  unlock when the caller's ID matches.
+- ps3recomp delivers vblank/flip handlers at whatever firmware call a guest thread happens to make, and the callback
+  inherits that thread's ID (`ppu_guest_call`). The flip handler ran nested inside `DisplayFlip`'s own call, while
+  `DisplayFlip` held the lock at `0x012450d8`. It re-entered the lock (same ID), and its unlock cleared the owner
+  record. `DisplayFlip`'s own unlock then saw an owner of 0 and was skipped, so the lock leaked (owner 4,
+  recursion 1). The display engine and a sound thread blocked on it forever, and with the handler stuck inside the
+  pump, no more vblank/flip callbacks were delivered.
+- On a PS3 these handlers run on GCM's own interrupt thread.
+
+**Fix** (our ps3recomp branch `gcm-handler-thread`, upstream PR candidate): `GCM_HANDLER_THREAD=1` delivers the
+handlers only on a dedicated host thread with its own identity. With it, 3 of 3 runs get past the boot screens,
+open `MLB_INTRO.BIK`, and go on loading user data, crowd sound banks, profiles and the logo cache.
+
+**Next problem:** the presented picture stays on the autosave notice (cover art) from about 20 s on, while the game
+keeps running. `DisplayFlip` now calls `cellGcmSetFlipImmediate(0)` about 100,000 times a second, so its flip loop no
+longer paces itself. The movie may be playing unseen.
+
+Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystemWorkload` and `cellHttpInitCookie`.
+
 ## 2026-10-27 (evening): first picture through Vulkan
 
 - **Packages:** Vulkan needs `vulkan-headers`, `glslang-devel` and `spirv-tools-devel` (Fedora). Build with
