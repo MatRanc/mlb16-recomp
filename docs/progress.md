@@ -3,6 +3,47 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (night): how the mesh rings work, and where the deadlock really is
+
+The stall at the pitching matchup isn't the game waiting for a pick (X on the matchup, START on the lineups):
+flips stop and the main thread never leaves the job-list wait, so pad input is never read. Pressing X there changes
+nothing.
+
+How MLB 16 feeds geometry to the GPU (worked out from walker traces, gdb watchpoints and Ghidra):
+
+- **Five mesh rings** of 2 MB each, holding **vertex/index data, not commands**: EA `0x11900000`, `0x11b00000`,
+  `0x11d00000`, `0x11f00000` and `0x12100000` (IO `0x00900000`–`0x012fffff`), with RSX labels 72–76
+  (`0x480`–`0x4c0`). Their state lives in the render object at `0x1246680`: `+0x200` holds
+  `{base, end, alloc pointer, label address}` per ring (one 128-byte line).
+- **Per-mesh slots in the command stream.** The PPU leaves a 0x90-byte slot per mesh job in its big command ring
+  (IO `0x013xxxxx`–`0x014xxxxx`): a self-JUMP plus `0x40880100` (a non-incrementing NOP skipping 34 words). The job
+  fills it by DMA when it finishes: vertex/index array offsets into its ring, the draw, and a release of its ring's
+  label with the segment's end address. The GPU stops at the first unfilled slot, so it consumes ring data as jobs
+  complete.
+- **Frame setup** (`0x70694` → `0x6ed24` → `0x6f6b0`): wait for the command-building worker threads (`0x70894`),
+  wait for the previous mesh job list (`0x9fb898`, list "MeshJobs0"), then set each ring's start for the new frame
+  and kick the next list. Frame end is `0x66530` (links the frame into the libgcm ring, flips, paces on the
+  frame counters).
+- **Each ring has one SPU writer.** Watchpoints on the alloc pointers show ring 72 only written by one SPU worker,
+  ring 75 by another, ring 76 by a third. Plus the PPU's frame setup. No lost updates.
+
+The deadlock: the GPU parks at the first unfilled slot. That slot's job waits for ring space (`jobmod_c690c2f7b09a`,
+`0xe4d0`–`0xe5c0`): it compares the ring's label (the GPU's read position) against the range it wants and retries
+forever. In every run the waiting job wants a range the GPU hasn't released yet, often right after wrapping its ring.
+Open question: why it wraps so early. In one run, ring 76's writer wrapped at `0x12137d00`, 0x37D00 bytes into a 2 MB
+ring. The frame setup also once set ring 76's start to `0x12105180` rather than the base. Next: trace the per-frame
+start/end values `0x6f6b0` hands out (`+0x18`, `+0x58`, and the single-ring branch at `+0x280`/`+0x290`) and how the
+job derives its ring end. An RPCS3 memory dump of the same structure at the same screen would settle what "normal"
+looks like.
+
+Side findings:
+- The walker's 50 ms park recovery is no longer needed for this game; running with it effectively off
+  (`GCM_PARK_GRACE_MS=100000000`) still boots, and parks are always patched within 4–47 ms (`[parkfix]` log).
+- `HeadFaceCacheFile` is the generated-face cache from the RPCS3 white-faces fix. Faces built natively before RSX
+  render-target readback works may be cached blank; delete it once a match loads.
+- Temporary diagnostics on branch `mlb16-work` (not for upstream), all under `MLB_SEMA_TRACE=1`: label releases with
+  stream position, CALL/JUMP into the rings, park patches, and SPU PUTs into the command ring (`[ringput]`).
+
 ## 2026-10-27 (evening): Bink spin fixed, match load reaches the pitching matchup
 
 - **`cellFsFtruncate` never worked:** it resolved to `libs/filesystem/cellFs.c`, which looks fds up in its own table,
