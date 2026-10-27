@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (end of day): SPU speed, 3.4 → 6.4 fps
+
+Measured as the average flip rate over 60 s of play (same at-bat each time, `GCM_FLIPCOUNT=1`).
+
+| Change | fps |
+|---|---|
+| Start (exact SPU float, scalar local-store access) | 3.4 |
+| `PS3RECOMP_SPU_FAST_FLOAT=ON` | 4.6 |
+| + `PS3RECOMP_SPU_FAST_LS=ON` | 6.4 |
+
+Both are CMake options on branch `mlb16-work` that affect only the lifted SPU sources (configure with
+`-DPS3RECOMP_SPU_FAST_FLOAT=ON -DPS3RECOMP_SPU_FAST_LS=ON`):
+
+- **Fast float:** ps3recomp's x86 path emulates SPU single precision bit-exactly: each op in f64x4 with lane checks
+  (~30 instructions), plus a scalar fix-up for tiny/out-of-range lanes that the vertex code hits often. The option
+  uses native SSE/FMA3, keeps the SPU's denormal flush, and differs only in rounding (nearest vs truncate) and
+  overflow (infinity vs saturate). It is within 1 ulp on 800k random lanes and ~6× faster per fma, like an
+  emulator's default "approximate" SPU float mode.
+- **Fast local store:** each 16-byte local-store access was four byte-swapped scalar moves plus a diagnostics-flag test
+  and cold call. Now it's one vector load/store and a `pshufb`, with no diagnostics in lifted code. The hottest mesh
+  block went from 827 to 478 x86 instructions.
+
+Where the time goes now: one SPU worker at ~86% running the mesh jobs (the game runs that list on one SPU at a time,
+as on hardware), a second at ~50%, the RSX walker thread at ~40% (CPU vertex conversion).
+
+**Next lever, register caching (prototype in `tools/spu_regcache.py`):** the lifted code keeps SPU registers in
+`ctx->gpr[]`, and every local-store store goes through a char pointer that may alias it, so the compiler reloads
+registers after each store. The prototype rewrites each lifted function to use C locals (load at entry, write back
+before exits/calls/channel ops, reload after calls).
+- Applied to all 639 functions of the mesh job module, the job went wrong (an SPU return to LS `0x22`). The likely
+  culprit is the interrupt path, which snapshots/restores `ctx->gpr` and can unwind host frames.
+- Applied only to the 402 functions without calls or channel ops, the game plays correctly but no faster (6.0 fps).
+  The hot loop (`0x7c18`) contains a call, so it wasn't covered.
+- Next: make calls inside hot blocks safe for caching (or move the caching into the lifter itself, with interrupt
+  points as explicit write-back sites), then measure again.
+
+Also open: render-target writeback ("Write Color Buffers") for the dark players and crowd sprites, the RSX walker's CPU
+vertex conversion, and the PPU side (same `ctx->gpr` pattern).
+
 ## 2026-10-27 (later): magenta fixed; where it stands against RPCS3
 
 - **Magenta surfaces:** a RenderDoc capture of our own Vulkan output (layer mode,
