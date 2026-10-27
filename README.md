@@ -31,6 +31,20 @@ job manager), and `tools/run.sh` runs a build; see [docs/progress.md](docs/progr
 - Other ps3recomp ports that got to playable: [inFAMOUS 2](https://github.com/ThiagoFraga761/infamous2-pc),
   [God of War II HD](https://github.com/andrebrumdev/gow2-recomp)
 
+## Credits
+
+- [ps3recomp](https://github.com/sp00nznet/ps3recomp) by Ned Heller ([@sp00nznet](https://github.com/sp00nznet))
+  and its contributors: the lifters, runtime and system libraries this port runs on. The WWS job manager support
+  MLB 16 needs came from [@sagemono](https://github.com/sagemono)'s LittleBigPlanet work.
+- [RPCS3](https://rpcs3.net): ps3recomp's behavioral reference, and how this game was first understood.
+- [inFAMOUS 2 PC](https://github.com/ThiagoFraga761/infamous2-pc) and
+  [God of War II HD](https://github.com/andrebrumdev/gow2-recomp): ports whose write-ups showed what it takes.
+- [Ghidra](https://ghidra-sre.org) with [Ps3GhidraScripts](https://github.com/clienthax/Ps3GhidraScripts) and
+  [GhidraMCP](https://github.com/LaurieWired/GhidraMCP): reading the game's code.
+- [SDL2](https://www.libsdl.org), [Vulkan](https://www.vulkan.org), [glslang](https://github.com/KhronosGroup/glslang)
+  and [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools) (input, windowing, rendering, shaders), and
+  [Capstone](https://www.capstone-engine.org).
+
 ## License
 
 MIT (see [LICENSE](LICENSE)), the same as ps3recomp, so fixes can go upstream. MLB The Show is © Sony Interactive
