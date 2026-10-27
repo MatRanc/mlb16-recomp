@@ -1,0 +1,16 @@
+# Never commit game files or anything generated from them
+*.elf
+*.ELF
+*.BIN
+*.self
+*.sprx
+*.prx
+*.iso
+*.pkg
+*.PUP
+*.rdc
+*.o
+work/
+build/
+recompiled/
+*.log
