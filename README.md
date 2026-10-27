@@ -6,7 +6,7 @@ time and compiled for your machine, instead of being emulated by RPCS3. The goal
 CPU-bound scenes (dugout close-ups, mound visits) and, later, online play through the
 [revival server](https://github.com/MatRanc/mlb16-revival-server).
 
-**Status: early. It boots, installs its game data and runs its SPU job manager, with no picture yet.** See [docs/progress.md](docs/progress.md).
+**Status: early. It boots, installs its game data, runs its SPU job manager and draws its first screen through Vulkan; it freezes at the intro movie.** See [docs/progress.md](docs/progress.md).
 
 **This repo contains no game code or data.** Like other ps3recomp ports, everything game-derived (the decrypted
 EBOOT, the lifted C++, the build) is produced on your own machine from your own copy of the game.

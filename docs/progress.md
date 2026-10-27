@@ -3,6 +3,22 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (evening): first picture through Vulkan
+
+- **Packages:** Vulkan needs `vulkan-headers`, `glslang-devel` and `spirv-tools-devel` (Fedora). Build with
+  `-DPS3RECOMP_RSX_VULKAN=ON`. With glslang found, CMake reports "guest programs available": the game's own RSX
+  shaders are translated (HLSL, then SPIR-V).
+- **Template gap (upstream fix candidate):** `templates/project/main.cpp` picks D3D12, Metal or the headless
+  renderer and never Vulkan, even in a Vulkan build. The runtime's own host tool (`runtime/host/host_posix.c`) does
+  pick it. Adding a `PS3RECOMP_RSX_VULKAN` case with `rsx_vulkan_backend_init/present/pump_messages` fixes it.
+- **Run:** `PS3RECOMP_VK_WINDOW=1 PS3RECOMP_VK_GUEST_PROGRAMS=1`. The renderer picks the RTX 3060 Ti, opens a
+  1280×720 Wayland window, and the game draws its **legal and licensing screen correctly**: text, logos and the
+  animated red and blue background. `PS3RECOMP_VK_DUMP=<file>.ppm PS3RECOMP_VK_DUMP_EVERY=60` saves frames.
+- **Next blocker:** it freezes right after opening the intro movie, `PS3/UI/Movies/intro/MLB_INTRO.BIK`. Bink's
+  SPU program is lifted, but playback hangs.
+- `PATCH_GD.WAD` fails to open from the data install folder (`BCUS01089_R`); it may be found in the update folder
+  instead, not checked yet.
+
 ## 2026-10-27 (later): SPU job manager running, data install done
 
 - **Policy module:** the WWS job manager's SPURS policy module is 12,032 raw bytes at `0x105bb80` (file offset
@@ -24,6 +40,14 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26).
   - The job manager sometimes spins at local store `0x2534`, repeating one DMA transfer until the runtime's
     watchdog halts that SPU (256 identical transfers). LBP's notes say this policy module gets code patched into it
     by SPURS at load time (holes at `0xAEE`–`0x11B0`, `executeStage` at `0x14f4`); `SPURS_PM_DUMP` checks for that.
+    - Checked with `SPURS_PM_DUMP=1`: the same holes as LBP's (1,728 of 1,730 bytes zero, `executeStage` empty).
+      No game code writes the main-memory copy in 60 s. Upstream has no fix for LBP either.
+    - That may be expected: the job manager writes code into its own local store (the runtime logs these as
+      `spu-smc` and runs them through the SPU interpreter). That would fill the holes on the SPU side, where a probe
+      of main memory can't see them.
+    - The spin re-reads the same 128 bytes of the workload's data (data + `0x80`) 256 times, which looks like
+      polling an empty job queue rather than a crash. The game keeps re-running those workloads afterwards. Still to
+      confirm.
   - One guest write to NULL+0x48 from `0x7b988`.
   - The headless null renderer shows nothing yet; the Vulkan backend is next.
 
