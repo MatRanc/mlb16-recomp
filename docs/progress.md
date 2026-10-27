@@ -3,6 +3,50 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (evening): Bink spin fixed, match load reaches the pitching matchup
+
+- **`cellFsFtruncate` never worked:** it resolved to `libs/filesystem/cellFs.c`, which looks fds up in its own table,
+  one that the port's `cellFsOpen` (`runtime/ppu/ppu_fs.cpp`) never fills, so every call returned EBADF.
+  - The game sizes `HeadFaceCacheFile` (in the install folder) to 314,584,064 bytes before a match, and
+    `ArenaLogoCache` to 9 MB. Implemented next to `cellFsOpen` (branch `cellfs-ftruncate`).
+  - With it, the match load gets past the starting lineups to the **pitching matchup** screen.
+- **The Bink SPU spin (99% of a core) is fixed:**
+  - The task retried `cellSpursEventFlagWait` forever, because each call failed at once with `0x80410911` (null
+    pointer): its event flag address was 0.
+  - The task DMAs its setup block from r4, the taskset argument. `_cellSpursTasksetAttributeInitialize` dropped
+    `argTaskset` and `cellSpursCreateTasksetWithAttribute` created the taskset with args 0.
+  - Carrying it through (branch `spurs-taskset-args`) gives r4 = `0x01476E80`; the Bink thread now sleeps in its
+    wait like on hardware. That's a core back.
+- **The match-load stall is a real deadlock**, not a slow first cache build: with the SPU watchdog at 600 s it never
+  moves. Three parties wait on each other:
+  - **PPU:** the main thread spins in `0x9fb898`, the WWS job manager's wait for job list "MeshJobs0". Two SPU lanes'
+    progress counters are stuck.
+  - **SPU:** two mesh jobs (`jobmod_c690c2f7b09a`, loop at `0xe510`–`0xe550`) wait for ring space. Each DMA-reads an
+    RSX label holding the GPU's read position in its ring (labels 72, 75 and 76; rings at EA `0x11900000`,
+    `0x11f00000` and `0x12100000`). It retries while that position is inside the region it wants to overwrite.
+  - **GPU:** our command walker has drained everything up to a self-JUMP "park" at IO `0x0138ef10`. The GPU waits
+    there for the PPU to write more; the PPU waits for the jobs.
+  - The only label release in that frame is label 75 = `0x11f02080`, inside the region its job wants. So that ring's
+    previous output was never marked as read by the GPU.
+- **Walker oddities found on the way** (not yet shown to cause the deadlock):
+  - The game extends its big ring by leaving a self-JUMP at the write head. After 50 ms (`GCM_PARK_GRACE_MS`) the
+    walker gives up on the park and jumps to `put`; a real RSX waits.
+    - With the grace effectively infinite the game still boots and gets to the same stall.
+    - The selected team's **logo now shows on team select**. It was probably in commands the early jump skipped.
+  - At about 2.5 minutes in, the walker reads data as commands at IO `0x2d4e80`. The frame `CALL`s a vertex-program
+    upload at `0x2d4ef0`; the walker was 0x70 bytes before it.
+    - It reads an upload argument (`0x709d302a`) as a CALL to an unmapped address, and drops the rest of that pass.
+    - Possibly a block rewritten while the walker, which drains on 4 ms ticks, was still behind it.
+  - New-style CALL targets are masked with the old JUMP mask (`0x1ffffffc`) and new-style JUMPs (`w & 3 == 1`)
+    aren't decoded at all. This game seems to use only old-style JUMPs and new-style CALLs into low IO, so neither
+    has bitten here yet.
+- **Ghidra:** the recompilation addresses are now named in the project (`Gfx_DisplayFlip`, `Gfx_FlipHandler`,
+  `Mutex_LockOwned`/`Mutex_UnlockOwned`, `Cond_Wait`, `File_Duplicate`, `File_Open`, `File_AioCallback`,
+  `MemPool_Acquire`, `MemPool_SharedMemContAnim_LazyInit`, `MemContainer_Carve`).
+- **Next:** find which commands should advance labels 72/75/76 and why the walker never reaches them: trace every
+  `0x1d6c`/`0x1d74` release value per frame, and the `CALL`s into the mesh rings (IO `0x0090xxxx`, `0x00f0xxxx`,
+  `0x0110xxxx`).
+
 ## 2026-10-27 (afternoon): driving it headless; match load gets to the lineups
 
 - **Scripted input:** `PAD_FILE=<file>` presses whatever button mask is written to the file (`0x4000` CROSS,
