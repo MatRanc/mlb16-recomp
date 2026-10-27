@@ -3,6 +3,29 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (evening, playtest): menus playable, match load crawls
+
+Played with a PS4 controller through SDL, in a window:
+- **Menus work.** Experience level, main menu and moving between screens, at about 20 fps (109 new frames in about
+  5 s, read from the frame counter at `0x011203d8`).
+- **Button presses sometimes need two taps.** `PAD_ALWAYS_CHANGE=1` (every read returns a full report) didn't fix it.
+  The controller is sampled every 4 ms, so short taps aren't the cause.
+- **Menu boxes flicker** (only the boxes, not the whole screen): to capture with the renderer's pass dumps.
+- **SELECT (Quick Menu) froze it.** This is online code, which also needed our server in RPCS3. Skipped for now;
+  offline first.
+- **Loading an exhibition match crawled.** The crowd job workload (`CrowdJobList`) started and stadium data loaded,
+  then reads dropped to about 17 KB/s with no new frames. The main thread was busy in game code (`0x5499a0`,
+  `0x643200`…) while the job module `255e2961` kept dropping into the SPU interpreter.
+  - A gdb breakpoint on `spu_interp_run_until` caught 7,293 interpreter entries in 25 s, mostly at `0xd7a0`,
+    `0xd9d0`, `0xd810` and `0xd878`: functions reached only through function pointers, so the lift never had them as
+    entry points.
+  - The 28 addresses are now passed to `lift_jobmods.py` (`LBP_JOBMOD_EXTRA_FUNCS`, in `tools/lift_spu.sh`). The
+    job modules gained functions, e.g. `7ac07dde` went from 241 to 630. Test pending.
+- **CPU use:** the Bink SPU program spins at 99% of a core in its wait loop even with no movie, and a job manager
+  thread runs at about 84%.
+- The build now lives in `recomp-work/build` (lifted source in `recomp-work/recompiled`), not the session's scratch
+  folder.
+
 ## 2026-10-27 (later still): first menu
 
 - **The autosave-screen stall** was the game's file copy into its `/dev_hdd1` cache (`0x776d8`, a "Duplicate"
