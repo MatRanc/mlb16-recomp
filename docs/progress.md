@@ -3,6 +3,24 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (late night): flip loop fixed; stuck on the autosave notice
+
+- **The 100,000 flips a second** came from the flip handler running twice per flip. `cellGcmSetFlipImmediate` calls
+  it at request time (a compatibility "early edge" in ps3recomp) and the pump calls it again at completion. MLB's
+  handler advances the displayed-frame counter (`0x011203dc`) each time, so it overtook the rendered-frame counter
+  (`0x011203d8`). `DisplayFlip` (`0x692dc`) then saw a frame ready forever and flipped non-stop. Upstream's
+  `GCM_FLIPCB_ONTICK=1` drops the early call. With it, about 35 flips a second, and the two counters stay a few
+  frames apart.
+- **Where it stops now:** the screen stays on the autosave notice (cover art) from about 20 s on, flipping buffer 0
+  only, while the game keeps loading in the background. It opens `MLB_INTRO.BIK` early, probably to preload.
+  - The main thread polls an event flag with an ~11.6 ms timeout (`0x4c7ae0` → `0x78ca4` → `0x785d8` → `0x776d8`).
+  - The Bink SPU program (`BinkSPU.spu.elf`, task created with a SPURS event flag, `direction=2`, SPU to PPU) spins
+    in its wait-for-work loop (`0x3870` → `0x3438` → `0x3448`) at 99% of a core.
+  - Next: check ps3recomp's SPURS task event flag and queue path between the two (`docs/spurs-task-signal-wake.md`
+    upstream).
+- **Upstream PR branches** are in the fork (`MatRanc/ps3recomp`: `template-vulkan-backend`, `gcm-handler-thread`),
+  with the draft descriptions in `PR_DRAFTS.md` on its `pr-drafts` branch. Nothing is opened yet.
+
 ## 2026-10-27 (night): boot freeze fixed, display stops updating
 
 **The freeze was a leaked lock, not Bink.** The game usually hung on its first screens, at random, before ever
