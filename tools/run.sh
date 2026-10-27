@@ -10,6 +10,6 @@ EXE=$1 ELF=$2 W=$(cd "$3" && pwd)
 # (branch mlb16-work) make SPURS schedule job lists as the SDK describes; without them a match load deadlocks
 # (2026-10-27, late night). The runtime logs a lot; drop the per-wait lines.
 GCM_HANDLER_THREAD=1 GCM_FLIPCB_ONTICK=1 PS3RECOMP_VK_GUEST_PROGRAMS=1 PS3RECOMP_VK_WINDOW=${WINDOW:-1} \
-SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1 \
+SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1 VK_DUMMY_BLACK=1 \
 PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W" "$EXE" "$ELF" 2>&1 |
     grep -av "timer_usleep\|^\s*+\|^\[WAIT\]\|LWM-"

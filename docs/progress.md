@@ -3,6 +3,27 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (later): magenta fixed; where it stands against RPCS3
+
+- **Magenta surfaces:** a RenderDoc capture of our own Vulkan output (layer mode,
+  `ENABLE_VULKAN_RENDERDOC_CAPTURE=1` with `SDL_VIDEODRIVER=x11`, since the layer has no Wayland support) showed the
+  player shader sampling texture unit 5, which the game leaves disabled. Our backend binds a 1×1 magenta placeholder
+  to such units, and the shader adds it as a tint. `VK_DUMMY_BLACK=1` (branch `mlb16-work`, set in `tools/run.sh`)
+  makes the placeholder transparent black. Dirt, crowd, field and walls now look right.
+- **Players and crowd sprites are dark/blank:** the same problem as RPCS3 without "Write Color Buffers". MLB 16 builds
+  some textures by rendering them and reading the render target back from the CPU/SPU (the generated faces in
+  `HeadFaceCacheFile`, the crowd sprite sheets). Our renderer doesn't write render targets back to guest memory, so
+  those reads see black. Next to fix. Then delete `HeadFaceCacheFile`, which was built blank.
+- **Speed: about 3.3 fps in a game** (flip counter, no RenderDoc). The two busiest threads are SPU workers running the
+  mesh jobs (`jobmod_c690c2f7b09a`, skinning/geometry); the PPU main thread is at ~30% and the GPU is nearly idle.
+  So the lifted SPU code is the bottleneck: one real SPU runs these jobs well within a frame, our translation is many
+  times slower.
+- **How this differs from an emulator, honestly:** the CPU side (PPU and SPU) is compiled ahead of time, but the GPU
+  side is still an emulated RSX (command walker, translated shaders, texture formats), the same job RPCS3 does. And
+  ps3recomp's RSX layer is much younger than RPCS3's, so graphics bugs RPCS3 fixed years ago show up here. The
+  speed advantage can only appear once the SPU code generation is fast. Right now it's the opposite: RPCS3's SPU JIT
+  (LLVM, with years of tuning) beats ps3recomp's straightforward SPU-to-C translation by a wide margin.
+
 ## 2026-10-27 (late night): in the game, pitches being thrown
 
 **The match-load deadlock is fixed and the game plays:** the dugout, the pre-game intro, Kauffman Stadium, Volquez
