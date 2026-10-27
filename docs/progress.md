@@ -3,6 +3,20 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (later still): first menu
+
+- **The autosave-screen stall** was the game's file copy into its `/dev_hdd1` cache (`0x776d8`, a "Duplicate"
+  routine called from the file open at `0x78ca4`). It writes 64 KB chunks with `cellFsAioWrite` and polls a status
+  word set by the completion callback (`0x79c2c`). `cellFsAioWrite` (`0x4CEF342E`) wasn't implemented in ps3recomp,
+  so nothing was written and the callback never ran. Implemented on our branch `cellfs-aio-write` (upstream PR
+  candidate 3), modeled on its `cellFsAioRead`.
+- **Result:** about 500 async writes during boot, then the game's first interactive screen, **"Choose your
+  experience level" (Veteran / Novice)**, drawn correctly through Vulkan with the team background behind it. This
+  is the first-time setup a new save sees before the main menu.
+- The Bink thread still spins at 99% of a core; whether the intro movie plays isn't known yet.
+- **New unresolved imports, reached for the first time:** `0xB20F87B3`, `0xCE4374F6`, `0xDBF22BD1`, plus
+  `cellHttpInitCookie` and `cellSpursAttributeEnableSystemWorkload` from before.
+
 ## 2026-10-27 (late night): flip loop fixed; stuck on the autosave notice
 
 - **The 100,000 flips a second** came from the flip handler running twice per flip. `cellGcmSetFlipImmediate` calls
