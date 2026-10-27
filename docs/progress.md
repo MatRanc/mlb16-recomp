@@ -3,6 +3,31 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (afternoon): driving it headless; match load gets to the lineups
+
+- **Scripted input:** `PAD_FILE=<file>` presses whatever button mask is written to the file (`0x4000` CROSS,
+  `0x0008` START, `0x0040` DOWN; `"0x0040 3"` holds it for 3 reports). With a frame dump every 10 frames, the menus
+  can be driven without a person: title → START → "Online disabled" OK → Play Now → Offline Rosters → team select →
+  stadium select (live 3D preview of Kauffman) → game options → starting lineups.
+- **`-O2 -march=native` build** (`recomp-work/build-o2`, 16.5 min at `-j4`): same menu frame rate as `-O1`, 421
+  frames in 20 s each (about 21 fps). The menus are paced at one frame per three 60 Hz vblanks, so they don't show CPU
+  speed.
+- **"3D TV detected":** `cellVideoOutGetResolutionAvailability` reported the 3D modes (ids `0x80`+) available, so
+  the game asked to enable 3D and, on yes, rendered over-under. Fixed on branch `cellvideoout-no-3d` (PR draft 5).
+- **The match-load NULL call** came from the game's memory containers:
+  - `0x14fc4` carves an N MB container out of the default one (id `0xFFFFFFFF` at `0x0111ffc4`): get its size,
+    destroy it, recreate it smaller, create its own.
+  - ps3recomp's `sys_memory_container_get_size` rejected the default id, took its arguments in the wrong order and
+    wrote `{total, used}` instead of `{total, available}`. `sys_memory_allocate_from_container` (syscall 350) wasn't
+    registered.
+  - So the "SharedMemContAnim" pool at `0x0134a464` (built lazily in `0x99c45c`) never got memory, and `0x8c5508`
+    called a method on a NULL buffer.
+  - Fixed on branch `sys-memory-containers` (PR draft 4). Both pools now allocate (25 MB in container 1, 7 MB in
+    container 3), and the NULL call is gone.
+- **Next stall:** about 30 s into the lineups screen, an SPU job on the job manager (local store `0xe510`) re-reads
+  RSX label 76 (`0x200004c0`; labels start at `0x20000000`) until the runtime halts it. Something that should write
+  that label, probably a semaphore release in the GPU command stream, isn't writing it.
+
 ## 2026-10-27 (evening, playtest): menus playable, match load crawls
 
 Played with a PS4 controller through SDL, in a window:

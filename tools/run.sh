@@ -3,6 +3,7 @@
 # mounted ISO works) and game/BCUS01089 is a copy of the v01.10 update from RPCS3's dev_hdd0. The game writes its
 # data install (about 9.5 GB) to game/BCUS01089_R. Don't point this at RPCS3's own dev_hdd0.
 # Usage: tools/run.sh /path/to/MyGameRecomp /path/to/EBOOT.elf work
+# Scripted input: PAD_FILE=<file>, then write a button mask to it (0x4000 CROSS, 0x0008 START, 0x0040 DOWN).
 EXE=$1 ELF=$2 W=$(cd "$3" && pwd)
 # GCM_HANDLER_THREAD=1 needs our ps3recomp branch (gcm-handler-thread); GCM_FLIPCB_ONTICK=1 is upstream. Both are
 # needed for the frame loop: see docs/progress.md (2026-10-27, night). The runtime logs a lot; drop the per-wait lines.
