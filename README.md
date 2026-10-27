@@ -6,7 +6,7 @@ time and compiled for your machine, instead of being emulated by RPCS3. The goal
 CPU-bound scenes (dugout close-ups, mound visits) and, later, online play through the
 [revival server](https://github.com/MatRanc/mlb16-revival-server).
 
-**Status: early probing. It doesn't run yet.** See [docs/progress.md](docs/progress.md).
+**Status: early. It boots, installs its game data and runs its SPU job manager, with no picture yet.** See [docs/progress.md](docs/progress.md).
 
 **This repo contains no game code or data.** Like other ps3recomp ports, everything game-derived (the decrypted
 EBOOT, the lifted C++, the build) is produced on your own machine from your own copy of the game.
@@ -21,7 +21,8 @@ tools/probe.sh /path/to/ps3recomp /path/to/EBOOT.elf work
 ```
 
 It loads the EBOOT, lifts the PPU code to C++ in `work/recompiled/`, generates the firmware import table and
-extracts the embedded SPU programs. Keep `work/` out of git.
+extracts the embedded SPU programs. Keep `work/` out of git. `tools/lift_spu.sh` lifts the SPU code (including the
+job manager), and `tools/run.sh` runs a build; see [docs/progress.md](docs/progress.md) for the build steps.
 
 ## Related
 

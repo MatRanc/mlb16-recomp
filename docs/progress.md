@@ -3,6 +3,30 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (later): SPU job manager running, data install done
+
+- **Policy module:** the WWS job manager's SPURS policy module is 12,032 raw bytes at `0x105bb80` (file offset
+  `0x104bb80`) that SPURS loads at local store `0xA00`. Wrapped as an SPU ELF at that base
+  (`wrap_spu_elf.py --base 0xA00`) and lifted with `build_spu_workloads.py`, its text segment registers under the
+  fingerprint the runtime looks up (`0x75BFE68AE96D7577`).
+  - The runtime's `SPU_DUMP_MISS=<dir>` setting wrote the missing programs out exactly as fingerprinted, which is
+    how both were found.
+  - The same job manager runs LittleBigPlanet, whose fixes are already upstream.
+- **Job modules:** `lift_jobmods.py --engine-elf` finds and lifts the 7 job modules linked into the EBOOT. One has
+  308 undecoded words, the same count as the MP3 decoder program, so they're probably its data tables.
+- **Build:** with the 13 SPU programs (`-DSPU_DIR=`), the rebuild takes 38 s. All of this is in `tools/lift_spu.sh`.
+- **Results:**
+  - All three job workloads resolve and run.
+  - The game's 9.5 GB first-boot data install completes in about 50 s.
+  - The game then creates more workloads and its seven sound streaming threads. Job loads stall and resume through
+    SPU DMA lists and interrupts, and the job manager's self-modifying code is handed to the SPU interpreter.
+- **Open problems:**
+  - The job manager sometimes spins at local store `0x2534`, repeating one DMA transfer until the runtime's
+    watchdog halts that SPU (256 identical transfers). LBP's notes say this policy module gets code patched into it
+    by SPURS at load time (holes at `0xAEE`–`0x11B0`, `executeStage` at `0x14f4`); `SPURS_PM_DUMP` checks for that.
+  - One guest write to NULL+0x48 from `0x7b988`.
+  - The headless null renderer shows nothing yet; the Vulkan backend is next.
+
 ## 2026-10-27: first boot
 
 **Lifting the PPU code** (`tools/probe.sh`):
