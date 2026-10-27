@@ -3,6 +3,35 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-27 (late night): in the game, pitches being thrown
+
+**The match-load deadlock is fixed and the game plays:** the dugout, the pre-game intro, Kauffman Stadium, Volquez
+pitching to Curtis Granderson, with the count and the score bug updating. Geometry is correct. Many surfaces
+(uniforms, skin, infield dirt, part of the crowd) come out solid magenta, a renderer problem still to look at.
+
+The cause was ps3recomp's SPURS scheduling, in three parts:
+
+1. **Max contention dropped.** `_cellSpursWorkloadAttributeInitialize` takes `maxContention` as its ninth argument,
+   on the guest stack, so the generic adapter never saw it and stored 1. The mesh lists ask for 5 and the DXT list
+   for 4. Fixed with a context handler that reads the stack (branch `spurs-workload-maxcontention`).
+2. **The ready count was consumed.** The scheduler decremented a workload's ready count each time it gave it an SPU.
+   In the SDK the ready count is a level: the kernel runs up to `min(ready, maxContention)` SPUs and the workload
+   lowers it itself. The WWS policy module does exactly that, setting it to 0 when its list is empty and back to 1
+   when it sees more work. Consumed, a kick could be used up by a dispatch that found no jobs yet, and nothing
+   dispatched the list again. `SPURS_READY_LEVEL=1` keeps the level.
+3. **Idle probes ran workloads nobody had kicked.** To cover for (2), the scheduler periodically dispatched idle
+   workloads. One such probe ran mesh jobs that the command-building threads had already queued, *before* the PPU
+   reset the mesh rings and kicked the list. The reset then threw away the ring space those jobs had used, the next
+   job was given the same space again, and it waited forever for the GPU to free it. `SPURS_NO_IDLE_PROBE=1`
+   schedules only kicked workloads, as real SPURS does.
+
+(2) and (3) are opt-in switches on branch `mlb16-work` for now, and `tools/run.sh` sets them. They change SPURS
+scheduling for every title, so they need testing on other ps3recomp games before going upstream.
+
+How it was found: a temporary override that forced the stuck wait through after 2 s got the game into the match
+(with garbled geometry), which proved the wait was the only blocker. Then gdb watchpoints on the ring allocation
+pointers and on the ready-count bytes showed the order of events.
+
 ## 2026-10-27 (night): how the mesh rings work, and where the deadlock really is
 
 The stall at the pitching matchup isn't the game waiting for a pick (X on the matchup, START on the lineups):
