@@ -8,7 +8,7 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26).
 - **Scripted input:** `PAD_FILE=<file>` presses whatever button mask is written to the file (`0x4000` CROSS,
   `0x0008` START, `0x0040` DOWN; `"0x0040 3"` holds it for 3 reports). With a frame dump every 10 frames, the menus
   can be driven without a person: title → START → "Online disabled" OK → Play Now → Offline Rosters → team select →
-  stadium select (live 3D preview of Kauffman) → game options → starting lineups.
+  stadium select (a still image of Kauffman) → game options → starting lineups.
 - **`-O2 -march=native` build** (`recomp-work/build-o2`, 16.5 min at `-j4`): same menu frame rate as `-O1`, 421
   frames in 20 s each (about 21 fps). The menus are paced at one frame per three 60 Hz vblanks, so they don't show CPU
   speed.
@@ -27,6 +27,17 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26).
 - **Next stall:** about 30 s into the lineups screen, an SPU job on the job manager (local store `0xe510`) re-reads
   RSX label 76 (`0x200004c0`; labels start at `0x20000000`) until the runtime halts it. Something that should write
   that label, probably a semaphore release in the GPU command stream, isn't writing it.
+
+- **Label 76, first look:** a temporary trace in our runtime branch (`MLB_SEMA_TRACE=1`, branch `mlb16-work`) shows
+  the GPU command stream *does* release it. The game cycles through five labels, `0x480`, `0x490`, `0x4a0`, `0x4b0`
+  and `0x4c0`, with `NV4097_SET_SEMAPHORE_OFFSET` (`0x1d6c`) and texture-read releases (`0x1d74`), on subchannel 0,
+  with no semaphore context DMA set (so they land in the label window). The waiting job is
+  `jobmod_c690c2f7b09a` (a geometry ring producer: DMA-reads the label at `0xe510`, compares it against its ring
+  bounds at `0xe550`).
+  - Next: compare the values released against what the job waits for. Candidates: byte order (`0x1d74` is written
+    verbatim, `0x1d70` byte-swapped), the walker running behind the job's own output, or releases in
+    SPU-built command blocks.
+  - Driving there takes about 4 minutes with the `PAD_FILE` script above.
 
 ## 2026-10-27 (evening, playtest): menus playable, match load crawls
 
