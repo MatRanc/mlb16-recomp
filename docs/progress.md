@@ -23,6 +23,17 @@ Played with a PS4 controller through SDL, in a window:
     job modules gained functions, e.g. `7ac07dde` went from 241 to 630. Test pending.
 - **CPU use:** the Bink SPU program spins at 99% of a core in its wait loop even with no movie, and a job manager
   thread runs at about 84%.
+- **Match load still stalls with the entry points added** (interpreter entries are now only the job manager's own
+  self-modifying code at `0xa68`). At the start of each match load the main thread calls a NULL object:
+  - `0x8c5508` writes the game's "FE data block" (`HDDBlk`) to the HDD cache. It takes a buffer from a 3-slot pool
+    at `0x0134a464` via `0x98c72c`, which hands one out only if the slot's current owner says it's done (virtual
+    `+0xc`).
+  - All three were busy, so no buffer came back. The caller doesn't check, and calls a virtual method on 0 (call at
+    `0x8c5638`, logged as `[null-call] near lr=0x8C563C`).
+  - Next: read the pool's owners (slots `+0x18`, `+0x24`, `+0x30`) at that moment to see what's still holding them.
+- `cellFsAioWrite`'s completion callback (`0x79c2c`) only forwards to the request's handler, which the game sets up
+  before submitting, so completing synchronously looks safe here.
+
 - The build now lives in `recomp-work/build` (lifted source in `recomp-work/recompiled`), not the session's scratch
   folder.
 
