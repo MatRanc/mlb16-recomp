@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## Next steps (as of 2026-10-28 evening)
+
+Where a frame goes at the pitch screen, ~50 ms:
+- the main thread runs ~12 ms alone;
+- the SPU job lists (~44 ms) and the walker drain run together;
+- the walker is busy only ~31% of the time and mostly waits on SPU output.
+
+So **SPU job time is the critical path**, and in order:
+
+1. **Native replacement of the Edge Geometry job `c690c2f7b09a`**, one function at a time, each checked bit for bit
+   offline before it goes into the game. Branch `native-c690` (local) has 0x7C18 with a harness: 2,000 random cases
+   bit-exact. Its speed comparison is not meaningful yet. Rebuild the harness with the game's flags (`-O2
+   -march=native -DSPU_FAST_FLOAT -DSPU_LIFTED_FAST_LS`) against the current `--ib-goto` lift, then go on to 0xFDA0,
+   0xD540, 0xD2B8, 0xAF98. The best case halves the SPU phase.
+2. **SPU codegen in general:** ~10 x86 instructions per SPU instruction, and a third of them stack spills. Calls in
+   `--local-regs` code write back and reload ~94 registers each. Write back only the registers written since the
+   last sync.
+3. **SPU runtime, ~28% of SPU busy time:**
+   - indirect-branch resolution and the drain loop;
+   - `mfc_for`;
+   - inFAMOUS 2's DMA fast path and inline MFC channel ops, not yet ported;
+   - the striped lock-line locks (branch `port-lockline-stripes`) measured neutral.
+4. **Then the walker, once the SPUs stop setting the pace:** vertex conversion is ~1/3 of its busy time, then draw
+   recording and texture hashing.
+5. **The main thread's 12 ms:** a flat profile of lifted PPU code; nothing stands out yet.
+6. **Correctness:**
+   - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
+   - labels are published before the GPU finishes;
+   - `sys_lwcond_signal` is a no-op, and waiters poll every 1 ms.
+
+Measuring: `measure6.sh`-style pitch-screen runs, 3 per build, alternating builds, judged on the 15 s window. Expect
+~±1.5 fps of noise from run to run and from other load on the machine.
+
 ## 2026-10-28 (afternoon): a faster frame dump; striped lock-line locks measured; the hot job module identified
 
 - **The frame dump was costing the walker ~20% of its time.** The test harness's PPM dump (every 10 frames) wrote 3
