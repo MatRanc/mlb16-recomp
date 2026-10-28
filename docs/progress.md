@@ -3,6 +3,44 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-28 (midday): the 5.9 s stalls fixed; SPU loops kept in registers; 17-18 fps at the pitch screen
+
+**The 5.9 s stalls: our command-buffer `end` was one word too far.** The runtime set the context's `end` to the
+first byte after the 64 KB buffer, IO 0x10000. The SDK sets it to the buffer's last word, the slot the wrap JUMP goes
+in. MLB writes its own JUMP-to-begin at `end`, so it landed in whatever the game keeps right after the buffer. When
+that word was overwritten, the walker walked on into data, read vertex-program microcode as a CALL, and skipped the
+frame's fence. Gfx_FrameEnd then waited out its own 5.9 s timeout. `end` is now `begin + size - 4`
+(ps3recomp `3695e97`).
+- **Before:** 8 bad CALLs per run, and every one was followed by a ~6 s freeze.
+- **After:** none in 3 runs, and no freezes during play. The few remaining multi-second gaps are scene loads: menus,
+  the walk into the game, a new SPU workload being created.
+- The pitch-screen benchmark is no longer bimodal: 15.2-17.3 fps across runs (before: 9 or 14-21).
+- `GCM_RINGDBG=1` logs a walker that steps past the end of the ring.
+
+**Where a frame goes now (ftrace at the pitch screen, ~58 ms frames).** The game publishes the FIFO `put` once per
+frame, in Gfx_FrameEnd, and then waits for that frame's reference value. A frame is therefore:
+1. the main thread runs about 12 ms, with the SPUs and the walker idle;
+2. the SPU job lists (~44 ms on 4-5 SPUs) and the walker's drain (~46 ms) run together;
+3. the walker finishes about 6 ms after the SPUs, which releases the main thread.
+
+The game's own sync allows no more overlap than that, so the lever is speed: SPU job time first, then the walker.
+- The interpreter is not the problem: 0.2-0.4 M interpreted SPU steps a second, a few ms of SPU time.
+- One job module (`c690c2f7b09a`) holds most of the SPU compute.
+
+**Two SPU code-quality fixes** (ps3recomp `a16e306`, `58587e9`):
+- **`--ib-goto` (lifter).** The hottest loop (0x7C18) loops back through `binz $39, $50`, where `$50` holds its own
+  entry address. The lifter treated that as leaving the function. Every iteration wrote back ~30 registers,
+  tail-called itself and reloaded ~60. A computed branch whose target is a known entry inside the same function is
+  now a guarded goto, and the loop keeps its registers. About +3%.
+- **`shufb` without byte swaps (x86).** Registers keep each word byte-reversed, so the swaps fold into the index
+  (`^ 3`), and a 16-entry lookup handles the special selectors. About 9 instructions instead of 18, and 9% fewer
+  instructions in a hot function. About +4%.
+
+**Result:** pitch-screen fps averages 17.8 over 3 runs (16.9 with the stall fix alone; 12-14 typical before it).
+
+Next: the SPU job code is still about 10 x86 instructions per SPU instruction, and a third of that is register
+spills. After that comes the walker (~40 us per draw).
+
 ## 2026-10-28 (morning): inFAMOUS 2's SPU and RSX work ported; a repeatable benchmark; a bimodal frame rate
 
 Ported from the inFAMOUS 2 port (MIT, credited in each commit), all on branch `mlb16-work`:
