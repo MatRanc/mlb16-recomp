@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-28 (morning): inFAMOUS 2's SPU and RSX work ported; a repeatable benchmark; a bimodal frame rate
+
+Ported from the inFAMOUS 2 port (MIT, credited in each commit), all on branch `mlb16-work`:
+- **SPU lifter:** `--local-regs` (registers in C locals) and `--const-bi`, plus our `--ib-known-targets`.
+- **SPU helpers:** SIMD forms for the integer helpers that were still scalar on x86.
+- **SPU runtime:**
+  - a fast branch resolver for job modules (`SPU_IB_FAST=0` turns it off);
+  - the channel-read store-forwarding fix;
+  - cheaper DMA parameter writes.
+- **RSX draw path:**
+  - per-texture-unit write counters with cached decode (`PS3RECOMP_ENG_TEXWGEN=0`);
+  - a texture-binding memo (`PS3RECOMP_ENG_TEXMEMO=0`);
+  - vertex-shader constants by range (`PS3RECOMP_ENG_VPC_FULL=1`).
+- **Frame pipelining (`VK_FRAME_PIPELINE=1`):** two batch sets; neither a present nor a full batch waits for the GPU.
+- **CMP32 vertex fetch:** decodes from the stable source instead of resolving each element.
+- **Interpreter stats** now name the job-code branch targets the lift lacks. Several were added to the jobmod lift
+  (the entry list `tools/lift_spu.sh` passes).
+
+**A repeatable benchmark at last (mostly).** Take the home team (the menu driver moves the controller right at team
+select, then handles pitcher selection and the lineup), and the game waits at the first pitch selection with a fixed
+camera: the full 3D scene, with the job lists still running. Fps is measured over 15 s from when that screen appears.
+
+**Results:**
+- None of the ports above shows a clear gain on its own.
+- The walker's GPU waits fell from ~600 to ~100-170 ms per 2 s with pipelining, but they were off the critical path.
+- All combined: 10.85, 18.24 and 12.99 fps, against 13.96, 8.85 and 8.72 for the previous build (and 13.7-14.9
+  earlier). 18.24 is the best run yet.
+
+**Both builds are bimodal.** Some runs settle around 9 fps and others around 14-18, which swamps every change
+measured this morning. It is not thread placement: four more runs (11.4, 12.1, 12.2, 17.9 fps) had the same
+spread of hot threads over cores and the same job lists on three or four SPUs at once. Next: a frame trace of a
+slow run against a fast one.
+
+**Where a frame goes now** (trace): five SPUs run the job lists for ~50 ms, then the RSX walker drains for ~35-40 ms
+with the SPUs idle. The game waits at frame end for the RSX to finish the previous frame, so the two phases don't
+overlap.
+
 ## 2026-10-28 (early morning): job lists on several SPUs, ~6 → ~12-13.6 fps
 
 With batching on, the frame trace (SPURS workers now record busy spans) showed one SPU busy nonstop for ~180 ms of a
