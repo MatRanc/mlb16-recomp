@@ -33,8 +33,22 @@ camera: the full 3D scene, with the job lists still running. Fps is measured ove
 
 **Both builds are bimodal.** Some runs settle around 9 fps and others around 14-18, which swamps every change
 measured this morning. It is not thread placement: four more runs (11.4, 12.1, 12.2, 17.9 fps) had the same
-spread of hot threads over cores and the same job lists on three or four SPUs at once. Next: a frame trace of a
-slow run against a fast one.
+spread of hot threads over cores and the same job lists on three or four SPUs at once.
+
+**Found it: 5.9-second stalls from a FIFO parse slip.** Traced runs show the median frame is ~43 ms (~23 fps) in
+slow and fast runs alike. The slow runs contain multi-second hitches:
+- The walker reaches `0x709D302A` and treats it as a CALL to unmapped IO. It is the 12-word vertex-program
+  microcode after a SET_TRANSFORM_PROGRAM header (`0x00300B80`) one word earlier.
+- The walker got there misaligned: it decoded `0x01000014` as a 64-word method header. Before that, its
+  control-flow log shows a park, a jump to 0xFFB8, and `0x00000009` at IO 0x15064 taken as a jump to IO 0x8.
+- The same two words (CALL `0x709D302A`, JUMP `0x30464649`) appear 6-8 times in every run.
+- After the bad branch the walker resyncs, so that frame's reference write is never seen. Gfx_FrameEnd waits for it
+  in a loop that gives up after 0x15B3 = 5,555 `Cond_Wait(9 ms)` calls. With our 1 ms lwcond poll that is 5,555 ×
+  ~1.06 ms ≈ 5.9 s.
+
+Whether a run's measured window catches some of these is the bimodal frame rate. Fixing the parse slip (likely the
+walker reading a ring slot before the SPU job has written it) is next. It is probably also the "hang-ups" seen
+while watching.
 
 **Where a frame goes now** (trace): five SPUs run the job lists for ~50 ms, then the RSX walker drains for ~35-40 ms
 with the SPUs idle. The game waits at frame end for the RSX to finish the previous frame, so the two phases don't
