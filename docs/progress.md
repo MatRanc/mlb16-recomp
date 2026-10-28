@@ -3,6 +3,48 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-28 (overnight): the frame is a waiting chain; draw batching +20%
+
+**Correction to the entry below.** The CPU-vs-CPU game plays out differently every run, so it wasn't the same
+at-bat each time, and fps swings ±20% with what's on screen. Changes are now judged by alternating A/B runs: a
+closed-loop menu driver that recognises each screen, fps over 30-210 s after the first pitch, one game at a time.
+
+**Where the time goes**, now measured on the running game:
+- Sampled with gdb, plus the runtime's `PS3_FTRACE` timeline (SPURS workers now record busy spans).
+- **Nothing is CPU-bound.** The process uses about 18% of the CPU. One SPU worker is ~60% busy, the RSX walker about
+  half, and the main thread ~10%.
+- **The frame is a chain of waits:**
+  - The main thread waits (Gfx_FrameEnd) for the RSX walker to finish the previous frame.
+  - The walker spent ~45% of its time waiting for the GPU after each draw.
+  - The SPU mesh jobs wait on the walker for ring space, which shows as bursts of ~8 ms on, 8 ms off.
+- **RPCS3 on the same PC** holds about 43 fps in the same scene, spreading SPU work over six threads.
+- The SPU compute per frame is similar between the two, so faster SPU code (a lifter flag `--ib-known-targets`
+  that turns the hot loops' computed branches into direct ones) gave no measurable gain.
+
+**Draw batching.** `VK_DRAW_BATCH=1`, ps3recomp's opt-in mode written for God of War: Ascension, records 100-200
+draws per GPU submission instead of waiting after each one:
+
+| | fps (runs) |
+|---|---|
+| Batching off | 5.41, 5.53 (4.50, 5.00, 6.24 before the GPU clock lock) |
+| Batching on | 6.25, 7.96 (6.01, 6.17 before) |
+
+It is now on in `tools/run.sh`.
+
+**The GPU sat in its idle clock** (210-270 MHz on a 3060 Ti). The bursty submit-and-wait pattern never ramps it up,
+and PowerMizer "prefer maximum performance" didn't stick. `nvidia-smi -lgc 1400,1980` (root; reset with `-rgc`) pins
+it for testing.
+
+**Smaller fixes** on branch `mlb16-work`:
+- Vertex fetch skips duplicate-removal hashing for sequential draws and fills attributes that have no array.
+- `VK_EB_STATS=1` prints why GPU batches end.
+
+**Next:**
+- Asynchronous GPU submission, so the walker records while the GPU executes. The first step publishes RSX labels only
+  after their GPU work completes; today the game can see a label before the work behind it ran.
+- Then SIMD vertex decode and a cache for static geometry; the walker re-decodes every vertex every draw.
+- Then why the SPU rings wait on the walker.
+
 ## 2026-10-27 (end of day): SPU speed, 3.4 → 6.4 fps
 
 Measured as the average flip rate over 60 s of play (same at-bat each time, `GCM_FLIPCOUNT=1`).
