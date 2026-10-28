@@ -3,6 +3,32 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-28 (early morning): job lists on several SPUs, ~6 → ~12-13.6 fps
+
+With batching on, the frame trace (SPURS workers now record busy spans) showed one SPU busy nonstop for ~180 ms of a
+~208 ms frame while the others idled. The WWS job manager's two main workloads ran on one SPU at a time, by turns.
+
+**The cause was a missing API, not the scheduler's speed.** MLB calls `cellSpursRequestIdleSpu(spurs, wid, 7)` for
+every workload. The SPURS kernel lets an SPU take a workload while its contention is below ready count + that idle
+count; WWS uses it to spread one job list over several SPUs, each grabbing the next job. Our runtime's version was a
+stub that kept nothing, so with a ready count of 1 every list got exactly one SPU.
+
+The inFAMOUS 2 port's notes and SPURS kernel had the answer (it is the same job manager). Now implemented on branch
+`mlb16-work`: the job lists run on three or four SPUs at once.
+
+| | fps in play (30-210 s after the first pitch) |
+|---|---|
+| Before (batching on) | 5.4-8.0 over six runs |
+| With idle SPUs honoured | 11.93, 13.59 |
+
+**Also learned:** vertex decode is not where the RSX walker's time goes. SIMD decode is 2× faster in isolation and
+bit-exact, but the walker's CPU per draw didn't move (60.4 vs 60.5 µs), and the walker sleeps most of the frame.
+
+**Next:** the inFAMOUS 2 port's other SPU work, ported where MLB needs it:
+- the lifter keeping SPU registers in locals (`--local-regs`), `--merge-chunks` and `--const-bi`;
+- SIMD forms of the integer SPU helpers;
+- cheaper DMA fences.
+
 ## 2026-10-28 (overnight): the frame is a waiting chain; draw batching +20%
 
 **Correction to the entry below.** The CPU-vs-CPU game plays out differently every run, so it wasn't the same
