@@ -3,6 +3,23 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
+## 2026-10-28 (afternoon): a faster frame dump; striped lock-line locks measured; the hot job module identified
+
+- **The frame dump was costing the walker ~20% of its time.** The test harness's PPM dump (every 10 frames) wrote 3
+  bytes per `fwrite` call. It now packs the frame into one buffer and writes it once, to a temp file renamed into
+  place. Pitch screen: 18.8 -> 20.3 fps (3 runs each). This only affects our measurements, not play, but the walker
+  finishes last every frame, so the dump was inflating every number above (ps3recomp `c93af77`).
+- **Striped lock-line locks (inFAMOUS 2, MIT): neutral.** Five SPUs contend on the one global lock-line lock in the
+  job manager's atomic job grab, about 4% of SPU busy time. The 64-stripe version from inFAMOUS 2 measured 18.8 vs
+  18.5 fps, within noise. It is kept on branch `port-lockline-stripes`, unmerged.
+- **SPU time, split by sampling:** ~72% in lifted job code and ~28% in the runtime (lock waits, indirect-branch
+  resolution, the drain loop, `mfc_for`). One module, `c690c2f7b09a`, is ~70% of the lifted part. A read-only
+  analysis identifies it as a variant of Sony's Edge Geometry pipeline (vertex decompression, matrix-palette
+  skinning, culling, quantization into the RSX mesh rings, and draw packets with fenced DMA).
+  - A native replacement could at best halve the SPU phase. The walker would then set the pace.
+  - The plan is one function at a time, each checked bit for bit against the lifted code offline, before
+    committing to the whole module.
+
 ## 2026-10-28 (midday): the 5.9 s stalls fixed; SPU loops kept in registers; 17-18 fps at the pitch screen
 
 **The 5.9 s stalls: our command-buffer `end` was one word too far.** The runtime set the context's `end` to the
