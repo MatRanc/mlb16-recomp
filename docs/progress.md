@@ -15,8 +15,9 @@ So **the walker is the critical path**, not SPU code. Of its time per frame, ~26
 `VK_FRAME_PIPELINE=1` removed the flush waits: **+27%, ~26 fps at the pitch screen**. Next, in order:
 
 1. **The present wait (~9 ms per frame before tonight).** The walker still waits for the GPU at present. Measure it
-   again under `VK_FRAME_PIPELINE`, then wait only when a resource is about to be reused. Also check the GPU's memory
-   clock while the game runs (it idles at 810 MHz; `nvidia-smi -lmc`).
+   again under `VK_FRAME_PIPELINE`, then wait only when a resource is about to be reused. The GPU is ~33% busy at the
+   pitch screen (P0, memory 7001 MHz, graphics 1410-1515 MHz under the 1400 MHz floor set for testing), so the waits
+   are latency, not GPU throughput; a higher graphics clock floor may shorten them.
 2. **The walker's CPU work per draw (35 us):** vertex remap, fetch and decode (~19% of its time), draw recording
    (~12%), texture content hashing (~6%).
 3. **Overlap the walker with the next frame's build:** the main thread waits for the frame's reference value the
