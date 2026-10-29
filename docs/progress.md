@@ -25,7 +25,9 @@ So **the walker is the critical path**, not SPU code. Of its time per frame, ~26
    within noise, because SPU time is off the critical path. An 8-wide AVX2 0x7C18 was bit-exact and exactly as fast
    as the lift: the loop is bound by local-store loads, stores and byte swaps, not math.
 5. **Correctness:**
-   - render-target writeback ("Write Color Buffers") for the dark crowd, blank faces and broken player bodies;
+   - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
+   - players' white uniform parts vanish in close-ups (wide shots are fine). Already in the morning's build, so not
+     from tonight's changes; probably a close-up LOD mesh or shader path;
    - labels are published before the GPU finishes;
    - `sys_lwcond_signal` is a no-op, and waiters poll every 1 ms (many PPU threads sit in 1 ms lwcond waits).
 
