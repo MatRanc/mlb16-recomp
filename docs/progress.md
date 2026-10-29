@@ -25,21 +25,45 @@ So **the walker is the critical path**, not SPU code. Of its time per frame, ~26
 4. **SPU code** only after that: dirty-register write-back, the DMA fast path and the native kernels all measured
    within noise, because SPU time is off the critical path. An 8-wide AVX2 0x7C18 was bit-exact and exactly as fast
    as the lift: the loop is bound by local-store loads, stores and byte swaps, not math.
-5. **A timing race in the match load.** Clang PGO was tried and is blocked by it: every instrumented build stalls
-   near frame 4,000 (~160 s, loading the match), even with only the runtime instrumented, the release flags matched
-   and the profile written only at exit. The same builds also crawl for ~25 s in the menus (80 frames where a normal
-   build does 1,250). The normal build never does either. So slowing the runtime is enough to wedge the load: look
-   for a poll or watchdog whose timing matters, then retry PGO (`-fprofile-list` with `src:*ps3recomp-probe*`).
+5. **PGO:** the match-load race is fixed (below) and a clang PGO build of the runtime is +5.8% at the pitch screen.
+   Make it part of the build, and retrain the profile after big runtime changes.
 6. **Correctness:**
    - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
    - players' white uniform parts vanish in close-ups (wide shots are fine). Already in the morning's build, so not
      from tonight's changes; probably a close-up LOD mesh or shader path;
    - labels are published before the GPU finishes;
-   - `sys_lwcond_signal` is a no-op, and waiters poll every 1 ms (many PPU threads sit in 1 ms lwcond waits).
+   - real `sys_lwcond` is in, behind `PS3_LWCOND_REAL=1`: neutral in A/B, so still off by default.
 
 Measuring: `measure6.sh`-style pitch-screen runs, 3 per build, alternating builds, judged on the 15 s window. Expect
 ~±1.5 fps of noise. Keep other heavy work off the machine while measuring: one benchmark running alongside dropped a
 run from ~20 to 16 fps.
+
+## 2026-10-29: the match-load race found; a faster FIFO walker; clang PGO +5.8%
+
+Measured by 3-run alternating A/Bs at the pitch screen. Today's absolute numbers are ~23 fps, not 26: the machine had
+more running alongside (a remote-desktop session alone cost ~15-20%), so compare builds within a session only. The 55 s
+"hold" number swings by ±3 fps between runs of one build, so decisions use the 15 s pitch-screen window.
+
+- **The match-load freeze behind the PGO stalls:** the RSX drain gives up on a self-JUMP "park" after a grace period
+  and follows `put` instead. MLB 16 parks in command buffers its SPU jobs are still writing, so when a slower runtime
+  (an instrumented build, a busy host) took longer than the 50 ms grace, the drain skipped those commands and a GPU
+  label with them, and the game waited forever. Confirmed by setting the grace to 5 ms on a normal build: same freeze.
+  The default is now 1000 ms (God of War HD needed more than 50 ms too); zero resyncs and no fps change in A/B.
+- **The instrumented builds' crawl** had a second cause: the profile list `src:*ps3recomp-probe*` also matched
+  `spu_helpers.h`, so every SPU helper inlined into the lifted SPU code was counted (`spu_v2u` alone 50 billion
+  times). Listing only `src:*ps3recomp-probe/*.c` and `src:*ps3recomp-probe/*.cpp` fixed it: training reaches the
+  pitch screen ~10% slower than a normal build.
+- **Clang PGO (runtime only):** 24.73 fps vs 23.37 for the gcc build and 23.66 for plain clang, best in all 3 runs
+  (24.69, 24.84, 24.67).
+- **FIFO walker:** with the draw engine on, every method word went through the per-word diagnostic loop. Runs of 3D
+  methods now skip it, and plain register writes are stored without the full dispatcher: 19.7 → 11.1 ns per word in a
+  replay benchmark with identical handler calls and register state. In the game it was within noise at the pitch
+  screen; screenshots match.
+- **Real `sys_lwcond`** (host condition variables, timeouts, a 10 ms fallback wake) behind `PS3_LWCOND_REAL=1`:
+  +2.7% pitch, -7% hold over 4 runs, so neutral; left off.
+- **A vertex cache across frames was measured and dropped:** validating the inputs costs about as much as converting
+  them (≤1.2× best case in a benchmark). The cost that matters is converting and then copying ~55 MB a frame into the
+  GPU ring; writing straight into the ring is next.
 
 ## 2026-10-28 (night): the frame traced; the walker is the bottleneck; +27% from pipelined GPU batches
 
