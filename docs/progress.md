@@ -25,7 +25,12 @@ So **the walker is the critical path**, not SPU code. Of its time per frame, ~26
 4. **SPU code** only after that: dirty-register write-back, the DMA fast path and the native kernels all measured
    within noise, because SPU time is off the critical path. An 8-wide AVX2 0x7C18 was bit-exact and exactly as fast
    as the lift: the loop is bound by local-store loads, stores and byte swaps, not math.
-5. **Correctness:**
+5. **A timing race in the match load.** Clang PGO was tried and is blocked by it: every instrumented build stalls
+   near frame 4,000 (~160 s, loading the match), even with only the runtime instrumented, the release flags matched
+   and the profile written only at exit. The same builds also crawl for ~25 s in the menus (80 frames where a normal
+   build does 1,250). The normal build never does either. So slowing the runtime is enough to wedge the load: look
+   for a poll or watchdog whose timing matters, then retry PGO (`-fprofile-list` with `src:*ps3recomp-probe*`).
+6. **Correctness:**
    - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
    - players' white uniform parts vanish in close-ups (wide shots are fine). Already in the morning's build, so not
      from tonight's changes; probably a close-up LOD mesh or shader path;
