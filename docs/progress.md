@@ -3,38 +3,60 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26).
 
-## Next steps (as of 2026-10-28 evening)
+## Next steps (as of 2026-10-28 night)
 
-Where a frame goes at the pitch screen, ~50 ms:
-- the main thread runs ~12 ms alone;
-- the SPU job lists (~44 ms) and the walker drain run together;
-- the walker is busy only ~31% of the time and mostly waits on SPU output.
+A frame trace (`PS3RECOMP_TRACE`, below) settled where the time goes, ~50 ms at the pitch screen before tonight:
+- the main thread builds the frame in ~7 ms while the SPUs start on it;
+- the RSX walker then drains for ~31 ms, and the frame ends when it does;
+- the SPUs run 3-5 wide for about half the drain and are idle or 1 wide for the rest, waiting for the walker.
 
-So **SPU job time is the critical path**, and in order:
+So **the walker is the critical path**, not SPU code. Of its time per frame, ~26 ms was CPU work (~750 draws at
+35 us each) and ~16 ms was waiting on the GPU (~7 ms after each 512-draw flush, ~9 ms at present).
+`VK_FRAME_PIPELINE=1` removed the flush waits: **+27%, ~26 fps at the pitch screen**. Next, in order:
 
-1. **Native replacement of the Edge Geometry job `c690c2f7b09a`**, one function at a time, each checked bit for bit
-   offline before it goes into the game. Branch `native-c690` (local) has 0x7C18 with a harness: 2,000 random cases
-   bit-exact. Its speed comparison is not meaningful yet. Rebuild the harness with the game's flags (`-O2
-   -march=native -DSPU_FAST_FLOAT -DSPU_LIFTED_FAST_LS`) against the current `--ib-goto` lift, then go on to 0xFDA0,
-   0xD540, 0xD2B8, 0xAF98. The best case halves the SPU phase.
-2. **SPU codegen in general:** ~10 x86 instructions per SPU instruction, and a third of them stack spills. Calls in
-   `--local-regs` code write back and reload ~94 registers each. Write back only the registers written since the
-   last sync.
-3. **SPU runtime, ~28% of SPU busy time:**
-   - indirect-branch resolution and the drain loop;
-   - `mfc_for`;
-   - inFAMOUS 2's DMA fast path and inline MFC channel ops, not yet ported;
-   - the striped lock-line locks (branch `port-lockline-stripes`) measured neutral.
-4. **Then the walker, once the SPUs stop setting the pace:** vertex conversion is ~1/3 of its busy time, then draw
-   recording and texture hashing.
-5. **The main thread's 12 ms:** a flat profile of lifted PPU code; nothing stands out yet.
-6. **Correctness:**
-   - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
+1. **The present wait (~9 ms per frame before tonight).** The walker still waits for the GPU at present. Measure it
+   again under `VK_FRAME_PIPELINE`, then wait only when a resource is about to be reused. Also check the GPU's memory
+   clock while the game runs (it idles at 810 MHz; `nvidia-smi -lmc`).
+2. **The walker's CPU work per draw (35 us):** vertex remap, fetch and decode (~19% of its time), draw recording
+   (~12%), texture content hashing (~6%).
+3. **Overlap the walker with the next frame's build:** the main thread waits for the frame's reference value the
+   whole drain.
+4. **SPU code** only after that: dirty-register write-back, the DMA fast path and the native kernels all measured
+   within noise, because SPU time is off the critical path. An 8-wide AVX2 0x7C18 was bit-exact and exactly as fast
+   as the lift: the loop is bound by local-store loads, stores and byte swaps, not math.
+5. **Correctness:**
+   - render-target writeback ("Write Color Buffers") for the dark crowd, blank faces and broken player bodies;
    - labels are published before the GPU finishes;
-   - `sys_lwcond_signal` is a no-op, and waiters poll every 1 ms.
+   - `sys_lwcond_signal` is a no-op, and waiters poll every 1 ms (many PPU threads sit in 1 ms lwcond waits).
 
 Measuring: `measure6.sh`-style pitch-screen runs, 3 per build, alternating builds, judged on the 15 s window. Expect
-~±1.5 fps of noise from run to run and from other load on the machine.
+~±1.5 fps of noise. Keep other heavy work off the machine while measuring: one benchmark running alongside dropped a
+run from ~20 to 16 fps.
+
+## 2026-10-28 (night): the frame traced; the walker is the bottleneck; +27% from pipelined GPU batches
+
+All ps3recomp changes are on `mlb16-work` (MatRanc/ps3recomp).
+
+- **Merged, measured at the pitch screen** (3 alternating runs each):
+  - inFAMOUS 2's SPU DMA fast path, inline MFC channel ops and register-built insertion masks: +2.7%;
+  - the lifter writes back only registers written since the last sync (register traffic in the hot job down 45%):
+    within noise;
+  - a ring filled exactly to its last word is no longer taken for an overrun (found by review);
+  - `--const-bi` no longer turns resolver-only targets into gotos (found by review; MLB's lift is unchanged);
+  - fixes from two reviews: memory containers reserve their size, SPURS slot checks and `maxContention` clamp, AIO
+    write prefault and shared AIO ids, the GCM interrupt thread's stack, the template's SPU options, and the
+    `run_tests.sh` and video fixture tests wired up. Within noise. One SPURS idle change was left out (-0.3 fps).
+- **A frame tracer.** `PS3RECOMP_TRACE=<file.json>` writes a Chrome/Perfetto timeline: SPU job runs and waits,
+  lock-line retries, the walker's drains and put waits, PPU lwmutex/lwcond/semaphore/event waits, GCM finish and
+  flip waits. Tracing on costs nothing measurable at the pitch screen (20.6 fps either way).
+- **What the trace showed.** The walker's drain is one ~36 ms pass over a few hundred bytes of the main command
+  stream: it follows the command buffers the SPUs build. The SPUs out-run it, fill their rings and wait. Per thread
+  the walker used ~55-68% of a core; the rest was GPU waits (`VK_EB_STATS=1`).
+- **`VK_FRAME_PIPELINE=1`** (an existing ps3recomp mode) submits a full batch of draws without waiting for the GPU:
+  20.8 -> 26.1 fps at the pitch screen, the pitch screen pixel-identical. Now on in `tools/run.sh`.
+- **Native Edge kernels: dropped.** With the benchmark fixed (setup was inside the timed loop), an 8-wide AVX2
+  version of job function 0x7C18 is bit-exact and 1.00x the lift. Only 2 of the job's 9 hot functions could be
+  widened at all.
 
 ## 2026-10-28 (afternoon): a faster frame dump; striped lock-line locks measured; the hot job module identified
 

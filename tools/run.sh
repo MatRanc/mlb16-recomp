@@ -9,8 +9,9 @@ EXE=$1 ELF=$2 W=$(cd "$3" && pwd)
 # needed for the frame loop: see docs/progress.md (2026-10-27, night). SPURS_READY_LEVEL=1 and SPURS_NO_IDLE_PROBE=1
 # (branch mlb16-work) make SPURS schedule job lists as the SDK describes; without them a match load deadlocks
 # (2026-10-27, late night). VK_DRAW_BATCH=1 records many draws per GPU submission instead of waiting on the GPU
-# after each one (about 20% faster in play). The runtime logs a lot; drop the per-wait lines.
+# after each one (about 20% faster in play); VK_FRAME_PIPELINE=1 lets a full batch go to the GPU without waiting
+# for it (+27% at the pitch screen, 2026-10-28 night). The runtime logs a lot; drop the per-wait lines.
 GCM_HANDLER_THREAD=1 GCM_FLIPCB_ONTICK=1 PS3RECOMP_VK_GUEST_PROGRAMS=1 PS3RECOMP_VK_WINDOW=${WINDOW:-1} \
-SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1 VK_DUMMY_BLACK=1 VK_DRAW_BATCH=1 \
+SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1 VK_DUMMY_BLACK=1 VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1 \
 PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W" "$EXE" "$ELF" 2>&1 |
     grep -av "timer_usleep\|^\s*+\|^\[WAIT\]\|LWM-"
