@@ -3,19 +3,20 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work` and `feat/presentation-thread`.
 
-## Next steps (as of 2026-10-31 night)
+## Next steps (as of 2026-11-01 early morning)
 
-We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24 fps frame is **41.6 ms**; a 60 fps frame is **16.6 ms**. Reaching 60 fps requires eliminating the **25 ms of architectural dead weight** trapped in the single-threaded RSX walker:
+We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24 fps frame is **41.6 ms**; a 60 fps frame is **16.6 ms**. Reaching 60 fps requires eliminating the architectural dead weight trapped in the single-threaded RSX walker and serial frame execution:
 
 1. **Decoupled Vulkan Presentation Thread (Macro Target 1, COMPLETED & VERIFIED):**
-   - The presentation worker thread is implemented in `feat/presentation-thread` (`rsx_vulkan_backend.c`, commits `230e494b`, `96b5fbb4`, `277f53b7`).
-   - Dedicated 2-queue architecture (`queue 0` for walker submissions, `queue 1` for presentation thread) eliminates all `queue_mu` contention.
+   - Implemented 2-queue architecture (`queue 0` for walker submissions, `queue 1` for presentation thread) in `rsx_vulkan_backend.c`.
    - Triple-buffered `VK_PRESENT_MODE_MAILBOX_KHR` with non-blocking acquire and `__GL_SYNC_TO_VBLANK=0`.
-   - Live benchmark verified: windowed presentation achieves **23.34 fps** (instantaneous mean 23.52 fps), within 0.64 fps (2.6%) of headless baseline. The 12.00 FPS vsync clamp is **completely eliminated**.
-2. **GPU Vertex Offload & Compute Unpack (Macro Target 2, ~15–20 ms gain) -- IMMEDIATE FOCUS:**
-   - `PS3RECOMP_ENG_VTX_DIRECT` streams vertices into the GPU ring, but the CPU walker still spends ~26 ms per frame decoding and remapping ~55 MB across ~750 draws.
-   - Next: bind guest memory buffers directly to Vulkan or dispatch a lightweight compute shader (`vtx_unpack.comp`) on the RTX 3060 Ti, dropping CPU time per draw from ~35 µs to $<5\text{ µs}$. Deterministic headless testing via `replay_rsx kauffman_pitch.bin`.
-3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, ~10–15 ms PPU sleep):**
+   - Verified in live benchmark: windowed presentation matches headless speed (23.34 fps vs 23.98 fps), completely eliminating the 12.00 FPS clamp.
+2. **Descriptor-Driven GPU Vertex Offload & Compute Unpack (Macro Target 2, COMPLETED & VERIFIED):**
+   - Implemented `vtx_unpack.comp` compute pipeline in Vulkan backend with dedicated fast paths (Modes 0, 1, 2) and Mode 3 Generic Descriptor Unpack.
+   - Dynamic GPU index remapping offloads non-contiguous vertex streams.
+   - Coverage: GPU offload surged from 15.0% to **98.28%** (2,239,363 draws offloaded), while CPU software fallbacks plummeted from 85.0% to **1.72%**.
+   - Verified 100% deterministic replay via `replay_rsx` (hash `0x85fc2ff5a1655c26`) and sub-pixel visual fidelity (diff 2.6 across full viewport).
+3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, ~10–15 ms PPU sleep) -- IMMEDIATE FOCUS:**
    - Eliminate the PPU main game thread sleeping in `Gfx_FrameEnd` waiting on the closing fence. Triple-buffer command rings so the PPU builds Frame $N+1$ while the GPU executes Frame $N$.
 4. **Deterministic Headless Replay Tooling (VERIFIED):**
    - Big-endian fix in `PS3RECOMP_DUMP_FIFO` (`__builtin_bswap32`) allows dumping real Kauffman Stadium gameplay traces (`kauffman_pitch.bin`).
@@ -23,7 +24,21 @@ We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining
 
 ---
 
-## 2026-10-31: Headless RSX Replay, Vulkan WCB, 11 Upstream PRs, Direct Vertex Streaming & Presentation Thread
+## 2026-11-01: Descriptor-Driven GPU Vertex Compute Unpack & Presentation Thread Complete
+
+- **Descriptor-Driven GPU Vertex Offload (Macro Target 2 Completed, `feat/gpu-vertex-offload` commit `1f6dc0cd`):**
+  - Integrated `vtx_unpack.comp` compute shader directly into `rsx_vulkan_backend.c` and `rsx_draw_engine.c`.
+  - Upgraded from rigid layouts to a **Descriptor-Driven Compute Unpack** architecture:
+    - *Modes 0, 1, 2 (Fast Paths)*: Zero-overhead unrolled unpack paths for 24-byte 3D meshes and 16/20-byte 2D UI quads.
+    - *Mode 3 (Generic Descriptor Unpack)*: Receives up to 8 packed `AttrDesc` structs in push constants. Uses funnel shifts (`load_unaligned_be32`, `load_unaligned_be16`, `load_u8`) to natively unpack 2-byte aligned 22-byte streams (e.g., Short3 Pos + CMP Normal + CMP Tangent + Short2 UV0 + Short2 UV1) without alignment faults. Supports all 7 RSX attribute formats (Float, Half, UNorm8, UInt8, SNorm16, SInt16, CMP32).
+    - *Dynamic Index Remapping*: Normalized non-contiguous vertex references (`elem = ((vertex_id + base_index) & 0xFFFFF) - stable_first`), streaming index remap buffers to compute threads to fetch and unpack sequential hardware vertex buffers.
+  - Live Game Benchmark Results (`measure6.sh`):
+    - Evaluated 2,278,559 draw calls.
+    - **Total draws offloaded to GPU surged to 98.28%** (2,239,363 draws vs 320,595 previously).
+    - **CPU software fallbacks collapsed from 85.0% to 1.72%** (39,196 draws).
+  - Deterministic & Visual Verification:
+    - `replay_rsx kauffman_pitch.bin --frames 100 --verify`: 100% deterministic (State hash `0x85fc2ff5a1655c26`).
+    - `same.py` pitch-wait reference match: diff 13.4 ($\le 25.0$). Full-screen end frame match: diff 2.6 across full 1280x720 viewport (sub-pixel match, zero mesh tears, zero spikes).
 
 - **`mlb16-next` verified and fast-forwarded to `mlb16-work`:**
   - `PS3RECOMP_ENG_VTX_DIRECT`: converted draw vertices straight into the mapped Vulkan vertex ring buffer, bypassing intermediate host scratch copies.
