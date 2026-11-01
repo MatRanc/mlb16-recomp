@@ -46,6 +46,13 @@ Target 3 will eliminate the ~8 ms PPU wait in `Gfx_FrameEnd`, but **framerate wi
    - Big-endian fix in `PS3RECOMP_DUMP_FIFO` (`__builtin_bswap32`) allows dumping real Kauffman Stadium gameplay traces (`kauffman_pitch.bin`).
    - Replays 100% deterministically in 3 seconds via `tools/replay_rsx` (hash `0x85fc2ff5a1655c26`, 646 draws, 50 clears, 2,338 dispatcher calls) to benchmark walker and vertex changes without 4-minute game boots.
 
+### Ecosystem Context, Lineage & Clean-Room Standard:
+- **PS3 Complexity Hierarchy:** *MLB The Show 16* sits at Tier 1.5 ("Late-Gen First-Party Titans") alongside *LittleBigPlanet* and *God of War: Ascension*. Only the "Nightmare Tier" (*The Last of Us*, *Killzone 2/3*, *Gran Turismo 6*, *MGS4*) is more complex. Standard cross-platform games (e.g. *The Bigs 2*, *GTA IV*, *RDR*) sit at Tier 3 and are significantly easier.
+- **Naughty Dog ICE Team Heritage:** Official SCE GDC records verify PlayStation Edge Geometry was built by Sony WWS and Naughty Dog's ICE Team. SPU module `c690c2f7b09a` is the ICE mesh skinning program.
+- **RPCS3 Blueprints (Clean-Room):** RPCS3 PR #16907 (`elad335`) confirms PPU thread wait flags (`cpu_flag::wait`) prevent SPURS starvation during workload removal. RPCS3's `VKGSRender` ring-slot fence tracking ($N$-buffering) serves as the architectural pattern for Target 3.
+- **Zelda64Recomp / UnleashedRecomp Lesson:** Never emulate on CPU what a modern GPU can do natively; RTX 3060 Ti compute unpack (`vtx_unpack.comp`) bypasses CPU SPU DMA `memcpy` churn.
+- **MIT vs GPLv2 Clean-Room Policy:** RPCS3 is GPLv2 while `ps3recomp` is MIT. Code cannot be copied from RPCS3. All implementations must be 100% original, clean-room C/C++ to preserve MIT licensing and upstream mergeability.
+
 ---
 
 ## 2026-11-01: Descriptor-Driven GPU Vertex Compute Unpack & Presentation Thread Complete
