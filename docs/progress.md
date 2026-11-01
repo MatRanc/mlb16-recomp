@@ -1,42 +1,58 @@
 # Progress log
 
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
-ps3recomp at upstream `4e8f3ca` (2026-10-26).
+ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work` and `feat/presentation-thread`.
 
-## Next steps (as of 2026-10-28 night)
+## Next steps (as of 2026-10-31 night)
 
-A frame trace (`PS3RECOMP_TRACE`, below) settled where the time goes, ~50 ms at the pitch screen before tonight:
-- the main thread builds the frame in ~7 ms while the SPUs start on it;
-- the RSX walker then drains for ~31 ms, and the frame ends when it does;
-- the SPUs run 3-5 wide for about half the drain and are idle or 1 wide for the rest, waiting for the walker.
+We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24 fps frame is **41.6 ms**; a 60 fps frame is **16.6 ms**. Reaching 60 fps requires eliminating the **25 ms of architectural dead weight** trapped in the single-threaded RSX walker:
 
-So **the walker is the critical path**, not SPU code. Of its time per frame, ~26 ms was CPU work (~750 draws at
-35 us each) and ~16 ms was waiting on the GPU (~7 ms after each 512-draw flush, ~9 ms at present).
-`VK_FRAME_PIPELINE=1` removed the flush waits: **+27%, ~26 fps at the pitch screen**. Next, in order:
+1. **Decoupled Vulkan Presentation Thread (Macro Target 1, ~9 ms gain):**
+   - The presentation worker thread is implemented in `feat/presentation-thread` (`rsx_vulkan_backend.c`).
+   - Initial run yielded exactly 12.00 fps (360 frames / 30 s), diagnosing swapchain sync-coupling in `VK_PRESENT_MODE_FIFO_KHR`.
+   - Next: ensure a lock-free mailbox queue with triple-buffering (`VK_PRESENT_MODE_MAILBOX_KHR` or non-blocking async FIFO) so the walker never waits for present completion, freeing ~9 ms of walker latency.
+2. **GPU Vertex Offload & Compute Unpack (Macro Target 2, ~15–20 ms gain):**
+   - `PS3RECOMP_ENG_VTX_DIRECT` streams vertices into the GPU ring, but the CPU walker still spends ~26 ms per frame decoding and remapping ~55 MB across ~750 draws.
+   - Next: bind guest memory buffers directly to Vulkan or dispatch a lightweight compute shader (`vtx_unpack.comp`) on the RTX 3060 Ti, dropping CPU time per draw from ~35 µs to $<5\text{ µs}$.
+3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, ~10–15 ms PPU sleep):**
+   - Eliminate the PPU main game thread sleeping in `Gfx_FrameEnd` waiting on the closing fence. Triple-buffer command rings so the PPU builds Frame $N+1$ while the GPU executes Frame $N$.
+4. **Deterministic Headless Replay Tooling:**
+   - Big-endian fix in `PS3RECOMP_DUMP_FIFO` (`__builtin_bswap32`) allows dumping real Kauffman Stadium gameplay traces (`kauffman_pitch.bin`).
+   - Replay headlessly in 3 seconds via `tools/replay_rsx` with 0% noise to benchmark walker and vertex changes without 4-minute game boots.
 
-1. **The present wait (~9 ms per frame before tonight).** The walker still waits for the GPU at present. Measure it
-   again under `VK_FRAME_PIPELINE`, then wait only when a resource is about to be reused. The GPU is ~33% busy at the
-   pitch screen (P0, memory 7001 MHz, graphics 1410-1515 MHz under the 1400 MHz floor set for testing), so the waits
-   are latency, not GPU throughput; a higher graphics clock floor may shorten them.
-2. **The walker's CPU work per draw (35 us):** vertex remap, fetch and decode (~19% of its time), draw recording
-   (~12%), texture content hashing (~6%).
-3. **Overlap the walker with the next frame's build:** the main thread waits for the frame's reference value the
-   whole drain.
-4. **SPU code** only after that: dirty-register write-back, the DMA fast path and the native kernels all measured
-   within noise, because SPU time is off the critical path. An 8-wide AVX2 0x7C18 was bit-exact and exactly as fast
-   as the lift: the loop is bound by local-store loads, stores and byte swaps, not math.
-5. **PGO:** the match-load race is fixed (below) and a clang PGO build of the runtime is +5.8% at the pitch screen.
-   Make it part of the build, and retrain the profile after big runtime changes.
-6. **Correctness:**
-   - render-target writeback ("Write Color Buffers") for the dark crowd and blank faces;
-   - players' white uniform parts vanish in close-ups (wide shots are fine). Already in the morning's build, so not
-     from tonight's changes; probably a close-up LOD mesh or shader path;
-   - labels are published before the GPU finishes;
-   - real `sys_lwcond` is in, behind `PS3_LWCOND_REAL=1`: neutral in A/B, so still off by default.
+---
 
-Measuring: `measure6.sh`-style pitch-screen runs, 3 per build, alternating builds, judged on the 15 s window. Expect
-~±1.5 fps of noise. Keep other heavy work off the machine while measuring: one benchmark running alongside dropped a
-run from ~20 to 16 fps.
+## 2026-10-31: Headless RSX Replay, Vulkan WCB, 11 Upstream PRs, Direct Vertex Streaming & Presentation Thread
+
+- **`mlb16-next` verified and fast-forwarded to `mlb16-work`:**
+  - `PS3RECOMP_ENG_VTX_DIRECT`: converted draw vertices straight into the mapped Vulkan vertex ring buffer, bypassing intermediate host scratch copies.
+  - Faster constant/NOP walker dispatch for repetitive WWS Edge state headers.
+  - Benchmarked at pitch screen: `cur` 23.80 fps vs `next` 24.16 fps (+0.36 fps uplift).
+  - Visual verification: `bodies.sh` captured 4 high-detail camera angles. Python/PIL pixel analysis confirmed identical rendering (no missing geometry, spikes, or flickering). Fast-forwarded.
+- **Clang PGO automated end-to-end (`pgo_build.sh`):**
+  - Profile counter pollution resolved: `pgo_profile_list.txt` filtered strictly to `src:*ps3recomp-probe/*.c` and `*.cpp`, eliminating counters from lifted SPU/PPU translation units (`0` in `spu_workloads.c.o`).
+  - Clean training run: match load to pitch screen reached in 276.1 s (+15.5% overhead vs uninstrumented, zero hangs).
+  - 9-run alternating A/B (load < 1.5, GPU clocks locked): GCC baseline 23.37 fps, Clang plain 23.66 fps, Clang PGO **24.73 fps (+5.82% / +1.36 fps, $\sigma = \pm 0.09\text{ fps}$)**.
+  - Automated entire pipeline into `recomp-work/pgo_build.sh`.
+- **Deterministic RSX FIFO Replay Tool (`tools/replay_rsx.cpp`, `tools/replay_rsx_core.c/.h`):**
+  - Standalone C++17 CLI tool that accepts dumped RSX command streams (`.bin`) and replays them through the walker and register-file draw engine headlessly.
+  - Reports p50, p95, min, max, equivalent FPS, draws/sec, and 64-bit deterministic state verification.
+  - Synthetic test fixture `sample_fifo.bin` replays 50 frames at 1,720 equivalent fps with 0% measurement noise. Added CTest target `replay_rsx_sample_fifo`.
+- **Vulkan Render-Target Readback (WCB) & Face Cache Purge:**
+  - Implemented `rsx_draw_engine_flush_dirty_to_guest` in `libs/video/rsx_draw_engine.c`. Offscreen render targets (dynamic player faces, crowd atlases) marked dirty during rendering and blitted via `vkCmdCopyImageToBuffer` into guest memory before sync points (`NV406E_SET_REFERENCE`, `SEMAPHORE_RELEASE`, flips). Display scanout buffers protected.
+  - Unit test `test_color_readback_guest.c` passing 13/13 checks.
+  - Added `--purge-cache` and `PURGE_FACE_CACHE=1` to `tools/run.sh` to safely auto-delete corrupt, black `HeadFaceCacheFile` assets on startup.
+- **Upstream Pull Request Campaign (11 PRs submitted to `sp00nznet/ps3recomp`):**
+  - Converted local fork fixes into 11 clean-room PRs (#640–#650) addressing community issues #551 (MLB 15 match load), #464 (Puppeteer SPU taskset crash), and #345.
+- **Real-Game FIFO Dump (`PS3RECOMP_DUMP_FIFO`) & Endianness Fix:**
+  - Added out-of-band flip hook in `gcm_flip_request` capturing 100 frame markers.
+  - Captured 2,082,182 words at the pitch screen; extracted single-frame trace of 26,479 words with 7,530 methods and 1 flip.
+  - Endianness diagnosis: dumper writing host little-endian integers caused `0x00040220` to decode as `JUMP 0x20020400` in big-endian `vm_read32`. Resolved via `__builtin_bswap32` so `replay_rsx` replays real Kauffman frames.
+- **Decoupled Vulkan Presentation Thread (`feat/presentation-thread`):**
+  - Moved `vkQueuePresentKHR` off the walker thread to a dedicated background worker thread in `libs/video/rsx_vulkan_backend.c`.
+  - Pushed to `fork/feat/presentation-thread` (commit `230e494b`). Initial run measured 360 frames / 30 s (12.00 fps) due to swapchain sync lockstep; currently uncoupling.
+
+---
 
 ## 2026-10-29: the match-load race found; a faster FIFO walker; clang PGO +5.8%
 
