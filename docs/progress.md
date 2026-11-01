@@ -26,9 +26,17 @@ Current `mlb16-work` tree, pitch screen: **32.2 fps** (1 s buckets 32.1 ± 2.0);
   recomp files are byte-identical to `.orig`.
 - **Committed** the three infrastructure tweaks and the AVX2 kernel on `mlb16-work` (`ba20312c`). The
   `recomp-work/spu_lifted` wiring is still outside git; a copy is at `spu_recomp.c.avx2_wired`.
+- **Walker split (`VK_DRAWPROF=1`):** of ~40 µs/draw, only ~10 µs is Vulkan recording (vertex dispatch 3.1, render
+  pass begin 1.9, descriptors 1.4, copy 1.3, barriers 0.8, state 0.4, binds+draw 0.6, pass end 0.6); the rest is
+  texture checks (~9 µs), vertex remap (~7 µs) and bookkeeping.
+- **Walker experiments:** backing off the full texture re-hash for stable textures = 32.5 fps (no change, reverted);
+  `PS3RECOMP_ENG_VTX_REMAP=0` = 28.4 fps (worse, dedup stays on); three frame-pipeline sets instead of two = 32.96 fps
+  (1 s-bucket 34.1), a small within-noise gain, kept opt-in (`060bd105`).
+- **Conclusion:** walker CPU is not the marginal limiter; the frame loses ~10.5 ms/frame waiting for the SPU to
+  publish command buffers. The c690 SPU job is the next lever.
 
-Next: the macro levers are walker CPU per draw and the c690 job's remaining hot functions (or GPU skinning), not the
-frame fence.
+Next: cut the c690 job's time (the remaining hot functions `0xD540`, `0x10028`, `0x6D68`, `0xAF98`, `0x8160`) or
+offload skinning to the GPU. The walker is close to its practical limit.
 
 
 ## Next steps (as of 2026-11-01 early morning)
