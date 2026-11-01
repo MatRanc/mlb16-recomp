@@ -3,6 +3,31 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 playtest (windowed, PS4 controller) — issues to fix
+
+Run with `ab-tools/play.sh` on the 36.6 fps build. The game plays, but it is neither smooth nor visually correct yet.
+
+**Rendering / visual**
+- **Missing shadows, dark/black crowd, blank or chrome/pink players, missing jerseys.** The render-target readback
+  (`PS3RECOMP_RSX_WCB`) was left off by default for benchmark speed; that is the path that writes rendered colour
+  (and the crowd/face caches) back to guest memory. `play.sh` now sets `PS3RECOMP_RSX_WCB=1`; retest before
+  concluding which of these it fixes.
+- **Crowd LOD popping:** people appear only when the camera zooms in; segments of the crowd are missing.
+- **Picture-in-picture view has a black background.**
+- **Depth-of-field duplicates** (the RPCS3-fixes artifacts) are present.
+- Several issues the `mlb-show-rpcs3-fixes` repo patches are present here and not yet ported.
+
+**Presentation / window**
+- **The window only updates when the mouse moves.** With the mouse still, the image runs for ~1 s then freezes while
+  the game keeps running (controller rumble continues). The headless benchmark does not show this, so it is the
+  windowed present/event path (Wayland/compositor frame callbacks or the SDL event pump), not the renderer. Try
+  `SDL_VIDEODRIVER=x11` to test the XWayland path.
+- Cutscenes and player entrances drop to low fps; load times are long.
+
+**Input**
+- **Controller presses are not always registered immediately**; menu items sometimes need several presses. Likely
+  `PAD_POLL_INTERVAL_MS` / pad report pacing, not the renderer.
+
 ## 2026-11-01 (later): Target 4 — a missing lift entry was costing ~5 M interpreted SPU steps/s
 
 The c690 job module's `spu_lifted` in the working tree was **stale**: it predated the `0xa8a0` entry already present in
@@ -24,6 +49,15 @@ The AVX2 `0x7C18` kernel was re-applied to the new lift and measured neutral (36
 
 **Lesson:** after changing `LBP_JOBMOD_EXTRA_FUNCS`, re-run `tools/lift_spu.sh`; `spu_lifted` is generated and not in
 git, and a stale copy silently reintroduces the interpreter path.
+
+**`0x108EC` — tried, then reverted.** The next missing c690 pointer target, `0x108EC` (between lifted `0x10758` and
+`0x1095C`), was added to the lift. It cut interpreted steps further, **~0.3 → ~0.1 M/s**, but pitch-wait fps did not
+move (**36.06 vs 36.1–36.7**, within noise), and the entry still hit the interpreter (`img=0xCC ls=0x108EC`) through a
+residency/SMC path even though the function is now lifted. Adding it to the *global* `LBP_JOBMOD_EXTRA_FUNCS` also
+pulled two other modules' `code_end` into their data tails (`7ac07dde` 0→411 unsupported, `31097a84` 0→195), so it
+would need a per-module extras mechanism. Reverted to the `0xA8A0`-only build. The remaining interpreter
+(~0.1–0.3 M/s) is the policy module's self-modifying-code entry at `0xA68` plus these residency paths; it is no
+longer a meaningful frame-time lever.
 
 ## 2026-11-01: frame re-measured; the walker + SPU pipeline are the wall; Target 3 fence-skip fails again
 
