@@ -3,6 +3,30 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (evening, later): current cost table + the honest path to 60 fps
+
+| Subsystem / Operation | Old figure | Current | Notes |
+|---|---|---|---|
+| Frame | ~31 ms | **~27.2–27.8 ms (36.0–36.8 fps)** | trace median 33.8 ms because flips burst/stall |
+| RSX FIFO walker drain | ~31 ms | **24.65 ms** | single-threaded; includes ~7–10 ms waiting on the SPU |
+| Walker *own* CPU | ~26 ms (~35 µs/draw) | **~14–15 ms** | ~35 µs/draw × ~440 draws; already under 16.6 ms |
+| SPU lifted job | ~44 ms aggregate | **25.5 ms wall/worker × 5 (~127 ms CPU)** | 5 busy, 6th underused; spread over ~15 kernels |
+| PPU `Gfx_FrameEnd` wait | ~30 ms | **18.2 ms** | halved by the `0xA8A0` lift |
+| Present | ~9 ms sync | **offloaded to present thread** (windowed) | not on the benchmark critical path |
+| GPU | — | **not the limiter** | headless replay 0.59 ms/frame |
+
+120-sample gdb profile (140 c690 samples): `0xFDA0` tree/leaf 28, `0xD4A8` output/skin 15, `0x6D68` unpack 12,
+`0x8160` pack 10, `0xAF98` normalize 10, `0x7C18` pack 8, `0xD2B8` skin 8, `0xFCB8` leaf 7. Buckets: **~50%
+per-vertex math, ~34% tree/leaf, ~15% index/table/ring.**
+
+**Why 60 fps is plausible but not a pile of 2 ms wins.** The `5M → 0.3M` win was *interpreted* SPU steps — a thin
+unlifted-code layer, not the job (32.5 → 36.6 fps). The "30 ms → 0.5 ms" memory is the `replay_rsx --verify`
+artifact, not a speedup. Micro-opts are single-digit %. The real path is one structural move: the walker's own CPU is
+already ~14–15 ms (fits under 16.6 ms), and the SPU is ~50% per-vertex math (~12.7 ms) + ~34% tree/leaf (~8.7 ms) +
+~15% index/ring (~3.8 ms). Move the per-vertex math to the GPU → SPU wall ~13 ms → the walker's ~10 ms SPU-wait
+collapses → frame ~16–17 ms → **55–60 fps plausible**. If only some of the ~40 format variants are covered or sync
+serializes, the walker caps it at **~40 fps**.
+
 ## 2026-11-01 (evening): reliable SPU profile + GPU-offload reality check
 
 A gdb stack-sampling run (25 rounds, pitch screen, 36.8 fps binary) replaces the unreliable `psample`
