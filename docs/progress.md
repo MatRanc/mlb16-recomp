@@ -3,6 +3,27 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (evening): reliable SPU profile + GPU-offload reality check
+
+A gdb stack-sampling run (25 rounds, pitch screen, 36.8 fps binary) replaces the unreliable `psample`
+per-thread attribution. The c690 job wall (~25.5 ms/frame across 5 workers) is **spread over many
+format-dispatched kernels**, not concentrated in skinning:
+
+- top `0xFDA0` (recursive tree/leaf) ~17% of job samples; then `0x7C18`, `0xFCB8`, `0x6D68`, `0xAF98`,
+  `0x6860`, `0xE0A8`, `0xC98C`, `0x76B8`, `0x10700`.
+- `0x31B0` is **not** c690: it is below the c690 LS base `0x4000`, inside the SPURS policy window.
+- dispatch overhead is now tiny (`spu_lifted_lookup_full` 4, `spu_indirect_branch_slow` 3) after the `0xA8A0` fix.
+
+Consequences for the plan:
+- **Offloading only skinning (`0xD2B8`, ~10–20% of the job) saves ~2.5–5 ms → ~34–38 fps, not 60.**
+  The whole per-vertex math pipeline (unpack/transform/normalize/pack, ~35–55%) is the necessary GPU step,
+  and even then the walker (~24.65 ms) must be cut to <16.6 ms or it caps the frame at ~40 fps.
+- `vtx_unpack.comp` is downstream of c690, so it cannot reduce c690's cost by itself.
+- palette/weight addresses are runtime values; a first step is `SPU_LS_DUMP` + per-function timers, not code.
+
+The walker remap cleanup (tightest table per draw) was behavior-preserving but **neutral** (36.80 vs 36.6).
+See `~/Documents/work_notes.md` "Session 5 Update" for the full scoping.
+
 ## 2026-11-01 playtest (windowed, PS4 controller) — issues to fix
 
 Run with `ab-tools/play.sh` on the 36.6 fps build. The game plays, but it is neither smooth nor visually correct yet.
