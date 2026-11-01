@@ -1,7 +1,7 @@
 # Progress log
 
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
-ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work` and `feat/presentation-thread`.
+ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
 ## Next steps (as of 2026-11-01 early morning)
 
