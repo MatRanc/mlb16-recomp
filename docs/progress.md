@@ -3,6 +3,28 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (later): Target 4 — a missing lift entry was costing ~5 M interpreted SPU steps/s
+
+The c690 job module's `spu_lifted` in the working tree was **stale**: it predated the `0xa8a0` entry already present in
+`tools/lift_spu.sh`. The game reaches LS `0xA8A0` through a function pointer inside the lifted `0xA818` body, so with
+no registered entry it fell to the SPU interpreter. `SPU_INTERP_STATS` showed ~5 M interpreted steps/s, with
+`img=0xCC ls=0x0A8A0` as the top entry (~58k calls/s).
+
+Re-running the canonical `tools/lift_spu.sh` (same flags; `0xa8a0` is already in `LBP_JOBMOD_EXTRA_FUNCS`) splits
+`0xA818` into `0xA818` + `0xA8A0`. Pitch-screen result:
+
+| | before | after |
+|---|---:|---:|
+| pitch-wait fps | ~32.5 (32.17–33.15) | **36.13 / 36.59 / 36.67** |
+| interpreted SPU steps | ~5 M/s | **~0.1–0.3 M/s** |
+| pitch visual diff | 12–18 | 14.2 |
+
+The AVX2 `0x7C18` kernel was re-applied to the new lift and measured neutral (36.59 vs 36.67), so it stays wired.
+`replay_rsx` still verifies `0x85fc2ff5a1655c26`.
+
+**Lesson:** after changing `LBP_JOBMOD_EXTRA_FUNCS`, re-run `tools/lift_spu.sh`; `spu_lifted` is generated and not in
+git, and a stale copy silently reintroduces the interpreter path.
+
 ## 2026-11-01: frame re-measured; the walker + SPU pipeline are the wall; Target 3 fence-skip fails again
 
 Current `mlb16-work` tree, pitch screen: **32.2 fps** (1 s buckets 32.1 ± 2.0); `replay_rsx` still verifies
