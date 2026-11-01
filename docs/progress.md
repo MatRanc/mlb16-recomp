@@ -5,7 +5,24 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentati
 
 ## Next steps (as of 2026-11-01 early morning)
 
-We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24 fps frame is **41.6 ms**; a 60 fps frame is **16.6 ms**. Reaching 60 fps requires eliminating the architectural dead weight trapped in the single-threaded RSX walker and serial frame execution:
+We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24.2 fps frame is **41.3 ms**; a 60 fps frame is **16.6 ms**.
+
+### The Mathematical Reality & Pipelining Law (Why Triple Buffering Alone Isn't 3x)
+A common misconception is that triple buffering divides frame time by 3 (e.g. $41.3\text{ ms} / 3 \approx 13.7\text{ ms}$). **In computing, pipelining never divides execution time by the number of buffers; it overlaps independent stages.** Under pipelined execution, frame throughput is strictly bounded by the single slowest stage:
+
+$$\text{Pipelined Frame Time} = \max\left(\text{Stage 1 [PPU]}, \ \text{Stage 2 [SPU]}, \ \text{Stage 3 [RSX/GPU]}\right)$$
+
+| Stage | Subsystem & Workload | Current Time | Ready for 60 FPS ($\le 16.6\text{ ms}$)? |
+| :--- | :--- | :---: | :---: |
+| **Stage 1 (PPU)** | Game logic, animation poses, physics, job submission | **~8.0 ms** |  **YES** (Fast enough for ~125 FPS) |
+| **Stage 3 (RSX / GPU)** | Walker dispatch & RTX 3060 Ti rendering (Targets 1 & 2) | **~3.0 ms** |  **YES** (Fast enough for ~300+ FPS) |
+| **Stage 2 (SPU)** | **Edge Geometry vertex decompression & skinning (`c690c2f7b09a`)** | **~35.0 ms** | ❌ **NO — THE PRIMARY BOTTLENECK** |
+
+If we overlap the PPU (8 ms) with the SPUs (35 ms) and GPU (3 ms) via triple-buffered command rings (Target 3 alone):
+$$\text{Frame Time} = \max(8\text{ ms}, \ \mathbf{35\text{ ms}}, \ 3\text{ ms}) = \mathbf{35.0\text{ ms}} \implies \mathbf{28.5\text{ FPS}}$$
+Target 3 will eliminate the ~8 ms PPU wait in `Gfx_FrameEnd`, but **framerate will hit a hard ceiling at 28.5 FPS dictated by the 35 ms SPU skinning loop**. Reaching 60 FPS requires both Target 3 and Target 4.
+
+### The Macro Redesign Roadmap to 60 FPS:
 
 1. **Decoupled Vulkan Presentation Thread (Macro Target 1, COMPLETED & VERIFIED):**
    - Implemented 2-queue architecture (`queue 0` for walker submissions, `queue 1` for presentation thread) in `rsx_vulkan_backend.c`.
@@ -16,9 +33,16 @@ We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining
    - Dynamic GPU index remapping offloads non-contiguous vertex streams.
    - Coverage: GPU offload surged from 15.0% to **98.28%** (2,239,363 draws offloaded), while CPU software fallbacks plummeted from 85.0% to **1.72%**.
    - Verified 100% deterministic replay via `replay_rsx` (hash `0x85fc2ff5a1655c26`) and sub-pixel visual fidelity (diff 2.6 across full viewport).
-3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, ~10–15 ms PPU sleep) -- IMMEDIATE FOCUS:**
-   - Eliminate the PPU main game thread sleeping in `Gfx_FrameEnd` waiting on the closing fence. Triple-buffer command rings so the PPU builds Frame $N+1$ while the GPU executes Frame $N$.
-4. **Deterministic Headless Replay Tooling (VERIFIED):**
+3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, Target: Overlap PPU 8 ms) -- IMMEDIATE FOCUS:**
+   - Double/triple-buffer command rings and frame-level sync fences so the PPU begins constructing Frame $N+1$ while the RSX walker and GPU actively process Frame $N$.
+   - Eliminates the PPU main game thread sleeping in `Gfx_FrameEnd` waiting on the closing fence, lifting the baseline toward the ~28.5 FPS SPU ceiling.
+4. **SPU Edge Geometry Skinning Loop Optimization / GPU Compute Skinning Offload (Macro Target 4, Target: Crush the 35 ms Wall):**
+   - SPU module `c690c2f7b09a` represents ~70% of all SPU compute time (~35 ms) executing software matrix-palette bone skinning and vertex decompression.
+   - *Option A (Lifted SPU Vectorization)*: Hand-vectorize hot loop `0x7C18` using AVX2 SIMD, keeping matrix palettes in vector registers and eliminating local-store byte-swap roundtrips.
+   - *Option B (GPU Compute Bone Skinning)*: Extend `vtx_unpack.comp` to accept bone matrix palettes via SSBO, performing matrix-palette skinning on the RTX 3060 Ti compute cores in $<1\text{ ms}$.
+   - Once SPU skinning drops from $35\text{ ms} \rightarrow \le 14\text{ ms}$:
+     $$\text{Pipelined Frame Time} = \max(\text{PPU: } 8\text{ ms}, \ \mathbf{\text{SPU: } 14\text{ ms}}, \ \text{GPU: } 3\text{ ms}) = \mathbf{14.0\text{ ms}} \implies \mathbf{71.4\text{ FPS (Rock-Solid 60 FPS Locked!)}}$$
+5. **Deterministic Headless Replay Tooling (VERIFIED):**
    - Big-endian fix in `PS3RECOMP_DUMP_FIFO` (`__builtin_bswap32`) allows dumping real Kauffman Stadium gameplay traces (`kauffman_pitch.bin`).
    - Replays 100% deterministically in 3 seconds via `tools/replay_rsx` (hash `0x85fc2ff5a1655c26`, 646 draws, 50 clears, 2,338 dispatcher calls) to benchmark walker and vertex changes without 4-minute game boots.
 
