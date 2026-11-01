@@ -36,9 +36,14 @@ We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining
     - Evaluated 2,278,559 draw calls.
     - **Total draws offloaded to GPU surged to 98.28%** (2,239,363 draws vs 320,595 previously).
     - **CPU software fallbacks collapsed from 85.0% to 1.72%** (39,196 draws).
+    - Pitch-wait FPS rose to **24.19 fps** (1-sec mean 24.39 fps, instantaneous mean 24.43 fps ±2.62 fps), with instantaneous peaks reaching **32.15 fps** (vs 22.64 fps prior run, +1.55 fps / +6.8% uplift).
   - Deterministic & Visual Verification:
     - `replay_rsx kauffman_pitch.bin --frames 100 --verify`: 100% deterministic (State hash `0x85fc2ff5a1655c26`).
     - `same.py` pitch-wait reference match: diff 13.4 ($\le 25.0$). Full-screen end frame match: diff 2.6 across full 1280x720 viewport (sub-pixel match, zero mesh tears, zero spikes).
+  - Architectural Diagnostic & Bottleneck Analysis:
+    - Headless `replay_rsx` executes the entire 646-draw Kauffman frame in **0.59 ms (~1,700 fps)** without per-call hashing, proving the RSX walker itself is no longer the bottleneck.
+    - The live game remains paced at ~24 FPS because the walker is starved at self-JUMP "parks" waiting for the **SPU Edge Geometry pipeline (`jobmod_c690c2f7b09a`)** which spends ~35–40 ms decompressing and skinning vertices on the CPU, and the **PPU main thread serializing in `Gfx_FrameEnd`**.
+    - Target 2 permanently eliminated the walker's 26 ms CPU vertex anchor (which made 60 FPS previously impossible). The remaining gap to 60 FPS is now isolated to Macro Target 3 (PPU/RSX overlap) and SPU skinning loop optimization.
 
 - **`mlb16-next` verified and fast-forwarded to `mlb16-work`:**
   - `PS3RECOMP_ENG_VTX_DIRECT`: converted draw vertices straight into the mapped Vulkan vertex ring buffer, bypassing intermediate host scratch copies.
