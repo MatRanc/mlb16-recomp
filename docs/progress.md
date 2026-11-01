@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01: frame re-measured; the walker + SPU pipeline are the wall; Target 3 fence-skip fails again
+
+Current `mlb16-work` tree, pitch screen: **32.2 fps** (1 s buckets 32.1 ± 2.0); `replay_rsx` still verifies
+`0x85fc2ff5a1655c26`. The AVX2 c690 `0x7C18` kernel is wired and active (the linked binary calls
+`native_spu_func_00007C18`), but it is not the main cost.
+
+- **`replay_rsx --verify` is a correctness gate, not a benchmark.** The 36 ms "frame" is the per-call hashing; without
+  `--verify` the same 646-draw frame is **0.59 ms** (~1,700 fps). The in-game walker is ~45× slower per draw because it
+  also fetches/converts guest vertices, checks textures and records Vulkan commands.
+- **Timeline (`PS3RECOMP_TRACE`, median 33.9 ms frame):** walker drain ~27 ms; PPU main sits in the `Gfx_FrameEnd`
+  fence spin ~34 ms; 5–6 SPURS workers run c690 concurrently. The walker also has ~10.5 ms/frame of gaps waiting for
+  the SPU to publish buffers (`rsx.put_wait`).
+- **Walker CPU ~40 µs/draw** (38.5–49, `VK_EB_STATS`) over ~438 draws/frame: ~29% Vulkan driver command recording,
+  ~18% `rsx_vertex_remap_build`, ~22% texture change checks, ~6% `sink_end`.
+- **SPU profile (1 kHz per-thread `perf_event_open`):** the c690 job's hot functions are `0xD540`, `0x10028`, `0x6D68`,
+  `0xAF98`, `0x8160`; `0x7C18` (the vectorized one) is a small share, and the others are local-store-bound.
+- **Target 3 re-attempt, done correctly:** `0x011203D4` was left untouched; at the `Gfx_FrameEnd` call site (lr
+  `0x6579C`) the wait used `(id + 1) & 3` instead of `id & 3`, behind `MLB16_PIPELINE=1`. It still fails: **185 flips
+  in 689 s** and never reaches the pitch screen, versus ~9,300 flips for the same build without it. The fence also
+  guards guest buffers the walker is still reading, so the PPU cannot run ahead of the drain. Reverted; both PPU
+  recomp files are byte-identical to `.orig`.
+- **Committed** the three infrastructure tweaks and the AVX2 kernel on `mlb16-work` (`ba20312c`). The
+  `recomp-work/spu_lifted` wiring is still outside git; a copy is at `spu_recomp.c.avx2_wired`.
+
+Next: the macro levers are walker CPU per draw and the c690 job's remaining hot functions (or GPU skinning), not the
+frame fence.
+
+
 ## Next steps (as of 2026-11-01 early morning)
 
 We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24.2 fps frame is **41.3 ms**; a 60 fps frame is **16.6 ms**.
