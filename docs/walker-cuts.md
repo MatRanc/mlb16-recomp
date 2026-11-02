@@ -1,9 +1,9 @@
 # Walker cuts 1 and 3: fetch/remap cache, pipeline memo, and the replay output gate
 
 Date: 2026-11-02. `ps3recomp-probe` branch `feat/walker-cuts` (off
-`feat/walker-prof`, not merged). Offline only: no game run was made for this
-work. Cut 2 (texture check/hash) is not implemented and Vulkan recording is
-untouched.
+`feat/walker-prof`, not merged). Offline A/B first, then a two-run in-game A/B
+(last section). Cut 2 (texture check/hash) is not implemented and Vulkan
+recording is untouched.
 
 ## What was added
 
@@ -155,7 +155,7 @@ the cuts' own.
 All checks pass. The test sets and clears `PS3RECOMP_WALKER_FAST` around its
 own engine init, so the rest of the suite runs on the default path.
 
-## In-game test plan (one run)
+## Original in-game test plan (not used)
 
 1. Use the `recomp-work/ab-tools/measure6` flow with
    `PS3RECOMP_WALKER_FAST=1 PS3RECOMP_WALKER_PROF=1`, record one pitch window
@@ -172,6 +172,64 @@ own engine init, so the rest of the suite runs on the default path.
 5. If anything looks wrong, the next run with `PS3RECOMP_WALKER_FAST=0` is the
    control; do not change any other setting between the two.
 
+## In-game A/B (two runs)
+
+The plan above was not used: the A/B was run untraced with `measure_fast.sh` so
+the two arms differ only in the switch. Build: `feat/walker-cuts` HEAD
+`55192504` in `build-o2` with the usual measurement config (Release,
+`-O2 -DNDEBUG -march=native`; Vulkan backend; SPU fast float/local-store and
+inline channel ops on; tests off). Method: `recomp-work/ab-tools/measure_fast.sh`
+unmodified, one 10 s pitch window per run, stale `frame.ppm` removed first.
+Logs `recomp-work/cuts_ab_A_off.log`, `cuts_ab_B_on.log`; frames
+`ab-tools/cuts_ab_A.ppm`, `cuts_ab_B.ppm`.
+
+| run | `PS3RECOMP_WALKER_FAST` | fps (10 s) | flips |
+|---|---|---:|---:|
+| A | unset | **38.52** | 390 |
+| B | `1` | **37.34** | 380 |
+
+Both runs took the same navigation path (`title > online > home_rtts >
+home_playnow > panel > roster_live > roster_offline > team:right > team >
+stadium > options > pitcher_select > lineup`), reached the pitch wait, and ran
+to the end of the window. Neither logged `[walker-prof]`, `[replay-engine]`,
+trace output, a crash, or a `pipeline ... FAILED` line; both were killed by the
+harness after the window as usual.
+
+B is **1.18 fps (3.1 %) below A**. That is inside the within-run spread (1 s
+buckets: A mean 38.56, stddev 1.60, range 35.9-40.8; B mean 37.50, stddev 1.72,
+range 35.2-40.3) and inside the round-to-round spread this title has shown on
+the same build (32.22 vs 34.63 fps in `walker-wake.md`). A ran first and B
+second, so drift between the runs is a further confound. With one run per arm
+this pair does **not** resolve an in-game gain: the offline -2.6 ms engine cut
+did not become a measurable fps increase here. It also cannot be read as a
+regression.
+
+**Rendering.** The two end-of-window `frame.ppm` files were compared with
+`same.py` (mean absolute grey difference, the method of `walker-wake.md`):
+**3.2** over the full 640x360 frame and **2.3** in the pitch box
+(380,100)-(500,200). The difference is in the animated crowd (6.1 grey levels
+in the stands) and sub-pixel player/UI motion (0.2 on the field); 98.9 % of
+grey values are identical as a histogram lower bound. By eye both frames show
+the same scene with complete pitcher, batter, catcher, umpire, crowd, uniforms,
+adboards and pitch-selection UI; the batter/catcher poses differ only because
+the two runs are at different animation phases. No constant-colour, missing or
+black draw.
+
+### 34.6 vs 37.07
+
+Run A is the same build family as the profiled run (this branch includes
+`feat/walker-prof`) with both the fast path and the profiler off, and it reads
+**38.52** on `measure_fast`. So the measurement method is not the explanation:
+the other harness on the same stationary pitch window gives the same or a
+higher number. The cuts are also off in A, so they are not it either. What
+remains is the build/session: the profiler commit is instrumentation only when
+its switches are off (one cached compare per drain), and this machine's pitch
+runs vary by several fps between sessions (32.22 vs 34.63 on one no-trace
+build; 35.9-40.8 within a single 10 s window here). The 37.07 profiled number
+therefore belongs to the newer build/session's own level, not to the
+`measure6` method. The useful fast-path comparison is A vs B, not 37.07 vs
+34.6.
+
 ## Reproduce
 
 ```sh
@@ -186,4 +244,8 @@ PS3RECOMP_WALKER_FAST=1 ./build/replay_rsx_engine ../recomp-work/walker_frame --
 
 - Cut 2 (texture page-dirty generation / decode memo). The offline replay is not
   a valid A/B for it: a single captured frame has no texture updates.
+- The in-game size of the gain. The two-run A/B is within this title's
+  run-to-run spread and no profiled fast-path run was made (a third run was out
+  of scope); a profiled `[walker-prof]` window would show whether the memo is
+  hitting at the pitch.
 - No change to Vulkan command recording or the live present path.

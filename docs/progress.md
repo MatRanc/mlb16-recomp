@@ -3,6 +3,24 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (walker cuts in-game): 38.52 fps off vs 37.34 fps on, no gain resolved
+
+Two `measure_fast.sh` runs on `feat/walker-cuts` (`55192504`, the usual
+`build-o2` config), untraced, one 10 s pitch window each: `PS3RECOMP_WALKER_FAST`
+unset **38.52 fps** (390 flips), `=1` **37.34 fps** (380 flips). Both reached the
+same pitch wait, ran the full window, and logged no crash, `[replay-engine]`,
+trace, `[walker-prof]` or new `pipeline ... FAILED` line. B is 1.18 fps (3.1 %)
+below A, inside the within-run spread (1 s buckets stddev 1.6-1.7, range
+35.9-40.8) and the same-build round-to-round spread (32.22 vs 34.63 earlier), so
+one run per arm does not resolve whether the cuts help in-game; the offline
+-2.6 ms engine cut did not show up as fps here. Frames are equivalent: **3.2**
+grey levels over the full 640x360 image and **2.3** in the pitch box
+(380,100)-(500,200) (`same.py`, as `walker-wake.md`), with the difference in the
+animated crowd and player pose; no missing, black or constant-colour draws. Run
+A (fast off) is 38.52, so the earlier 34.6 no-trace baseline vs 37.07 profiled
+run is a build/session difference, not the `measure6` method and not the cuts.
+Details: [`docs/walker-cuts.md`](walker-cuts.md).
+
 ## 2026-11-02 (walker cuts 1+3): fetch -1.63 ms, pipeline -1.09 ms per frame offline
 
 Branch `feat/walker-cuts` (`ps3recomp-probe`, off `feat/walker-prof`, not merged).
