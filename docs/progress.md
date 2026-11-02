@@ -3,6 +3,41 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (tick + resync): the 16 ms tick caps only NO_DRAW; FAST_WAKE still wedges
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, 6 x 10 s
+per arm, PIN on. Details and PNGs: [`docs/tick-and-resync.md`](tick-and-resync.md).
+
+- **A/B band labelling:** the report was right, the PNG was read as game fps.
+  MangoHud frametime is the *host present* interval; the bands also included
+  the 2 s the report drops (the previous arm's tail). Bands now shade the
+  measured window, print the band's guest `[flip]` fps, the plot handles
+  MangoHud's nanosecond `elapsed` column, and a live-ctl/arm self-check passes
+  on all re-rendered runs. `ab_live.sh` defaults WCB=2, warns when arm B names
+  a key arm A does not (the control file never reverts a key), and has
+  `BOOT_ARM` so `EXP_NO_DRAW` is not live at boot.
+- **Jump-park resync fix** (`PS3RECOMP_WALKER_RESYNC_FIX=1`, default off):
+  instead of teleporting `get` to `put` and losing the draws, rewinds it to
+  the first unread offset below `put` and drains the range through the normal
+  walker. Offline replay gate unchanged (`0f91a96c79a7aadf`); a park-reuse
+  fixture shows the skipped probe executed with the fix, dropped without.
+- **FAST_WAKE still not viable:** with the fix the arm is **~9 fps** (walker
+  55 ms/frame vs 17 baseline) and wedges on the 3rd B (guest 314.5 s). The fix
+  fires once, walks `0xC03C..0xC190`, and flips do not resume; 4d skipped.
+- **Tick ceiling, NO_DRAW (WCB off):** A 16 ms **40.89 fps** vs B 8 ms
+  **44.25 fps**, but B is bimodal: 54.0/60.4/55.8 in three segments,
+  28.7/30.8/35.9 in the others. **The 16 ms tick is a real cap** (B exceeds
+  41.5 by 45 %) but 8 ms is not free (doubled vblank/flip callbacks).
+- **Tick, real drawing (WCB=2):** A **33.83** vs B **33.71 fps**, paired
+  **0.12 fps** (CI -5.96..+6.20), A/A-level. With draws the walker is the
+  limiter, not the tick.
+- **Game speed:** the tick scales `cellGcmGetVBlankCount`, the vblank handler
+  argument and the flip rate, so flip/vblank-driven logic speeds up (`sys_timer`
+  is unaffected). Today's 16.000 ms is 62.5 Hz, already 4.3 % fast vs 59.94.
+  A proper fix needs a 59.94 Hz vblank tick, flip completion at the marker (or
+  a render-ahead mode), and a drain/fence cadence off the tick; >60 fps with
+  unchanged per-flip simulation needs per-title delta-time work.
+
 ## 2026-11-02 (live A/B + ceilings): walker draw work is the limit; FAST_WAKE wedges
 
 Branch `exp/live-ab` (`ps3recomp-play`, off `play/multiscene`), `build-play`.

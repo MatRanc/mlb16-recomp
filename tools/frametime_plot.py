@@ -101,18 +101,26 @@ def choose_time(ft, times):
     if span_t <= 0 or span_c <= 0:
         return cum, "cumulative frametime"
 
-    # Decide whether the column is seconds or milliseconds: compare one step
-    # with the frametime in milliseconds.
+    # Decide the column's unit. MangoHud has shipped seconds, milliseconds,
+    # and (on current Linux builds) nanoseconds, and the old seconds-vs-ms test
+    # silently fell back to cumulative frametime for the nanosecond column.
+    # Try every plausible scale and keep the one whose total span matches the
+    # summed frametime; break ties with the median step.
     steps = [times[i] - times[i - 1] for i in range(1, n) if times[i] > times[i - 1]]
     if steps:
         med_step = sorted(steps)[len(steps) // 2]
         med_ft = sorted(ft)[n // 2]
-        as_seconds = abs(med_step * 1000.0 - med_ft) <= abs(med_step - med_ft)
-        scale = 1.0 if as_seconds else 0.001
-        t = [(x - times[0]) * scale for x in times]
-        ratio = (t[-1] - t[0]) / span_c if span_c else 0.0
-        if 0.2 <= ratio <= 5.0:
-            return t, "elapsed column (s)" if as_seconds else "elapsed column (ms)"
+        best = None
+        for scale, label in ((1.0, "s"), (1e-3, "ms"), (1e-6, "us"), (1e-9, "ns")):
+            t = [(x - times[0]) * scale for x in times]
+            span = t[-1] - t[0]
+            ratio = span / span_c if span_c else 0.0
+            if 0.2 <= ratio <= 5.0:
+                err = abs(med_step * scale * 1000.0 - med_ft)
+                if best is None or err < best[0]:
+                    best = (err, t, f"elapsed column ({label})")
+        if best is not None:
+            return best[1], best[2]
     return cum, "cumulative frametime"
 
 
@@ -199,6 +207,14 @@ def fmt_summary(path, s, axis_label):
 
 
 def read_segments(path):
+    """`start_s end_s label [guest_fps]` -> (start, end, label, fps|None).
+
+    The optional 4th field is the guest flip rate the A/B report measured for
+    that band. It is drawn in the band: MangoHud's frametime is the HOST
+    present interval, which is not the guest's frame rate, and reading the
+    trace as game fps (or comparing bands only by its bucket maxima) can
+    reverse the A/B order.
+    """
     segs = []
     if not path:
         return segs
@@ -207,10 +223,53 @@ def read_segments(path):
             parts = line.split()
             if len(parts) >= 3:
                 try:
-                    segs.append((float(parts[0]), float(parts[1]), parts[2]))
+                    a, b = float(parts[0]), float(parts[1])
                 except ValueError:
-                    pass
+                    continue
+                fps = None
+                if len(parts) >= 4:
+                    try:
+                        fps = float(parts[3])
+                    except ValueError:
+                        fps = None
+                segs.append((a, b, parts[2], fps))
     return segs
+
+
+def check_segments(segs, t, ft):
+    """Structural self-check for --segments bands.
+
+    Bands must be ordered, non-overlapping, non-empty spans. A band may fall
+    partly outside the sampled time range (the run ended early); that is
+    reported but not fatal. The mean window-present frametime per band is
+    printed too: it is NOT guest fps, and a band can look slower here while
+    the guest flips faster (MangoHud samples presents, not flips).
+    """
+    if not segs:
+        return
+    errs = []
+    prev_b = None
+    for a, b, label, _fps in segs:
+        if b <= a:
+            errs.append(f"band {label} [{a:.3f},{b:.3f}] is empty or reversed")
+        if prev_b is not None and a < prev_b - 1e-6:
+            errs.append(f"band {label} starts at {a:.3f}, before the previous "
+                        f"band ends at {prev_b:.3f} (overlap or unsorted)")
+        prev_b = b
+    x0, x1 = (t[0], t[-1]) if t else (0.0, 0.0)
+    for a, b, label, gfps in segs:
+        sel = [ft[i] for i in range(len(t)) if a <= t[i] <= b]
+        g = f", guest {gfps:.2f} fps from [flip]" if gfps is not None else ""
+        if not sel:
+            print(f"segment {label} [{a:.3f},{b:.3f}]{g}: no samples"
+                  + (" (outside the log)" if b < x0 or a > x1 else ""))
+            continue
+        mean = sum(sel) / len(sel)
+        print(f"segment {label} [{a:.3f},{b:.3f}]{g}: {len(sel)} samples, "
+              f"present frametime mean {mean:.2f} ms ({1000.0 / mean:.1f} fps)")
+    if errs:
+        raise SystemExit("frametime_plot segment self-check failed: "
+                         + "; ".join(errs))
 
 
 def render_png(path, t, ft, s, segments=None):
@@ -241,8 +300,9 @@ def render_png(path, t, ft, s, segments=None):
     px = lambda x: ml + (x - x0) / (x1 - x0) * (W - ml - mr)
     py = lambda y: H - mb - (y - ymin) / (ymax - ymin) * (H - mt - mb)
 
-    # A/B segment bands, drawn behind the data. Labels A/B at the top.
-    for (a, b, label) in (segments or []):
+    # A/B segment bands, drawn behind the data. Labels A/B plus the guest fps
+    # the report measured (the trace is host present time, not guest fps).
+    for (a, b, label, gfps) in (segments or []):
         if b < x0 or a > x1 or b <= a:
             continue
         col = (222, 235, 248) if label.upper() == "A" else (252, 235, 219)
@@ -250,6 +310,10 @@ def render_png(path, t, ft, s, segments=None):
         d.rectangle([xa, mt, xb, H - mb], fill=col)
         d.text(((xa + xb) / 2 - 4, mt + 3), label, fill=(60, 60, 60),
                font=small)
+        if gfps is not None:
+            txt = f"{gfps:.0f}"
+            d.text(((xa + xb) / 2 - 6, mt + 19), txt, fill=(90, 90, 90),
+                   font=small)
 
     # grid and ticks
     for i in range(7):
@@ -310,7 +374,8 @@ def main():
     ap.add_argument("csv", help="MangoHud CSV log")
     ap.add_argument("-o", "--output", help="PNG path (default: <csv>.png)")
     ap.add_argument("--no-plot", action="store_true", help="text summary only")
-    ap.add_argument("--segments", help="\"start_s end_s label\" bands to shade")
+    ap.add_argument("--segments",
+                    help="\"start_s end_s label [guest_fps]\" bands to shade")
     args = ap.parse_args()
 
     fps, ft, times = read_mangohud_csv(args.csv)
@@ -319,9 +384,13 @@ def main():
     self_check(s)
     print(fmt_summary(args.csv, s, axis))
 
+    segments = read_segments(args.segments)
+    if segments:
+        check_segments(segments, t, ft)
+
     if not args.no_plot:
         out = args.output or (os.path.splitext(args.csv)[0] + ".png")
-        written = render_png(out, t, ft, s, read_segments(args.segments))
+        written = render_png(out, t, ft, s, segments)
         if written:
             print(f"plot: {written}")
 
