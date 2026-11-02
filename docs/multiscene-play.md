@@ -100,10 +100,11 @@ the `[flip]` counter (`cellGcmSys.c`, `GCM_FLIPCOUNT=1`). The two differ: at
 one pitch run the CSV had 72.8 rows/s (presents) while `[flip]` measured
 35.44 fps, and during a present stall the CSV stops growing while `[flip]`
 keeps advancing. Use `[flip]` for game fps and `window: ... shown` for how fast
-the window is updated. `tools/frametime_plot.py`'s avg fps is now rows / total
-time, so it reports the present rate, not the guest frame rate. A full present
-stall truncates the CSV (no rows are written while nothing is presented), so
-the `window:` lines are the truth for freezes.
+the window is updated. The row count matches the present counter: one
+232.8 s run had 13,107 CSV rows and 13,093 `shown` presents. `tools/frametime_plot.py`'s
+avg fps is now rows / total time, so it reports the present rate, not the guest
+frame rate. A full present stall truncates the CSV (no rows are written while
+nothing is presented), so the `window:` lines are the truth for freezes.
 
 ## What to do in-game (about 1 minute each)
 
