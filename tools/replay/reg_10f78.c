@@ -1,0 +1,1303 @@
+/* generated: LS addr -> lifted fn for jobmod c690 (from spu_recomp.h) */
+struct spu_context; typedef struct spu_context spu_context;
+typedef void (*spu_fn)(spu_context*);
+typedef struct { unsigned addr; spu_fn fn; } reg_ent;
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004000(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004030(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004040(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004080(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004100(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004168(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000041FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000042A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004304(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000043B4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000448C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004604(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004770(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000047C8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000047FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000480C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004880(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000494C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004974(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004998(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000049A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000049B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000049D4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004A3C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004A5C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004AAC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004AD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004AEC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004B24(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004B6C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004BA4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004BC4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004BD4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004CD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004D1C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004D80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E14(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E24(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E44(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E54(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E7C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004E90(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004F00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004F98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00004FB0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005000(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005034(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000050F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000050FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000514C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000052B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005318(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000538C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000053C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005508(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005520(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005550(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005560(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000055A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005600(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005620(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005680(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000056D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000056F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005740(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005788(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000057B4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005840(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005898(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005920(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005940(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005A40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005A80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005AD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005AF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005BC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005BD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005BD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005C18(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005CA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005CC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005D80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005D98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005E00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005EA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005F80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00005FC8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006300(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006350(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000063C8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006468(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006538(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006640(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000066A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006780(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006838(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006860(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006A48(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006B30(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006D68(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006EC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006F10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00006FA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000070E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000070F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000072C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007450(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007540(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000075C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007678(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000076B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007800(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007840(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000078C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007960(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007998(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007AC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007B28(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007BD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007C18(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007D40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007D7C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007DA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007E58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007E98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00007FC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008040(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008120(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008160(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000082C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000082FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008428(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008570(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008678(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008740(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008960(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008A78(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008B00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008C50(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008C80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008EC4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008EC8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008ED8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008F58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008F68(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00008FE8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009058(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000090C8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009138(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000918C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000091A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009200(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009218(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009288(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000092F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009480(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000095A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000095B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009628(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009638(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000096A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009708(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009768(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000097C8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009828(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009888(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000098E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009948(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009A40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009A88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009B40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009BE0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009CC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009D00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009DC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009DF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009E08(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009E34(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009EC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009F00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009F80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00009FA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A040(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A0E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A178(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A268(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A298(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A370(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A410(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A660(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A730(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A798(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A808(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A810(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A818(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A8A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A940(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A944(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A948(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000A9B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ABB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000AD18(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000AD8C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000AF10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000AF98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B238(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B268(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B488(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B748(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B830(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000B958(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BA10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BBB0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BCB4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BCDC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BD20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BDB4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BDD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE5C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BED0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000BF00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C018(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C0F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C118(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C290(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C398(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C420(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C5B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C70C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C74C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C764(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C78C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7D4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C8E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C98C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000C9D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000CC48(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000CD80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D080(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D2B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D2B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D4A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D508(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D540(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D790(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D7A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D7C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D810(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D878(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000D9D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DA60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DB58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DB88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DC48(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DD48(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DE30(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF64(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF70(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DFD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000DFD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E000(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E014(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E020(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E050(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E058(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E094(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E114(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E138(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E140(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E158(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E168(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E178(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E190(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E1EC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E20C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E218(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E22C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E238(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E270(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E278(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E280(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E294(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E2B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E2D8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E320(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E37C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E384(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E390(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3D8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E408(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E450(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E458(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E470(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E488(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E504(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E510(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E530(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E538(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E550(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5D4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5D8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5F0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E604(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E60C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E614(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E620(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E630(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E670(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E698(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E6B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E708(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E734(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E750(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E78C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E840(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E860(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E868(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000E92C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA70(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EACC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EC60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EC98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ECD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ECF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED78(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDE0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EE20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EE48(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EEA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EED0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EEF0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EF20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EF88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFB0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F058(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F1A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F450(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F47C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4A4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4AC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4D4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4DC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F514(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F520(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F5D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F600(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F628(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F638(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F680(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F6F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F738(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F7B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F860(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F970(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F9A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000F9E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA14(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA3C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FAD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC28(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC50(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC94(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCA4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCE4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FDA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FDD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FE38(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0000FFFC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010000(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010028(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000100E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010108(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001016C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001017C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010190(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001024C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010250(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010258(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000102DC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010300(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001036C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010390(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000103A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001040C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010430(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010478(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010480(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010488(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010498(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000104B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000104B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000104E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010530(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010538(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010568(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000105B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000105B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000105C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000105F0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010618(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010660(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010688(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010700(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010758(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001095C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000109C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010B18(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010B28(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010B44(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010B60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010B88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010BB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010BE4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010C10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010C40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010C70(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010CB0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010CF0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010D20(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010D80(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010DC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010DC8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010DD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00010F78(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000110C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000110E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001112C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011210(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001125C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011268(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011318(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001133C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011350(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011390(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000113F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011404(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011410(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011538(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011578(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001157C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011610(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011640(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011648(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011678(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000116B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000116E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011720(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011758(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011790(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011848(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000118C8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011990(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011A28(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011A60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011A78(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011A90(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011AA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011AC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011B90(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011BC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011BF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011C40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011C60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011CA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011CC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011CD8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011D54(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011DBC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011DC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011DF0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011E88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011F58(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011FD0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00011FF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012010(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012040(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012058(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012060(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012090(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000120D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012180(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000121BC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000121D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000121E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000122C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000123E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012414(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001241C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012430(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012448(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012460(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012478(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000124B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012630(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012670(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000126D8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012780(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012788(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000127F4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012828(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012830(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012850(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012860(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000128B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000128B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012908(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012948(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012980(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000129B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000129C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000129E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000129F0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012A40(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012A60(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012A88(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012A90(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012AA8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012AB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012AC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012B08(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012B70(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012BA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012BD4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012C00(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012C08(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012C98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012CCC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012D04(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012D08(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012DA4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012DAC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012DB8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012DC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012DC8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012E10(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012EC0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012F68(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012F7C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012F98(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012F9C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012FA0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012FE8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012FF0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00012FF8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013004(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013080(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000130E4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000130E8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001311C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013140(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013178(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013198(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000131A0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000131F8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013200(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013240(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013248(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013250(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013288(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000132D8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000132E0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000133A4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000133A8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000133B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013480(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000134AC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000134FC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013504(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013510(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013518(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013520(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013528(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013534(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001353C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013540(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013544(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013548(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001354C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013550(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013554(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013558(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001355C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013560(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013564(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013568(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001356C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013570(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013574(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013578(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001357C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000135AC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000135B8(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000135F0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013604(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001361C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_00013664(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_0001367C(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136A4(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136AC(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136B0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136C0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136D0(spu_context*);
+void jobmod_c690c2f7b09a_eF5B8_spu_func_000136E0(spu_context*);
+const reg_ent g_c690_reg[] = {
+  {0x00004000, jobmod_c690c2f7b09a_eF5B8_spu_func_00004000},
+  {0x00004030, jobmod_c690c2f7b09a_eF5B8_spu_func_00004030},
+  {0x00004040, jobmod_c690c2f7b09a_eF5B8_spu_func_00004040},
+  {0x00004080, jobmod_c690c2f7b09a_eF5B8_spu_func_00004080},
+  {0x00004100, jobmod_c690c2f7b09a_eF5B8_spu_func_00004100},
+  {0x00004168, jobmod_c690c2f7b09a_eF5B8_spu_func_00004168},
+  {0x000041FC, jobmod_c690c2f7b09a_eF5B8_spu_func_000041FC},
+  {0x000042A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000042A8},
+  {0x00004304, jobmod_c690c2f7b09a_eF5B8_spu_func_00004304},
+  {0x000043B4, jobmod_c690c2f7b09a_eF5B8_spu_func_000043B4},
+  {0x0000448C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000448C},
+  {0x00004604, jobmod_c690c2f7b09a_eF5B8_spu_func_00004604},
+  {0x00004770, jobmod_c690c2f7b09a_eF5B8_spu_func_00004770},
+  {0x000047C8, jobmod_c690c2f7b09a_eF5B8_spu_func_000047C8},
+  {0x000047FC, jobmod_c690c2f7b09a_eF5B8_spu_func_000047FC},
+  {0x0000480C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000480C},
+  {0x00004880, jobmod_c690c2f7b09a_eF5B8_spu_func_00004880},
+  {0x0000494C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000494C},
+  {0x00004974, jobmod_c690c2f7b09a_eF5B8_spu_func_00004974},
+  {0x00004998, jobmod_c690c2f7b09a_eF5B8_spu_func_00004998},
+  {0x000049A0, jobmod_c690c2f7b09a_eF5B8_spu_func_000049A0},
+  {0x000049B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000049B0},
+  {0x000049D4, jobmod_c690c2f7b09a_eF5B8_spu_func_000049D4},
+  {0x00004A3C, jobmod_c690c2f7b09a_eF5B8_spu_func_00004A3C},
+  {0x00004A5C, jobmod_c690c2f7b09a_eF5B8_spu_func_00004A5C},
+  {0x00004AAC, jobmod_c690c2f7b09a_eF5B8_spu_func_00004AAC},
+  {0x00004AD0, jobmod_c690c2f7b09a_eF5B8_spu_func_00004AD0},
+  {0x00004AEC, jobmod_c690c2f7b09a_eF5B8_spu_func_00004AEC},
+  {0x00004B24, jobmod_c690c2f7b09a_eF5B8_spu_func_00004B24},
+  {0x00004B6C, jobmod_c690c2f7b09a_eF5B8_spu_func_00004B6C},
+  {0x00004BA4, jobmod_c690c2f7b09a_eF5B8_spu_func_00004BA4},
+  {0x00004BC4, jobmod_c690c2f7b09a_eF5B8_spu_func_00004BC4},
+  {0x00004BD4, jobmod_c690c2f7b09a_eF5B8_spu_func_00004BD4},
+  {0x00004CD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00004CD8},
+  {0x00004D1C, jobmod_c690c2f7b09a_eF5B8_spu_func_00004D1C},
+  {0x00004D80, jobmod_c690c2f7b09a_eF5B8_spu_func_00004D80},
+  {0x00004E14, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E14},
+  {0x00004E24, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E24},
+  {0x00004E44, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E44},
+  {0x00004E54, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E54},
+  {0x00004E7C, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E7C},
+  {0x00004E90, jobmod_c690c2f7b09a_eF5B8_spu_func_00004E90},
+  {0x00004F00, jobmod_c690c2f7b09a_eF5B8_spu_func_00004F00},
+  {0x00004F98, jobmod_c690c2f7b09a_eF5B8_spu_func_00004F98},
+  {0x00004FB0, jobmod_c690c2f7b09a_eF5B8_spu_func_00004FB0},
+  {0x00005000, jobmod_c690c2f7b09a_eF5B8_spu_func_00005000},
+  {0x00005034, jobmod_c690c2f7b09a_eF5B8_spu_func_00005034},
+  {0x000050F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000050F8},
+  {0x000050FC, jobmod_c690c2f7b09a_eF5B8_spu_func_000050FC},
+  {0x0000514C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000514C},
+  {0x000052B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000052B0},
+  {0x00005318, jobmod_c690c2f7b09a_eF5B8_spu_func_00005318},
+  {0x0000538C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000538C},
+  {0x000053C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000053C0},
+  {0x00005508, jobmod_c690c2f7b09a_eF5B8_spu_func_00005508},
+  {0x00005520, jobmod_c690c2f7b09a_eF5B8_spu_func_00005520},
+  {0x00005550, jobmod_c690c2f7b09a_eF5B8_spu_func_00005550},
+  {0x00005560, jobmod_c690c2f7b09a_eF5B8_spu_func_00005560},
+  {0x000055A0, jobmod_c690c2f7b09a_eF5B8_spu_func_000055A0},
+  {0x00005600, jobmod_c690c2f7b09a_eF5B8_spu_func_00005600},
+  {0x00005620, jobmod_c690c2f7b09a_eF5B8_spu_func_00005620},
+  {0x00005680, jobmod_c690c2f7b09a_eF5B8_spu_func_00005680},
+  {0x000056D0, jobmod_c690c2f7b09a_eF5B8_spu_func_000056D0},
+  {0x000056F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000056F8},
+  {0x00005740, jobmod_c690c2f7b09a_eF5B8_spu_func_00005740},
+  {0x00005788, jobmod_c690c2f7b09a_eF5B8_spu_func_00005788},
+  {0x000057B4, jobmod_c690c2f7b09a_eF5B8_spu_func_000057B4},
+  {0x00005840, jobmod_c690c2f7b09a_eF5B8_spu_func_00005840},
+  {0x00005898, jobmod_c690c2f7b09a_eF5B8_spu_func_00005898},
+  {0x00005920, jobmod_c690c2f7b09a_eF5B8_spu_func_00005920},
+  {0x00005940, jobmod_c690c2f7b09a_eF5B8_spu_func_00005940},
+  {0x00005A40, jobmod_c690c2f7b09a_eF5B8_spu_func_00005A40},
+  {0x00005A80, jobmod_c690c2f7b09a_eF5B8_spu_func_00005A80},
+  {0x00005AD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00005AD8},
+  {0x00005AF8, jobmod_c690c2f7b09a_eF5B8_spu_func_00005AF8},
+  {0x00005BC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00005BC0},
+  {0x00005BD0, jobmod_c690c2f7b09a_eF5B8_spu_func_00005BD0},
+  {0x00005BD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00005BD8},
+  {0x00005C18, jobmod_c690c2f7b09a_eF5B8_spu_func_00005C18},
+  {0x00005CA0, jobmod_c690c2f7b09a_eF5B8_spu_func_00005CA0},
+  {0x00005CC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00005CC0},
+  {0x00005D80, jobmod_c690c2f7b09a_eF5B8_spu_func_00005D80},
+  {0x00005D98, jobmod_c690c2f7b09a_eF5B8_spu_func_00005D98},
+  {0x00005E00, jobmod_c690c2f7b09a_eF5B8_spu_func_00005E00},
+  {0x00005EA0, jobmod_c690c2f7b09a_eF5B8_spu_func_00005EA0},
+  {0x00005F80, jobmod_c690c2f7b09a_eF5B8_spu_func_00005F80},
+  {0x00005FC8, jobmod_c690c2f7b09a_eF5B8_spu_func_00005FC8},
+  {0x00006300, jobmod_c690c2f7b09a_eF5B8_spu_func_00006300},
+  {0x00006350, jobmod_c690c2f7b09a_eF5B8_spu_func_00006350},
+  {0x000063C8, jobmod_c690c2f7b09a_eF5B8_spu_func_000063C8},
+  {0x00006468, jobmod_c690c2f7b09a_eF5B8_spu_func_00006468},
+  {0x00006538, jobmod_c690c2f7b09a_eF5B8_spu_func_00006538},
+  {0x00006640, jobmod_c690c2f7b09a_eF5B8_spu_func_00006640},
+  {0x000066A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000066A8},
+  {0x00006780, jobmod_c690c2f7b09a_eF5B8_spu_func_00006780},
+  {0x00006838, jobmod_c690c2f7b09a_eF5B8_spu_func_00006838},
+  {0x00006860, jobmod_c690c2f7b09a_eF5B8_spu_func_00006860},
+  {0x00006A48, jobmod_c690c2f7b09a_eF5B8_spu_func_00006A48},
+  {0x00006B30, jobmod_c690c2f7b09a_eF5B8_spu_func_00006B30},
+  {0x00006D68, jobmod_c690c2f7b09a_eF5B8_spu_func_00006D68},
+  {0x00006EC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00006EC0},
+  {0x00006F10, jobmod_c690c2f7b09a_eF5B8_spu_func_00006F10},
+  {0x00006FA0, jobmod_c690c2f7b09a_eF5B8_spu_func_00006FA0},
+  {0x000070E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000070E0},
+  {0x000070F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000070F8},
+  {0x000072C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000072C0},
+  {0x00007450, jobmod_c690c2f7b09a_eF5B8_spu_func_00007450},
+  {0x00007540, jobmod_c690c2f7b09a_eF5B8_spu_func_00007540},
+  {0x000075C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000075C0},
+  {0x00007678, jobmod_c690c2f7b09a_eF5B8_spu_func_00007678},
+  {0x000076B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000076B8},
+  {0x00007800, jobmod_c690c2f7b09a_eF5B8_spu_func_00007800},
+  {0x00007840, jobmod_c690c2f7b09a_eF5B8_spu_func_00007840},
+  {0x000078C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000078C0},
+  {0x00007960, jobmod_c690c2f7b09a_eF5B8_spu_func_00007960},
+  {0x00007998, jobmod_c690c2f7b09a_eF5B8_spu_func_00007998},
+  {0x00007AC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00007AC0},
+  {0x00007B28, jobmod_c690c2f7b09a_eF5B8_spu_func_00007B28},
+  {0x00007BD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00007BD8},
+  {0x00007C18, jobmod_c690c2f7b09a_eF5B8_spu_func_00007C18},
+  {0x00007D40, jobmod_c690c2f7b09a_eF5B8_spu_func_00007D40},
+  {0x00007D7C, jobmod_c690c2f7b09a_eF5B8_spu_func_00007D7C},
+  {0x00007DA8, jobmod_c690c2f7b09a_eF5B8_spu_func_00007DA8},
+  {0x00007E58, jobmod_c690c2f7b09a_eF5B8_spu_func_00007E58},
+  {0x00007E98, jobmod_c690c2f7b09a_eF5B8_spu_func_00007E98},
+  {0x00007FC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00007FC0},
+  {0x00008040, jobmod_c690c2f7b09a_eF5B8_spu_func_00008040},
+  {0x00008120, jobmod_c690c2f7b09a_eF5B8_spu_func_00008120},
+  {0x00008160, jobmod_c690c2f7b09a_eF5B8_spu_func_00008160},
+  {0x000082C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000082C0},
+  {0x000082FC, jobmod_c690c2f7b09a_eF5B8_spu_func_000082FC},
+  {0x00008428, jobmod_c690c2f7b09a_eF5B8_spu_func_00008428},
+  {0x00008570, jobmod_c690c2f7b09a_eF5B8_spu_func_00008570},
+  {0x00008678, jobmod_c690c2f7b09a_eF5B8_spu_func_00008678},
+  {0x00008740, jobmod_c690c2f7b09a_eF5B8_spu_func_00008740},
+  {0x00008960, jobmod_c690c2f7b09a_eF5B8_spu_func_00008960},
+  {0x00008A78, jobmod_c690c2f7b09a_eF5B8_spu_func_00008A78},
+  {0x00008B00, jobmod_c690c2f7b09a_eF5B8_spu_func_00008B00},
+  {0x00008C50, jobmod_c690c2f7b09a_eF5B8_spu_func_00008C50},
+  {0x00008C80, jobmod_c690c2f7b09a_eF5B8_spu_func_00008C80},
+  {0x00008EC4, jobmod_c690c2f7b09a_eF5B8_spu_func_00008EC4},
+  {0x00008EC8, jobmod_c690c2f7b09a_eF5B8_spu_func_00008EC8},
+  {0x00008ED8, jobmod_c690c2f7b09a_eF5B8_spu_func_00008ED8},
+  {0x00008F58, jobmod_c690c2f7b09a_eF5B8_spu_func_00008F58},
+  {0x00008F68, jobmod_c690c2f7b09a_eF5B8_spu_func_00008F68},
+  {0x00008FE8, jobmod_c690c2f7b09a_eF5B8_spu_func_00008FE8},
+  {0x00009058, jobmod_c690c2f7b09a_eF5B8_spu_func_00009058},
+  {0x000090C8, jobmod_c690c2f7b09a_eF5B8_spu_func_000090C8},
+  {0x00009138, jobmod_c690c2f7b09a_eF5B8_spu_func_00009138},
+  {0x0000918C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000918C},
+  {0x000091A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000091A8},
+  {0x00009200, jobmod_c690c2f7b09a_eF5B8_spu_func_00009200},
+  {0x00009218, jobmod_c690c2f7b09a_eF5B8_spu_func_00009218},
+  {0x00009288, jobmod_c690c2f7b09a_eF5B8_spu_func_00009288},
+  {0x000092F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000092F8},
+  {0x00009480, jobmod_c690c2f7b09a_eF5B8_spu_func_00009480},
+  {0x000095A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000095A8},
+  {0x000095B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000095B8},
+  {0x00009628, jobmod_c690c2f7b09a_eF5B8_spu_func_00009628},
+  {0x00009638, jobmod_c690c2f7b09a_eF5B8_spu_func_00009638},
+  {0x000096A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000096A8},
+  {0x00009708, jobmod_c690c2f7b09a_eF5B8_spu_func_00009708},
+  {0x00009768, jobmod_c690c2f7b09a_eF5B8_spu_func_00009768},
+  {0x000097C8, jobmod_c690c2f7b09a_eF5B8_spu_func_000097C8},
+  {0x00009828, jobmod_c690c2f7b09a_eF5B8_spu_func_00009828},
+  {0x00009888, jobmod_c690c2f7b09a_eF5B8_spu_func_00009888},
+  {0x000098E8, jobmod_c690c2f7b09a_eF5B8_spu_func_000098E8},
+  {0x00009948, jobmod_c690c2f7b09a_eF5B8_spu_func_00009948},
+  {0x00009A40, jobmod_c690c2f7b09a_eF5B8_spu_func_00009A40},
+  {0x00009A88, jobmod_c690c2f7b09a_eF5B8_spu_func_00009A88},
+  {0x00009B40, jobmod_c690c2f7b09a_eF5B8_spu_func_00009B40},
+  {0x00009BE0, jobmod_c690c2f7b09a_eF5B8_spu_func_00009BE0},
+  {0x00009CC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00009CC0},
+  {0x00009D00, jobmod_c690c2f7b09a_eF5B8_spu_func_00009D00},
+  {0x00009DC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00009DC0},
+  {0x00009DF8, jobmod_c690c2f7b09a_eF5B8_spu_func_00009DF8},
+  {0x00009E08, jobmod_c690c2f7b09a_eF5B8_spu_func_00009E08},
+  {0x00009E34, jobmod_c690c2f7b09a_eF5B8_spu_func_00009E34},
+  {0x00009EC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00009EC0},
+  {0x00009F00, jobmod_c690c2f7b09a_eF5B8_spu_func_00009F00},
+  {0x00009F80, jobmod_c690c2f7b09a_eF5B8_spu_func_00009F80},
+  {0x00009FA8, jobmod_c690c2f7b09a_eF5B8_spu_func_00009FA8},
+  {0x0000A040, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A040},
+  {0x0000A0E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A0E8},
+  {0x0000A178, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A178},
+  {0x0000A268, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A268},
+  {0x0000A298, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A298},
+  {0x0000A370, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A370},
+  {0x0000A3C0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3C0},
+  {0x0000A3E0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3E0},
+  {0x0000A3F8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A3F8},
+  {0x0000A410, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A410},
+  {0x0000A660, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A660},
+  {0x0000A730, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A730},
+  {0x0000A798, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A798},
+  {0x0000A808, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A808},
+  {0x0000A810, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A810},
+  {0x0000A818, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A818},
+  {0x0000A8A0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A8A0},
+  {0x0000A940, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A940},
+  {0x0000A944, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A944},
+  {0x0000A948, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A948},
+  {0x0000A9B0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000A9B0},
+  {0x0000ABB8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ABB8},
+  {0x0000AD18, jobmod_c690c2f7b09a_eF5B8_spu_func_0000AD18},
+  {0x0000AD8C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000AD8C},
+  {0x0000AF10, jobmod_c690c2f7b09a_eF5B8_spu_func_0000AF10},
+  {0x0000AF98, jobmod_c690c2f7b09a_eF5B8_spu_func_0000AF98},
+  {0x0000B238, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B238},
+  {0x0000B268, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B268},
+  {0x0000B488, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B488},
+  {0x0000B748, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B748},
+  {0x0000B830, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B830},
+  {0x0000B958, jobmod_c690c2f7b09a_eF5B8_spu_func_0000B958},
+  {0x0000BA10, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BA10},
+  {0x0000BB20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB20},
+  {0x0000BB80, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB80},
+  {0x0000BB98, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BB98},
+  {0x0000BBB0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BBB0},
+  {0x0000BCB4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BCB4},
+  {0x0000BCDC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BCDC},
+  {0x0000BD20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BD20},
+  {0x0000BDB4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BDB4},
+  {0x0000BDD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BDD8},
+  {0x0000BE00, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE00},
+  {0x0000BE20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE20},
+  {0x0000BE5C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BE5C},
+  {0x0000BED0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BED0},
+  {0x0000BF00, jobmod_c690c2f7b09a_eF5B8_spu_func_0000BF00},
+  {0x0000C018, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C018},
+  {0x0000C0F8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C0F8},
+  {0x0000C118, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C118},
+  {0x0000C290, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C290},
+  {0x0000C398, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C398},
+  {0x0000C420, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C420},
+  {0x0000C5B8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C5B8},
+  {0x0000C70C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C70C},
+  {0x0000C74C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C74C},
+  {0x0000C764, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C764},
+  {0x0000C78C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C78C},
+  {0x0000C7A0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7A0},
+  {0x0000C7D4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7D4},
+  {0x0000C7E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C7E8},
+  {0x0000C8E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C8E8},
+  {0x0000C98C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C98C},
+  {0x0000C9D0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000C9D0},
+  {0x0000CC48, jobmod_c690c2f7b09a_eF5B8_spu_func_0000CC48},
+  {0x0000CD80, jobmod_c690c2f7b09a_eF5B8_spu_func_0000CD80},
+  {0x0000D080, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D080},
+  {0x0000D2B0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D2B0},
+  {0x0000D2B8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D2B8},
+  {0x0000D4A8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D4A8},
+  {0x0000D508, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D508},
+  {0x0000D540, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D540},
+  {0x0000D790, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D790},
+  {0x0000D7A0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D7A0},
+  {0x0000D7C0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D7C0},
+  {0x0000D810, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D810},
+  {0x0000D878, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D878},
+  {0x0000D9D0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000D9D0},
+  {0x0000DA60, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DA60},
+  {0x0000DB58, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DB58},
+  {0x0000DB88, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DB88},
+  {0x0000DC48, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DC48},
+  {0x0000DD48, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DD48},
+  {0x0000DE30, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DE30},
+  {0x0000DF40, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF40},
+  {0x0000DF64, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF64},
+  {0x0000DF70, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF70},
+  {0x0000DF80, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DF80},
+  {0x0000DFD0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DFD0},
+  {0x0000DFD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000DFD8},
+  {0x0000E000, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E000},
+  {0x0000E014, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E014},
+  {0x0000E020, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E020},
+  {0x0000E050, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E050},
+  {0x0000E058, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E058},
+  {0x0000E094, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E094},
+  {0x0000E0A0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0A0},
+  {0x0000E0A8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0A8},
+  {0x0000E0E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E0E8},
+  {0x0000E114, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E114},
+  {0x0000E138, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E138},
+  {0x0000E140, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E140},
+  {0x0000E158, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E158},
+  {0x0000E168, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E168},
+  {0x0000E178, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E178},
+  {0x0000E190, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E190},
+  {0x0000E1EC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E1EC},
+  {0x0000E20C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E20C},
+  {0x0000E218, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E218},
+  {0x0000E22C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E22C},
+  {0x0000E238, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E238},
+  {0x0000E270, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E270},
+  {0x0000E278, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E278},
+  {0x0000E280, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E280},
+  {0x0000E294, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E294},
+  {0x0000E2B0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E2B0},
+  {0x0000E2D8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E2D8},
+  {0x0000E320, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E320},
+  {0x0000E37C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E37C},
+  {0x0000E384, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E384},
+  {0x0000E390, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E390},
+  {0x0000E3D8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3D8},
+  {0x0000E3E0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3E0},
+  {0x0000E3F8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E3F8},
+  {0x0000E408, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E408},
+  {0x0000E450, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E450},
+  {0x0000E458, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E458},
+  {0x0000E470, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E470},
+  {0x0000E488, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E488},
+  {0x0000E4A0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4A0},
+  {0x0000E4B8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4B8},
+  {0x0000E4D0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E4D0},
+  {0x0000E504, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E504},
+  {0x0000E510, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E510},
+  {0x0000E530, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E530},
+  {0x0000E538, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E538},
+  {0x0000E550, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E550},
+  {0x0000E5C0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5C0},
+  {0x0000E5D4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5D4},
+  {0x0000E5D8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5D8},
+  {0x0000E5F0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5F0},
+  {0x0000E5FC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E5FC},
+  {0x0000E604, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E604},
+  {0x0000E60C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E60C},
+  {0x0000E614, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E614},
+  {0x0000E620, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E620},
+  {0x0000E630, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E630},
+  {0x0000E670, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E670},
+  {0x0000E698, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E698},
+  {0x0000E6B8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E6B8},
+  {0x0000E708, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E708},
+  {0x0000E734, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E734},
+  {0x0000E750, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E750},
+  {0x0000E78C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E78C},
+  {0x0000E840, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E840},
+  {0x0000E860, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E860},
+  {0x0000E868, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E868},
+  {0x0000E8A8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8A8},
+  {0x0000E8B0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8B0},
+  {0x0000E8E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E8E8},
+  {0x0000E92C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000E92C},
+  {0x0000EA10, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA10},
+  {0x0000EA40, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA40},
+  {0x0000EA70, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EA70},
+  {0x0000EACC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EACC},
+  {0x0000EB10, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB10},
+  {0x0000EB58, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB58},
+  {0x0000EB98, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EB98},
+  {0x0000EBA0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBA0},
+  {0x0000EBB8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBB8},
+  {0x0000EBC0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBC0},
+  {0x0000EBD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EBD8},
+  {0x0000EC60, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EC60},
+  {0x0000EC98, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EC98},
+  {0x0000ECD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ECD8},
+  {0x0000ECF8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ECF8},
+  {0x0000ED00, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED00},
+  {0x0000ED40, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED40},
+  {0x0000ED78, jobmod_c690c2f7b09a_eF5B8_spu_func_0000ED78},
+  {0x0000EDB8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDB8},
+  {0x0000EDD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDD8},
+  {0x0000EDE0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EDE0},
+  {0x0000EE20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EE20},
+  {0x0000EE48, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EE48},
+  {0x0000EEA8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EEA8},
+  {0x0000EED0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EED0},
+  {0x0000EEF0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EEF0},
+  {0x0000EF20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EF20},
+  {0x0000EF88, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EF88},
+  {0x0000EFA8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFA8},
+  {0x0000EFB0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFB0},
+  {0x0000EFD0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000EFD0},
+  {0x0000F058, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F058},
+  {0x0000F1A8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F1A8},
+  {0x0000F450, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F450},
+  {0x0000F47C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F47C},
+  {0x0000F4A4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4A4},
+  {0x0000F4AC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4AC},
+  {0x0000F4D4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4D4},
+  {0x0000F4DC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4DC},
+  {0x0000F4FC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F4FC},
+  {0x0000F514, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F514},
+  {0x0000F520, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F520},
+  {0x0000F5D0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F5D0},
+  {0x0000F600, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F600},
+  {0x0000F628, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F628},
+  {0x0000F638, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F638},
+  {0x0000F680, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F680},
+  {0x0000F6F8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F6F8},
+  {0x0000F738, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F738},
+  {0x0000F7B0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F7B0},
+  {0x0000F860, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F860},
+  {0x0000F970, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F970},
+  {0x0000F9A8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F9A8},
+  {0x0000F9E8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000F9E8},
+  {0x0000FA14, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA14},
+  {0x0000FA20, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA20},
+  {0x0000FA3C, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA3C},
+  {0x0000FA58, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA58},
+  {0x0000FA80, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FA80},
+  {0x0000FAD0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FAD0},
+  {0x0000FC28, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC28},
+  {0x0000FC50, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC50},
+  {0x0000FC94, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FC94},
+  {0x0000FCA4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCA4},
+  {0x0000FCB8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCB8},
+  {0x0000FCE4, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FCE4},
+  {0x0000FDA0, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FDA0},
+  {0x0000FDD8, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FDD8},
+  {0x0000FE38, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FE38},
+  {0x0000FFFC, jobmod_c690c2f7b09a_eF5B8_spu_func_0000FFFC},
+  {0x00010000, jobmod_c690c2f7b09a_eF5B8_spu_func_00010000},
+  {0x00010028, jobmod_c690c2f7b09a_eF5B8_spu_func_00010028},
+  {0x000100E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000100E0},
+  {0x00010108, jobmod_c690c2f7b09a_eF5B8_spu_func_00010108},
+  {0x0001016C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001016C},
+  {0x0001017C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001017C},
+  {0x00010190, jobmod_c690c2f7b09a_eF5B8_spu_func_00010190},
+  {0x0001024C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001024C},
+  {0x00010250, jobmod_c690c2f7b09a_eF5B8_spu_func_00010250},
+  {0x00010258, jobmod_c690c2f7b09a_eF5B8_spu_func_00010258},
+  {0x000102DC, jobmod_c690c2f7b09a_eF5B8_spu_func_000102DC},
+  {0x00010300, jobmod_c690c2f7b09a_eF5B8_spu_func_00010300},
+  {0x0001036C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001036C},
+  {0x00010390, jobmod_c690c2f7b09a_eF5B8_spu_func_00010390},
+  {0x000103A0, jobmod_c690c2f7b09a_eF5B8_spu_func_000103A0},
+  {0x0001040C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001040C},
+  {0x00010430, jobmod_c690c2f7b09a_eF5B8_spu_func_00010430},
+  {0x00010478, jobmod_c690c2f7b09a_eF5B8_spu_func_00010478},
+  {0x00010480, jobmod_c690c2f7b09a_eF5B8_spu_func_00010480},
+  {0x00010488, jobmod_c690c2f7b09a_eF5B8_spu_func_00010488},
+  {0x00010498, jobmod_c690c2f7b09a_eF5B8_spu_func_00010498},
+  {0x000104B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000104B0},
+  {0x000104B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000104B8},
+  {0x000104E8, jobmod_c690c2f7b09a_eF5B8_spu_func_000104E8},
+  {0x00010530, jobmod_c690c2f7b09a_eF5B8_spu_func_00010530},
+  {0x00010538, jobmod_c690c2f7b09a_eF5B8_spu_func_00010538},
+  {0x00010568, jobmod_c690c2f7b09a_eF5B8_spu_func_00010568},
+  {0x000105B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000105B0},
+  {0x000105B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000105B8},
+  {0x000105C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000105C0},
+  {0x000105F0, jobmod_c690c2f7b09a_eF5B8_spu_func_000105F0},
+  {0x00010618, jobmod_c690c2f7b09a_eF5B8_spu_func_00010618},
+  {0x00010660, jobmod_c690c2f7b09a_eF5B8_spu_func_00010660},
+  {0x00010688, jobmod_c690c2f7b09a_eF5B8_spu_func_00010688},
+  {0x00010700, jobmod_c690c2f7b09a_eF5B8_spu_func_00010700},
+  {0x00010758, jobmod_c690c2f7b09a_eF5B8_spu_func_00010758},
+  {0x0001095C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001095C},
+  {0x000109C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000109C0},
+  {0x00010B18, jobmod_c690c2f7b09a_eF5B8_spu_func_00010B18},
+  {0x00010B28, jobmod_c690c2f7b09a_eF5B8_spu_func_00010B28},
+  {0x00010B44, jobmod_c690c2f7b09a_eF5B8_spu_func_00010B44},
+  {0x00010B60, jobmod_c690c2f7b09a_eF5B8_spu_func_00010B60},
+  {0x00010B88, jobmod_c690c2f7b09a_eF5B8_spu_func_00010B88},
+  {0x00010BB8, jobmod_c690c2f7b09a_eF5B8_spu_func_00010BB8},
+  {0x00010BE4, jobmod_c690c2f7b09a_eF5B8_spu_func_00010BE4},
+  {0x00010C10, jobmod_c690c2f7b09a_eF5B8_spu_func_00010C10},
+  {0x00010C40, jobmod_c690c2f7b09a_eF5B8_spu_func_00010C40},
+  {0x00010C70, jobmod_c690c2f7b09a_eF5B8_spu_func_00010C70},
+  {0x00010CB0, jobmod_c690c2f7b09a_eF5B8_spu_func_00010CB0},
+  {0x00010CF0, jobmod_c690c2f7b09a_eF5B8_spu_func_00010CF0},
+  {0x00010D20, jobmod_c690c2f7b09a_eF5B8_spu_func_00010D20},
+  {0x00010D80, jobmod_c690c2f7b09a_eF5B8_spu_func_00010D80},
+  {0x00010DC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00010DC0},
+  {0x00010DC8, jobmod_c690c2f7b09a_eF5B8_spu_func_00010DC8},
+  {0x00010DD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00010DD8},
+  {0x00010F78, jobmod_c690c2f7b09a_eF5B8_spu_func_00010F78},
+  {0x000110C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000110C0},
+  {0x000110E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000110E0},
+  {0x0001112C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001112C},
+  {0x00011210, jobmod_c690c2f7b09a_eF5B8_spu_func_00011210},
+  {0x0001125C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001125C},
+  {0x00011268, jobmod_c690c2f7b09a_eF5B8_spu_func_00011268},
+  {0x00011318, jobmod_c690c2f7b09a_eF5B8_spu_func_00011318},
+  {0x0001133C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001133C},
+  {0x00011350, jobmod_c690c2f7b09a_eF5B8_spu_func_00011350},
+  {0x00011390, jobmod_c690c2f7b09a_eF5B8_spu_func_00011390},
+  {0x000113F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000113F8},
+  {0x00011404, jobmod_c690c2f7b09a_eF5B8_spu_func_00011404},
+  {0x00011410, jobmod_c690c2f7b09a_eF5B8_spu_func_00011410},
+  {0x00011538, jobmod_c690c2f7b09a_eF5B8_spu_func_00011538},
+  {0x00011578, jobmod_c690c2f7b09a_eF5B8_spu_func_00011578},
+  {0x0001157C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001157C},
+  {0x00011610, jobmod_c690c2f7b09a_eF5B8_spu_func_00011610},
+  {0x00011640, jobmod_c690c2f7b09a_eF5B8_spu_func_00011640},
+  {0x00011648, jobmod_c690c2f7b09a_eF5B8_spu_func_00011648},
+  {0x00011678, jobmod_c690c2f7b09a_eF5B8_spu_func_00011678},
+  {0x000116B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000116B0},
+  {0x000116E8, jobmod_c690c2f7b09a_eF5B8_spu_func_000116E8},
+  {0x00011720, jobmod_c690c2f7b09a_eF5B8_spu_func_00011720},
+  {0x00011758, jobmod_c690c2f7b09a_eF5B8_spu_func_00011758},
+  {0x00011790, jobmod_c690c2f7b09a_eF5B8_spu_func_00011790},
+  {0x00011848, jobmod_c690c2f7b09a_eF5B8_spu_func_00011848},
+  {0x000118C8, jobmod_c690c2f7b09a_eF5B8_spu_func_000118C8},
+  {0x00011990, jobmod_c690c2f7b09a_eF5B8_spu_func_00011990},
+  {0x00011A28, jobmod_c690c2f7b09a_eF5B8_spu_func_00011A28},
+  {0x00011A60, jobmod_c690c2f7b09a_eF5B8_spu_func_00011A60},
+  {0x00011A78, jobmod_c690c2f7b09a_eF5B8_spu_func_00011A78},
+  {0x00011A90, jobmod_c690c2f7b09a_eF5B8_spu_func_00011A90},
+  {0x00011AA8, jobmod_c690c2f7b09a_eF5B8_spu_func_00011AA8},
+  {0x00011AC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011AC0},
+  {0x00011B90, jobmod_c690c2f7b09a_eF5B8_spu_func_00011B90},
+  {0x00011BC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011BC0},
+  {0x00011BF8, jobmod_c690c2f7b09a_eF5B8_spu_func_00011BF8},
+  {0x00011C40, jobmod_c690c2f7b09a_eF5B8_spu_func_00011C40},
+  {0x00011C60, jobmod_c690c2f7b09a_eF5B8_spu_func_00011C60},
+  {0x00011CA8, jobmod_c690c2f7b09a_eF5B8_spu_func_00011CA8},
+  {0x00011CC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011CC0},
+  {0x00011CD8, jobmod_c690c2f7b09a_eF5B8_spu_func_00011CD8},
+  {0x00011D54, jobmod_c690c2f7b09a_eF5B8_spu_func_00011D54},
+  {0x00011DBC, jobmod_c690c2f7b09a_eF5B8_spu_func_00011DBC},
+  {0x00011DC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011DC0},
+  {0x00011DF0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011DF0},
+  {0x00011E88, jobmod_c690c2f7b09a_eF5B8_spu_func_00011E88},
+  {0x00011F58, jobmod_c690c2f7b09a_eF5B8_spu_func_00011F58},
+  {0x00011FD0, jobmod_c690c2f7b09a_eF5B8_spu_func_00011FD0},
+  {0x00011FF8, jobmod_c690c2f7b09a_eF5B8_spu_func_00011FF8},
+  {0x00012010, jobmod_c690c2f7b09a_eF5B8_spu_func_00012010},
+  {0x00012040, jobmod_c690c2f7b09a_eF5B8_spu_func_00012040},
+  {0x00012058, jobmod_c690c2f7b09a_eF5B8_spu_func_00012058},
+  {0x00012060, jobmod_c690c2f7b09a_eF5B8_spu_func_00012060},
+  {0x00012090, jobmod_c690c2f7b09a_eF5B8_spu_func_00012090},
+  {0x000120D0, jobmod_c690c2f7b09a_eF5B8_spu_func_000120D0},
+  {0x00012180, jobmod_c690c2f7b09a_eF5B8_spu_func_00012180},
+  {0x000121BC, jobmod_c690c2f7b09a_eF5B8_spu_func_000121BC},
+  {0x000121D0, jobmod_c690c2f7b09a_eF5B8_spu_func_000121D0},
+  {0x000121E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000121E0},
+  {0x000122C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000122C0},
+  {0x000123E8, jobmod_c690c2f7b09a_eF5B8_spu_func_000123E8},
+  {0x00012414, jobmod_c690c2f7b09a_eF5B8_spu_func_00012414},
+  {0x0001241C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001241C},
+  {0x00012430, jobmod_c690c2f7b09a_eF5B8_spu_func_00012430},
+  {0x00012448, jobmod_c690c2f7b09a_eF5B8_spu_func_00012448},
+  {0x00012460, jobmod_c690c2f7b09a_eF5B8_spu_func_00012460},
+  {0x00012478, jobmod_c690c2f7b09a_eF5B8_spu_func_00012478},
+  {0x000124B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000124B8},
+  {0x00012630, jobmod_c690c2f7b09a_eF5B8_spu_func_00012630},
+  {0x00012670, jobmod_c690c2f7b09a_eF5B8_spu_func_00012670},
+  {0x000126D8, jobmod_c690c2f7b09a_eF5B8_spu_func_000126D8},
+  {0x00012780, jobmod_c690c2f7b09a_eF5B8_spu_func_00012780},
+  {0x00012788, jobmod_c690c2f7b09a_eF5B8_spu_func_00012788},
+  {0x000127F4, jobmod_c690c2f7b09a_eF5B8_spu_func_000127F4},
+  {0x00012828, jobmod_c690c2f7b09a_eF5B8_spu_func_00012828},
+  {0x00012830, jobmod_c690c2f7b09a_eF5B8_spu_func_00012830},
+  {0x00012850, jobmod_c690c2f7b09a_eF5B8_spu_func_00012850},
+  {0x00012860, jobmod_c690c2f7b09a_eF5B8_spu_func_00012860},
+  {0x000128B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000128B0},
+  {0x000128B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000128B8},
+  {0x00012908, jobmod_c690c2f7b09a_eF5B8_spu_func_00012908},
+  {0x00012948, jobmod_c690c2f7b09a_eF5B8_spu_func_00012948},
+  {0x00012980, jobmod_c690c2f7b09a_eF5B8_spu_func_00012980},
+  {0x000129B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000129B0},
+  {0x000129C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000129C0},
+  {0x000129E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000129E0},
+  {0x000129F0, jobmod_c690c2f7b09a_eF5B8_spu_func_000129F0},
+  {0x00012A40, jobmod_c690c2f7b09a_eF5B8_spu_func_00012A40},
+  {0x00012A60, jobmod_c690c2f7b09a_eF5B8_spu_func_00012A60},
+  {0x00012A88, jobmod_c690c2f7b09a_eF5B8_spu_func_00012A88},
+  {0x00012A90, jobmod_c690c2f7b09a_eF5B8_spu_func_00012A90},
+  {0x00012AA8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012AA8},
+  {0x00012AB8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012AB8},
+  {0x00012AC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012AC0},
+  {0x00012B08, jobmod_c690c2f7b09a_eF5B8_spu_func_00012B08},
+  {0x00012B70, jobmod_c690c2f7b09a_eF5B8_spu_func_00012B70},
+  {0x00012BA0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012BA0},
+  {0x00012BD4, jobmod_c690c2f7b09a_eF5B8_spu_func_00012BD4},
+  {0x00012C00, jobmod_c690c2f7b09a_eF5B8_spu_func_00012C00},
+  {0x00012C08, jobmod_c690c2f7b09a_eF5B8_spu_func_00012C08},
+  {0x00012C98, jobmod_c690c2f7b09a_eF5B8_spu_func_00012C98},
+  {0x00012CCC, jobmod_c690c2f7b09a_eF5B8_spu_func_00012CCC},
+  {0x00012D04, jobmod_c690c2f7b09a_eF5B8_spu_func_00012D04},
+  {0x00012D08, jobmod_c690c2f7b09a_eF5B8_spu_func_00012D08},
+  {0x00012DA4, jobmod_c690c2f7b09a_eF5B8_spu_func_00012DA4},
+  {0x00012DAC, jobmod_c690c2f7b09a_eF5B8_spu_func_00012DAC},
+  {0x00012DB8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012DB8},
+  {0x00012DC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012DC0},
+  {0x00012DC8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012DC8},
+  {0x00012E10, jobmod_c690c2f7b09a_eF5B8_spu_func_00012E10},
+  {0x00012EC0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012EC0},
+  {0x00012F68, jobmod_c690c2f7b09a_eF5B8_spu_func_00012F68},
+  {0x00012F7C, jobmod_c690c2f7b09a_eF5B8_spu_func_00012F7C},
+  {0x00012F98, jobmod_c690c2f7b09a_eF5B8_spu_func_00012F98},
+  {0x00012F9C, jobmod_c690c2f7b09a_eF5B8_spu_func_00012F9C},
+  {0x00012FA0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012FA0},
+  {0x00012FE8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012FE8},
+  {0x00012FF0, jobmod_c690c2f7b09a_eF5B8_spu_func_00012FF0},
+  {0x00012FF8, jobmod_c690c2f7b09a_eF5B8_spu_func_00012FF8},
+  {0x00013004, jobmod_c690c2f7b09a_eF5B8_spu_func_00013004},
+  {0x00013080, jobmod_c690c2f7b09a_eF5B8_spu_func_00013080},
+  {0x000130E4, jobmod_c690c2f7b09a_eF5B8_spu_func_000130E4},
+  {0x000130E8, jobmod_c690c2f7b09a_eF5B8_spu_func_000130E8},
+  {0x0001311C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001311C},
+  {0x00013140, jobmod_c690c2f7b09a_eF5B8_spu_func_00013140},
+  {0x00013178, jobmod_c690c2f7b09a_eF5B8_spu_func_00013178},
+  {0x00013198, jobmod_c690c2f7b09a_eF5B8_spu_func_00013198},
+  {0x000131A0, jobmod_c690c2f7b09a_eF5B8_spu_func_000131A0},
+  {0x000131F8, jobmod_c690c2f7b09a_eF5B8_spu_func_000131F8},
+  {0x00013200, jobmod_c690c2f7b09a_eF5B8_spu_func_00013200},
+  {0x00013240, jobmod_c690c2f7b09a_eF5B8_spu_func_00013240},
+  {0x00013248, jobmod_c690c2f7b09a_eF5B8_spu_func_00013248},
+  {0x00013250, jobmod_c690c2f7b09a_eF5B8_spu_func_00013250},
+  {0x00013288, jobmod_c690c2f7b09a_eF5B8_spu_func_00013288},
+  {0x000132D8, jobmod_c690c2f7b09a_eF5B8_spu_func_000132D8},
+  {0x000132E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000132E0},
+  {0x000133A4, jobmod_c690c2f7b09a_eF5B8_spu_func_000133A4},
+  {0x000133A8, jobmod_c690c2f7b09a_eF5B8_spu_func_000133A8},
+  {0x000133B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000133B0},
+  {0x00013480, jobmod_c690c2f7b09a_eF5B8_spu_func_00013480},
+  {0x000134AC, jobmod_c690c2f7b09a_eF5B8_spu_func_000134AC},
+  {0x000134FC, jobmod_c690c2f7b09a_eF5B8_spu_func_000134FC},
+  {0x00013504, jobmod_c690c2f7b09a_eF5B8_spu_func_00013504},
+  {0x00013510, jobmod_c690c2f7b09a_eF5B8_spu_func_00013510},
+  {0x00013518, jobmod_c690c2f7b09a_eF5B8_spu_func_00013518},
+  {0x00013520, jobmod_c690c2f7b09a_eF5B8_spu_func_00013520},
+  {0x00013528, jobmod_c690c2f7b09a_eF5B8_spu_func_00013528},
+  {0x00013534, jobmod_c690c2f7b09a_eF5B8_spu_func_00013534},
+  {0x0001353C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001353C},
+  {0x00013540, jobmod_c690c2f7b09a_eF5B8_spu_func_00013540},
+  {0x00013544, jobmod_c690c2f7b09a_eF5B8_spu_func_00013544},
+  {0x00013548, jobmod_c690c2f7b09a_eF5B8_spu_func_00013548},
+  {0x0001354C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001354C},
+  {0x00013550, jobmod_c690c2f7b09a_eF5B8_spu_func_00013550},
+  {0x00013554, jobmod_c690c2f7b09a_eF5B8_spu_func_00013554},
+  {0x00013558, jobmod_c690c2f7b09a_eF5B8_spu_func_00013558},
+  {0x0001355C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001355C},
+  {0x00013560, jobmod_c690c2f7b09a_eF5B8_spu_func_00013560},
+  {0x00013564, jobmod_c690c2f7b09a_eF5B8_spu_func_00013564},
+  {0x00013568, jobmod_c690c2f7b09a_eF5B8_spu_func_00013568},
+  {0x0001356C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001356C},
+  {0x00013570, jobmod_c690c2f7b09a_eF5B8_spu_func_00013570},
+  {0x00013574, jobmod_c690c2f7b09a_eF5B8_spu_func_00013574},
+  {0x00013578, jobmod_c690c2f7b09a_eF5B8_spu_func_00013578},
+  {0x0001357C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001357C},
+  {0x000135AC, jobmod_c690c2f7b09a_eF5B8_spu_func_000135AC},
+  {0x000135B8, jobmod_c690c2f7b09a_eF5B8_spu_func_000135B8},
+  {0x000135F0, jobmod_c690c2f7b09a_eF5B8_spu_func_000135F0},
+  {0x00013604, jobmod_c690c2f7b09a_eF5B8_spu_func_00013604},
+  {0x0001361C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001361C},
+  {0x00013664, jobmod_c690c2f7b09a_eF5B8_spu_func_00013664},
+  {0x0001367C, jobmod_c690c2f7b09a_eF5B8_spu_func_0001367C},
+  {0x000136A4, jobmod_c690c2f7b09a_eF5B8_spu_func_000136A4},
+  {0x000136AC, jobmod_c690c2f7b09a_eF5B8_spu_func_000136AC},
+  {0x000136B0, jobmod_c690c2f7b09a_eF5B8_spu_func_000136B0},
+  {0x000136C0, jobmod_c690c2f7b09a_eF5B8_spu_func_000136C0},
+  {0x000136D0, jobmod_c690c2f7b09a_eF5B8_spu_func_000136D0},
+  {0x000136E0, jobmod_c690c2f7b09a_eF5B8_spu_func_000136E0},
+};
+const int g_c690_reg_n = (int)(sizeof(g_c690_reg)/sizeof(g_c690_reg[0]));
