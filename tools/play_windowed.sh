@@ -91,6 +91,8 @@ export VK_DUMMY_BLACK=1
 # guest keeps flipping. FIFO is the required present mode and avoids that path
 # (Xwayland negotiates FIFO too). Override with PS3RECOMP_VK_PRESENT_MODE=mailbox.
 export PS3RECOMP_VK_PRESENT_MODE="${PS3RECOMP_VK_PRESENT_MODE:-fifo}"
+# FIFO alone still froze native Wayland (2026-11-02, shown 0 / no-slot); Xwayland does not. Override SDL_VIDEODRIVER=wayland.
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
 # Thumbnail source: the title's own presented frame, every DUMP_EVERY flips.
 export PS3RECOMP_VK_DUMP="$OUTDIR/frame.ppm"
 export PS3RECOMP_VK_DUMP_EVERY="$DUMP_EVERY"
