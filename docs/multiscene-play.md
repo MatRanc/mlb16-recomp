@@ -62,6 +62,8 @@ Ctrl-C) to end it. The script uses `build-play/MyGameRecomp` and the normal
 | `PS3RECOMP_WALKER_PROF=1` | walker own CPU and per-phase time |
 | `PS3RECOMP_VK_PRESENT_STATS=1` | pump gap, shown/dropped, present stall |
 | `PS3RECOMP_PUMP_MS=8` | pump inside the catch-up loop (freeze knob, already on) |
+| `PS3RECOMP_VK_PRESENT_MODE=fifo` | default freeze fix; `mailbox` overrides (see `docs/window-freeze-fix.md`) |
+| `VK_DUMMY_BLACK=1` | disabled texture units read black, not magenta (no pink picture) |
 | `PS3RECOMP_VK_DUMP` + `_EVERY=30` | the thumbnail source (the game's own frame) |
 
 Arguments:
@@ -89,6 +91,19 @@ Output, under `recomp-work/`:
 MangoHud shows fps + frametime graph, CPU/GPU load and per-core load. It is
 opt-out (`nohud`) because an overlay or its Vulkan layer can be the thing that
 breaks the window or the device on this machine.
+
+**MangoHud's fps is the window-present rate, not the game's fps.** MangoHud
+logs one CSV row per `vkQueuePresentKHR`; that is the same call the present
+thread counts as `shown` in `[RSX vulkan] window:` lines
+(`rsx_vulkan_backend.c`, `vk_present_thread_main`). The guest's frame rate is
+the `[flip]` counter (`cellGcmSys.c`, `GCM_FLIPCOUNT=1`). The two differ: at
+one pitch run the CSV had 72.8 rows/s (presents) while `[flip]` measured
+35.44 fps, and during a present stall the CSV stops growing while `[flip]`
+keeps advancing. Use `[flip]` for game fps and `window: ... shown` for how fast
+the window is updated. `tools/frametime_plot.py`'s avg fps is now rows / total
+time, so it reports the present rate, not the guest frame rate. A full present
+stall truncates the CSV (no rows are written while nothing is presented), so
+the `window:` lines are the truth for freezes.
 
 ## What to do in-game (about 1 minute each)
 

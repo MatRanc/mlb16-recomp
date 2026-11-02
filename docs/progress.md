@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (window freeze): native-Wayland MAILBOX present stalls; FIFO by default
+
+The player's window froze for 15-50 s at a time while the game kept running;
+moving the mouse unfroze it. The `PS3RECOMP_VK_PRESENT_STATS=1` lines prove it
+is presentation: the pump ran normally (`max pump gap` 4-15 ms) while every
+frame was dropped **no-slot** (`blits 0, shown 0, dropped ~65/s`). The whole
+session was **219 frozen s / 457 s**, 15,059 no-slot drops, only 87 not-ready,
+and the longest `vkQueuePresentKHR` was **49.2 s**.
+
+- **Mechanism:** a 3-image swapchain exposes only 2 present slots
+  (`rsx_vulkan_backend.c:1982`). A slot is busy until `vkQueuePresentKHR`
+  returns. On native Wayland + NVIDIA MAILBOX the present thread can block
+  waiting for the compositor's buffer release; after two stuck presents every
+  later flip is dropped at `:2210-2211` *before* the acquire. `no-slot` is not
+  an acquire timeout, so `PS3RECOMP_VK_ACQUIRE_TIMEOUT_MS` cannot help.
+- **A/B (windowed, MangoHud, no input):** MAILBOX froze hard in 2 of 4
+  play-style runs (138 s and 82 s frozen; 5-8k no-slot) and in the player's
+  session. Wayland FIFO: 0 s and 1 s frozen, 1-2 no-slot over 147-149 s.
+  Xwayland (which negotiated FIFO) 0 s / 4 no-slot. The measure_fast pitch
+  harness did not reproduce the menu/attract stall (0 frozen in two runs);
+  pitch fps was **35.44 flips/s** there.
+- **Fix:** `tools/play_windowed.sh` defaults `PS3RECOMP_VK_PRESENT_MODE=fifo`
+  (override with `mailbox`) and sets `VK_DUMMY_BLACK=1` (missing textures are
+  black, not magenta). No ps3recomp code change was needed.
+- **Tool bug:** `tools/frametime_plot.py` averaged per-row fps and reported
+  333.83 fps for a log whose mean frametime was 35.25 ms; avg is now
+  frames/total time (28.37 fps) and a self-check enforces it. MangoHud's fps
+  counts window presents (72.8 rows/s at one pitch) while game fps is
+  `[flip]` (35.44); documented in `docs/multiscene-play.md`.
+- Details: [`docs/window-freeze-fix.md`](window-freeze-fix.md).
+
 ## 2026-11-02 (overlap): the ref is published 3 us after the walker reaches it; the wait is walker time-to-fence
 
 One traced pitch run (`measure_fast.sh`, `VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1`): **35.01 fps** on the
