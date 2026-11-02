@@ -3,6 +3,17 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (capture): pitch pipeline is multi-command; per-call offload not viable
+
+- Captured the pitch frame's `0x10F78` (0x2A handler), `0x10B88`, `0xA798`, `0xAF98`, `0x6D68` in one run
+  (multi-address `SPU_FN_CAPTURE`). `0x10F78` replays offline with zero DMA/mailbox.
+- **The 0x2A handler is not the position path**: it is the stream-2 attribute gather/convert (`0x7840` family),
+  writing `0x2F870`/`0x23400`. Position unpack is the separate leaf `0x6D68` (bit-exact, `0xb98ec2c0561b2bbf`).
+- **Fence-latency implication**: `0x6D68` is ~0.5 µs/call; a per-call GPU dispatch+fence (~10–20 µs) is a loss.
+  The offload must be **job-level** (all streams, one dispatch + one fence per job), which requires the full
+  per-vertex pipeline in one shader.
+- Report + constants: `docs/pitch_0x2A_pipeline.md`, `tools/replay/pitch_pipeline_constants.h`.
+
 ## 2026-11-01 (tooling decision): no Ghidra SPU import, no emulator FP
 
 - Ghidra 12.1.2 has no SPU processor; GhidraSPU builds for it, but the MCP is bound to the EBOOT and cannot switch
