@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (dummy census): the dark players are cube surfaces read as 2-D; MangoHud now counts flips
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. WCB=2, PIN=1, x11,
+`PS3RECOMP_WALKER_RESYNC_FIX=1`, new `PS3RECOMP_TEX_MISS_LOG=1`. Details,
+run table and PNGs: [`docs/textures-dummy-census.md`](textures-dummy-census.md).
+
+- **New census** (`libs/video/rsx_tex_miss.{c,h}` + unit
+  `test_rsx_tex_miss`): every dummy fallback by reason (format, surface,
+  address, size, other), guest address, format byte, size, pitch, mips, cube,
+  fragment hash and pipeline; per-frame summary + cumulative top-10. The only
+  dummy sites in `libs/video` are the vtable `vk_cb_bind_texture` and the
+  engine descriptor (`vk_eng_sample_view` / `vk_eng_write_descriptors_to`).
+- **The jerseys are not a format/address/size miss.** At the meter the engine
+  resolved every texture: `format=0 address=0 size=0`; **201,000 misses in the
+  1029-frame meter window, mean 195/frame, max 582**, all the render-target
+  reason. They are 8x8, 1-mip, `cubemap=1` textures whose guest address is also
+  a tracked colour target (e.g. `0x059f3000`); the engine binds the 2-D
+  surface/view to a `TextureCube` unit and the backend reads the dummy. One
+  fragment program accounts for ~217/frame. Fix is a six-face cube-surface
+  path, not contained, design in the doc.
+- **Team-select logo is not a dummy:** black and magenta team frames are
+  identical (mean diff 0.0); `RESYNC_FIX=1` still does not bring the logo back
+  (park-resync draw loss, not texture resolution).
+- **Magenta arm blocked by the harness:** with `VK_DUMMY_BLACK` unset the nav
+  references (recorded with black dummies) lose the pitch twice, so no magenta
+  meter frame; the saved b-roll pitch frame is ~24% pure magenta (217,220 px),
+  confirming the dummy surfaces are the crowd/player materials.
+- **`PS3RECOMP_VK_PRESENT_NEW_ONLY=1` (task 5):** gated on the new
+  `cellGcm_flip_frame_count()` (SetFlipCommand / FIFO marker, not
+  SetPrepareFlip), so re-presents of the frame on screen are dropped. Start
+  screen: **`[flip]` 42.66 fps, MangoHud 42.57 rows/s, shown 426/10 s**, 0
+  drops, pump gap 6-7 ms. `play_windowed.sh` now sets it.
+
 ## 2026-11-02 (meter pacing): guest work, not a 30 fps cap; the tick is not the missing tick
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, X once,

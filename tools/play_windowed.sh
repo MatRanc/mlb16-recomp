@@ -83,6 +83,13 @@ export PS3RECOMP_C690_STATS=1
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
+# Present the window only when the title produced a new frame. Without it the
+# frame clock's outer pass re-presents on a flip request, so MangoHud's row
+# rate (one per vkQueuePresentKHR) reads above the guest [flip] fps. The
+# window pump and input delivery are independent of presents, so this does not
+# affect responsiveness; the confirm run measured 42.57 rows/s vs 42.66 [flip]
+# fps at the start screen (docs/textures-dummy-census.md).
+export PS3RECOMP_VK_PRESENT_NEW_ONLY=1
 # Disabled texture units read magenta otherwise, which makes the picture pink.
 # measure_fast uses the same black dummy.
 export VK_DUMMY_BLACK=1
