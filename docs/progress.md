@@ -3,6 +3,35 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (overlap): the ref is published 3 us after the walker reaches it; the wait is walker time-to-fence
+
+One traced pitch run (`measure_fast.sh`, `VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1`): **35.01 fps** on the
+10 s counter; trace window 12.05 s / 416 flips / 510 fences / 396 PPU ref waits. New trace-only
+`gcm.ref_set` / `gcm.ref_pub` events (`ps3recomp-probe` `mlb16-work`, off by default, pushed to `fork`)
+measure the publication path directly.
+
+- **Publication is not late.** Walker reaches `NV406E_SET_REFERENCE` -> ref register written:
+  **p50 3 µs, p90 4 µs, max 20 µs** over 510 fences. The write is a plain guest store at
+  `cellGcmSys.c:3194` (end of the drain pass) or the read-driven poll (`:1909`); no Vulkan submit,
+  GPU fence, flip or `VK_FRAME_PIPELINE` dependency. Labels/semaphores are written at dispatch.
+- **The fence is the last word before the park**, so end-of-pass publication is ~0 ms after dispatch.
+  "Publish at dispatch" is a no-op for this title.
+- **The wait is the walker reaching the fence.** Of the mean **20.7 ms** wait, **19.7 ms** is before
+  the walker reaches the target; set->pub is 0.003 ms and pub->PPU read is 0.97 ms. In 396/396
+  episodes the target was not yet written when the wait began. The walker is in a drain pass 52.6 %
+  of that pre-publication time (p50 72 %) and starved the rest.
+- **Guest side:** one global monotonic ref counter (`DAT_01246044`), one main pushbuffer
+  (`0x01246390`, `0x280000`, usable `0x27FC00`) and one 16 KB mesh/frame-tail ring (`0x01244E08`) in
+  the 64 KB cellGcm FIFO; `FUN_000655cc` waits for `ctrl->ref == DAT_01245058[prev & 3]` on lwcond
+  `0x01245090` (mutex `0x01245068`, 9000 us) as a **one-frame-in-flight** throttle.
+- **Overlap is already present:** main builds frame N while the walker drains N-1; only the submission
+  tail is serial. There is no extra append work to overlap; deeper runtime rings cannot skip the
+  guest's depth-1 wait, and forcing it is the geometry-corruption path (the old `(id+1)&3`).
+- Options: (A) publish at dispatch, **0-0.02 ms** (do not pursue); (B) cut walker time-to-fence,
+  0-2.6 ms (existing `PS3RECOMP_WALKER_FAST`); (C) shorten the starved half, 0-2 ms; (D) deeper
+  pipeline, guest change only, high risk; (E) env A/B `VK_FRAME_PIPELINE`/`VK_DRAW_BATCH` to size the
+  GPU part of the drain. Details: [`docs/overlap-analysis.md`](overlap-analysis.md).
+
 ## 2026-11-02 (walker cuts in-game): 38.52 fps off vs 37.34 fps on, no gain resolved
 
 Two `measure_fast.sh` runs on `feat/walker-cuts` (`55192504`, the usual
