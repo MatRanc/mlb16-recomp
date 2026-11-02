@@ -3,6 +3,24 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (night): Stage 0 c690 capture implemented — first real data flow
+
+`SPU_JOB_LS_DUMP=<prefix>` (ps3recomp `f47deb52`, off by default) captures at the c690 entry (LS `0x135B8`):
+the local store, the descriptor words, any guest EAs it references, and the job's first 400 DMAs. The job runs
+under **image 6 (the SPURS policy)**, not image 204. Findings:
+
+- The c690 code is DMA'd into LS `0x4000` from guest `0x105EE00` (variant `0x106D380`).
+- The descriptor (`r3` = LS `0x1330`) is format/callback data; +0xC is a guest EA (`0x01243E00`) pointing at a
+  **16×16-byte attribute-format table**.
+- **Data flow:** inputs are per-mesh attribute streams from `0x0173xxxxx`–`0x0180xxxxx` (`0x180`–`0x500` blocks),
+  params/matrices at `0x172F2FF0`, and a `0x2000` block from RSX memory `0x05800C000`; outputs are PUT back to
+  the **same** `0x0173xxxxx` EAs (in-place transform), plus `0x011B00000` (`0x2400`), `0x146A800`, and
+  `0x05800C000`.
+- `tools/spu_profile.sh` is the repeatable gdb sampler (the `psample` attribution is unreliable).
+
+Next: a larger/filtered DMA capture to separate palette/weight GETs from vertex-attribute GETs, and map the
+attribute-format table. See `~/Documents/work_notes.md` "Session 7 Update".
+
 ## 2026-11-01 (evening, later): current cost table + the honest path to 60 fps
 
 | Subsystem / Operation | Old figure | Current | Notes |
