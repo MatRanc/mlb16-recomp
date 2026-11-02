@@ -3,6 +3,26 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (attribution): the walker's 10 ms wait is mostly PPU/cadence, not c690 throughput
+
+One pitch run (`measure_fast.sh`, 33.44 fps / 10 s; trace window 393 frames, 11.80 s, 33.29 fps; instrumentation
+costs −3.4 %). New `PS3RECOMP_TRACE` events (`c690.job`, `spurs.kick`, `gcm.spu_put`, `rsx.park`,
+`spu.overlay_load`, `spurs.init`) plus a trigger window attribute every `rsx.put_wait` to the SPU PUT that
+overwrites the parked slot and the c690 job that made it.
+
+- 2,444 waits = **11.64 ms/frame**. Only **~2.8 ms/frame is c690 production** (job admitted 1.82, running 0.96).
+  **~5.7 ms/frame has no SPU PUT at the park** (20.5 % caught up with `put`, 28.7 % park patched by a non-SPU
+  writer), and **~3.0 ms/frame is the walker not running again after the PUT** (slot filled p50 68 µs after the
+  wait starts; resume p50 527 µs / p90 2.15 ms later).
+- Workers are not saturated: c690 **42.1 %** of lane time over 6 configured lanes, 58.8 % busy, lane 5 idle
+  (0 c690). Queueing with an idle lane 0.8 % of wait, all-busy 0.1 %. c690 wall ~75–77 ms/frame cumulative
+  (matches 73.5 ms at 34.6 fps).
+- **Implication:** the path to 60 is scheduling/overlap — wake the walker on the slot PUT, pipeline the PPU
+  producer with the walker, and shave walker CPU (~37–39 fps for wake-on-PUT; ~44–46 for producer overlap;
+  both + the no-trace 14–15 ms walker → ~60). Design B alone measures ~38 fps, not 55–60, because it removes
+  only the c690 part. Full attribution, levers, caveats: [`docs/walker-spu-wait.md`](walker-spu-wait.md),
+  analysis `tools/analyse_walker_wait.py`.
+
 ## 2026-11-01 (measure-and-decide): c690 offload verdict — no-go for A; B is the only 60 path
 
 One pitch run (34.63 fps, 10 s window, `PS3RECOMP_C690_STATS=1 VK_DRAWPROF=1`). c690: **429 jobs/frame**, job

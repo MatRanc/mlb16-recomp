@@ -1,5 +1,12 @@
 # c690 GPU-offload decision (measure-and-decide)
 
+> **Update 2026-11-02:** the assumption that the walker's ~10 ms wait is SPU output does not hold.
+> A windowed `PS3RECOMP_TRACE` run attributes only **~2.8 ms/frame** to c690 production; ~5.7 ms/frame
+> is PPU/park-patch and ~3.0 ms/frame is the walker's own resume cadence, with workers 42 % c690-busy.
+> Design B alone is ~38 fps here, not 55–60; the cheap levers are wake-on-PUT and producer/walker
+> pipelining. See [`docs/walker-spu-wait.md`](walker-spu-wait.md). The Design B estimate below is left
+> as written for the record.
+
 Date: 2026-11-01. Host: Ryzen 5 2600X, RTX 3060 Ti (clocks locked 1400–1980), Fedora 44.
 One game run (`measure_fast.sh`, `PS3RECOMP_C690_STATS=1 VK_DRAWPROF=1`), pitch reached, **34.63 fps**
 (350 flips / 10 s). All Phase-2 numbers below are the **pitch-window delta** (245.4 s → 255.4 s, 10.0 s),
