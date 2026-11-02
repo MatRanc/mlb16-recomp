@@ -22,9 +22,14 @@ cmake -B recomp-work/build-play -S ps3recomp-play/templates/project -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=/usr/lib64/ccache/clang \
   -DCMAKE_CXX_COMPILER=/usr/lib64/ccache/clang++ \
+  -DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG -march=native" \
+  -DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG -march=native" \
   -DPS3RECOMP_DIR=$PWD/ps3recomp-play \
   -DRECOMP_DIR=$PWD/recomp-work/recompiled \
-  -DSPU_DIR=$PWD/recomp-work/spu_lifted
+  -DSPU_DIR=$PWD/recomp-work/spu_lifted \
+  -DPS3RECOMP_SPU_FAST_FLOAT=ON -DPS3RECOMP_SPU_FAST_LS=ON \
+  -DPS3RECOMP_SPU_WRCH_INLINE=ON -DPS3RECOMP_FFMPEG_RUNTIME=OFF \
+  -DPS3RECOMP_RSX_VULKAN=ON -DPS3RECOMP_BUILD_TESTS=ON
 ninja -C recomp-work/build-play MyGameRecomp
 ```
 
