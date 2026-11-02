@@ -3,6 +3,41 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (meter pacing): guest work, not a 30 fps cap; the tick is not the missing tick
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, X once,
+10 s settle, 6 x 10 s per arm, PIN on, 45 s trace window armed at the first
+A/B switch. Details and PNGs: [`docs/meter-pacing.md`](meter-pacing.md).
+
+- **Static:** the title never calls `cellGcmSetFlipMode` (import present, no
+  call site), does not import `cellGcmGetVBlankCount` /
+  `cellGcmSetVBlankFrequency`, and its vblank handler (`0x69288`) only updates
+  a counter and a deadline that nothing reads. `Gfx_FrameEnd` allows the main
+  to run **3 flips ahead**; `Gfx_DisplayFlip` flips continuously. There is no
+  two-vblank wait, flip interval, or per-scene pacing switch. The title,
+  pitch-wait and meter use the same path.
+- **WCB=0, both `EXP_NO_DRAW=1`:** 16 ms **31.32 +/- 1.06 fps** vs 8 ms
+  **28.05 +/- 0.43**, paired **+3.27** (CI +2.30..+4.23). WCB=2: 16 ms
+  **28.89 +/- 1.77** vs 8 ms **26.85 +/- 0.56**, paired **+2.04** (CI
+  +0.47..+3.62). **Halving the tick is slower, not faster.**
+- **Per-frame trace (WCB=0):** main running p50 **14.7 ms**, blocked **19.6 ms**
+  in `FUN_000655cc`; of the 18.9 ms ref wait only **0.97 ms is walker drain**
+  and **16.8 ms is the walker waiting for a producer** (954 `gcm.spu_put`
+  instants in a sample 13.8 ms wait). With WCB=2 the same wait is **16.8 ms
+  walker drain** and 4.3 ms producer. Removing draws moves the wait to the
+  guest mesh producer; it does not shorten the frame.
+- **Vblank ticks/flip:** WCB=0 16 ms **2.05** vs 8 ms **4.48**; WCB=2 2.32
+  vs 4.68, while the wall frame stays 32-38 ms. The meter's "two ticks" is
+  arithmetic, not tick quantization or a title setting.
+- **Verdict:** (1) guest work - main's own ~15 ms (p50) plus the buffer-ref
+  handoff set by the SPU mesh producer - not (2) a deliberate 30 fps target
+  and not (3) our flip/tick path. Keep draw fast-path benchmarks on the
+  pitch-wait/gameplay, where the guest asks for flips sooner.
+- **Tooling:** new `gcm.flip_vb` trace instant (request, vblank), `vc=` on the
+  `[flip]` line, and `tools/analyse_meter_pacing.py` (streams the full SPU
+  trace, splits arms from the `.marks` file, reports per-frame main
+  blocked/running and the walker split inside the ref wait).
+
 ## 2026-11-02 (meter baseline): the stable meter is guest-cadence bound; NO_DRAW does not help it
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. X once at the pitch,
