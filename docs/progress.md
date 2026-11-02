@@ -3,6 +3,18 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (late): cull-bypass A/B (negative) + research triage
+
+- **Cull bypass is a perf loss.** Porting the RPCS3 `MLB16_triangle_fix` idea (`bi $lr` on ICE handlers
+  `0x2C`/`0x26`/`0x25`, LS `0x12DC0`/`0x13518`/`0x13520`) via an early `SPU_RET(ctx)` measured **33.57 fps vs 36.6**
+  (diff 6.5). The cull is an early-out before the expensive per-vertex math; removing it costs more downstream
+  than it saves. Keep it off; it stays a *visual* option for high-resolution pin-holes only.
+- **Research doc:** its c690 command table / dispatch tables / patch offsets are corroborated by our own
+  `mlb16-revival-server/docs/ice-mesh.md`. The valuable new prior art is **WKC2's capture/replay harness**
+  (`WKC_JOB_CAPTURE` / `WKC_JOB_REPLAY`) and its serial-ring-commit rule. Its RPCS3 config flags are not
+  applicable to a native recomp, and its "native SIMD → 6–7.5 ms" estimate is optimistic given our neutral
+  `0x7C18` kernel and the cull result. RPCS3 calibration: 12700K ~55–60 fps minor-league / ~38–48 major.
+
 ## 2026-11-01 (night): Stage 0 c690 capture implemented — first real data flow
 
 `SPU_JOB_LS_DUMP=<prefix>` (ps3recomp `f47deb52`, off by default) captures at the c690 entry (LS `0x135B8`):
