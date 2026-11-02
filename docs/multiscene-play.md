@@ -35,8 +35,12 @@ ninja -C recomp-work/build-play MyGameRecomp
 
 `build-o2` is untouched. The unit tests the branches added are built with
 `-DPS3RECOMP_BUILD_TESTS=ON` and run from `build-play/ps3recomp_sdk`
-(`ctest -R color_readback_guest`; `tools/test_gcm_walker_wake.py`; the walker
-fast checks live in the same `test_color_readback_guest` binary).
+(`ctest -R color_readback_guest` and `-R replay_rsx_sample_fifo`;
+`tools/test_gcm_walker_wake.py`; and `libs/video/tests/test_rsx_draw_engine.c`
+built standalone against `rsx_draw_engine.c`, which runs the new
+`test_walker_fast_*` checks). After merging `walker-cuts`, the standalone
+walker-wake fixture also needs no-op stubs for `rsx_wprof_*` / `rsx_wcap_*` /
+`rsx_draw_engine_wcb_*`; the fixture itself is unchanged.
 
 ## Run
 
