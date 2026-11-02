@@ -3,6 +3,15 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (late, 3): per-function native + cull bypass are both closed
+
+- **Native kernels bit-exact but at parity:** `0x6D68` = **1.00×** (563 vs 568 ns/call); `0xAF98`+`0xB238` = **1.03×**
+  (216 vs 223 ns/call). The lift already emits the same `vpshufb/vpsllvd/vfmadd132ps` mix. Per-function SIMD is not
+  a performance lever.
+- **Cull bypass loses in every variant:** all three = 33.6 fps; only `0x2C` = 34.85; baseline 36.6. The culls remove
+  triangles before the per-vertex math, so they are a net win.
+- **Conclusion:** cheap levers exhausted. 60 fps needs the whole-pipeline GPU offload (2–4 months) or accept ~36–40 fps.
+
 ## 2026-11-01 (late, 2): offline capture/replay harness working
 
 `SPU_FN_CAPTURE=<lsa>[:dir]` (ps3recomp `a3a5564f`) dumps the full LS + 128 GPRs + pc at a function entry. First
