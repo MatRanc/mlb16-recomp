@@ -124,16 +124,26 @@ def percentile(sorted_vals, p):
 
 
 def stats(fps, ft, t):
+    """Summarise one row per frame.
+
+    avg fps is frames / total time (n / sum(frametime)), not the mean of the
+    row's instantaneous fps values: averaging 1/dt overweights short frames
+    and reported 333 fps for a log whose real mean was 28 fps. The 1 % and
+    0.1 % lows are the reciprocal of the mean of the slowest 1 %/0.1 % frame
+    times, the usual definition, so they use the same time base as avg fps.
+    The per-row fps column is not used at all.
+    """
     fts = sorted(ft)
     n = len(ft)
-    mean_ft = sum(ft) / n
-    avg_fps = sum(fps) / n
+    total_ms = sum(ft)
+    mean_ft = total_ms / n
+    avg_fps = n * 1000.0 / total_ms
     k1 = max(1, int(math.ceil(n * 0.01)))
     k01 = max(1, int(math.ceil(n * 0.001)))
     low1 = 1000.0 / (sum(fts[-k1:]) / k1)
     low01 = 1000.0 / (sum(fts[-k01:]) / k01)
     spikes = sum(1 for x in ft if x > 50.0)
-    duration = t[-1] - t[0] if n > 1 else 0.0
+    duration = total_ms / 1000.0
     return {
         "n": n,
         "duration": duration,
@@ -147,6 +157,27 @@ def stats(fps, ft, t):
         "min": fts[0],
         "spikes": spikes,
     }
+
+
+def self_check(s):
+    """Fail loudly if the summary is internally inconsistent."""
+    errs = []
+    if s["n"] <= 0:
+        errs.append("no samples")
+    if not (s["mean_ft"] > 0.0 and math.isfinite(s["mean_ft"])):
+        errs.append(f"bad mean frametime {s['mean_ft']!r}")
+    else:
+        implied = 1000.0 / s["mean_ft"]
+        if abs(s["avg_fps"] - implied) > max(1e-6, implied * 1e-9):
+            errs.append(f"avg fps {s['avg_fps']:.6f} != 1000/mean_ft {implied:.6f}")
+        if not (0.0 < s["low01"] <= s["low1"] + 1e-9):
+            errs.append(f"0.1% low {s['low01']:.3f} > 1% low {s['low1']:.3f}")
+        if s["low1"] > implied + 1e-6:
+            errs.append(f"1% low {s['low1']:.3f} > avg {implied:.3f}")
+        if s["min"] <= 0.0:
+            errs.append(f"bad minimum frametime {s['min']!r}")
+    if errs:
+        raise SystemExit("frametime_plot self-check failed: " + "; ".join(errs))
 
 
 def fmt_summary(path, s, axis_label):
@@ -255,6 +286,7 @@ def main():
     fps, ft, times = read_mangohud_csv(args.csv)
     t, axis = choose_time(ft, times)
     s = stats(fps, ft, t)
+    self_check(s)
     print(fmt_summary(args.csv, s, axis))
 
     if not args.no_plot:

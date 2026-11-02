@@ -15,6 +15,11 @@
 # The thumbnail source is the game's own frame dump (PS3RECOMP_VK_DUMP), so it
 # works on native Wayland as well as Xwayland. If no dump appears, it falls
 # back to an X11 root-window grab when DISPLAY is set.
+#
+# Defaults: VK_DUMMY_BLACK=1 (no pink missing textures; measure_fast uses it)
+# and PS3RECOMP_VK_PRESENT_MODE=fifo (avoids the native-Wayland MAILBOX present
+# stall). Both are plain environment variables, so export them before the
+# script to override.
 
 set -o pipefail
 
@@ -66,8 +71,8 @@ mkdir -p "$OUTDIR"
     echo "ARGS=$*"
 } > "$OUTDIR/meta.txt"
 
-# The user's normal run.sh environment (real textures: no VK_DUMMY_BLACK, no
-# scripted pad, no benchmark flip counter), plus the multi-scene diagnostics.
+# The user's normal run.sh environment (no scripted pad) plus the multi-scene
+# diagnostics.
 export __GL_SYNC_TO_VBLANK=0
 export GCM_HANDLER_THREAD=1 GCM_FLIPCB_ONTICK=1 GCM_FLIPCOUNT=1
 export PS3RECOMP_VK_GUEST_PROGRAMS=1 PS3RECOMP_VK_WINDOW=1 PS3RECOMP_VK_FULLSCREEN=0
@@ -78,6 +83,14 @@ export PS3RECOMP_C690_STATS=1
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
+# Disabled texture units read magenta otherwise, which makes the picture pink.
+# measure_fast uses the same black dummy.
+export VK_DUMMY_BLACK=1
+# Native Wayland + NVIDIA: MAILBOX can leave the present thread blocked in
+# vkQueuePresentKHR for tens of seconds, dropping every frame no-slot while the
+# guest keeps flipping. FIFO is the required present mode and avoids that path
+# (Xwayland negotiates FIFO too). Override with PS3RECOMP_VK_PRESENT_MODE=mailbox.
+export PS3RECOMP_VK_PRESENT_MODE="${PS3RECOMP_VK_PRESENT_MODE:-fifo}"
 # Thumbnail source: the title's own presented frame, every DUMP_EVERY flips.
 export PS3RECOMP_VK_DUMP="$OUTDIR/frame.ppm"
 export PS3RECOMP_VK_DUMP_EVERY="$DUMP_EVERY"
