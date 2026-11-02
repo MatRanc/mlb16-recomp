@@ -83,6 +83,7 @@ export PS3RECOMP_VK_DUMP="$OUTDIR/frame.ppm"
 export PS3RECOMP_VK_DUMP_EVERY="$DUMP_EVERY"
 # Real controller, not pad.txt.
 unset PAD_FILE
+unset PS3RECOMP_RSX_WCB PS3RECOMP_RSX_WCB_STATS
 if [ "$WCB" = 1 ]; then
     export PS3RECOMP_RSX_WCB=3
     export PS3RECOMP_RSX_WCB_STATS=60
