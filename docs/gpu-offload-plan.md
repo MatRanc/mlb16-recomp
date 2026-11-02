@@ -84,6 +84,27 @@ Mitigations to evaluate in the spike:
 - **M3** Cover the hot formats.
 - **M4** Frame pipelining / walker overlap.
 
+## M0 findings (decoded from existing captures, no game run)
+
+- **Correction:** `0x01243E00` is the game's `cellSpurs` instance, not an attribute table. The SPU job never reads
+  descriptor `+0x0C`; its entry (`spu_recomp.c:135B8`) reads `+0x20` -> work block at LS `0xC30`. The real format
+  data is the LS block before each stream (LS `0x172B0`) and the PPU ICE struct (`FUN_000730c8`).
+- **Pitch mesh format (job_01):** position = 12/12/11 bits, 35 bits/vertex, 8 verts per 35-byte block, MSB-first
+  unsigned; dequant `a = bitcast_f32(0x3F800000 + (B + 4F))`, `value = fma(a, A, C)`, step 1/1024, per-axis AABB
+  bias. Normals/tangents = 3x10-bit snorm; UV0 = 2x11; UV1 = 2x9. No blend indices/weights in this format.
+- **Output:** AoS 16-byte `(x,y,z,const)` for positions; snorm16 pack (`0x7C18`, `cflts 157`), snorm8 (`0x8160`,
+  `cflts 142`); TBN normalize (`0xAF98+B238`). Outputs are PUT back to the **same** guest EAs as the packed inputs
+  (in-place expansion ~4.4 -> 16 B/vertex), so the shader must stage the input block before writing.
+- **Command stream:** at LS `0x17000`, 16-bit BE words; per-vertex workhorse is `0x2A -> 0x10F78` (48-byte stride,
+  calls the format kernel via `$87`). `0x0C` is index decompress; `0x25` cull. `0x22/0x26/0x2C` not exercised by
+  the captured jobs. Jobs are small (~300 tris), so batch one dispatch per job/frame.
+- **Integration:** dispatch at the DMA boundary (`mfc_do_transfer_fast`, both fast and full paths), one dispatch per
+  job, zero-copy import of `vm_base` windows via `VK_EXT_external_memory_host`, output written in place, one fence
+  per job waited at the publish PUT (`0x011B00000`) before `g_spu_put_hook`. Skip the SPU math per-format via the
+  existing native-swap pattern (`spu_recomp.c:7612`), driven by `desc[4]`.
+- **Open risks:** import feasibility on the target driver; SPU-thread Vulkan safety (private cmd pool + `queue_mu`);
+  in-place aliasing across frames (wait-on-reuse); bit-exactness vs the fast-float build.
+
 ## Prerequisites already in place
 
 - Offline capture/replay harness (`tools/replay/`, `SPU_FN_CAPTURE`) with bit-exact reference checksums.
