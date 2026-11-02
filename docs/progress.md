@@ -3,6 +3,14 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (decision): commit to the whole-pipeline GPU offload
+
+Cheap levers are closed (per-function native 1.00×/1.03×; cull bypass loses). The only path to 60 fps is moving the
+c690 **per-vertex math** (unpack `0x6D68`, skin `0xD2B8/0xD4A8/0xC98C`, normalize `0xAF98+B238`, pack `0x7C18/0x8160`)
+to GPU compute, keeping culling/tree/index/ring on the SPU. First step is a 1–2 week go/no-go spike on one format
+(bit-exact vs the offline harness, then measure the fence/sync cost). Full plan, data flow, risks, and milestones:
+[`docs/gpu-offload-plan.md`](gpu-offload-plan.md).
+
 ## 2026-11-01 (late, 3): per-function native + cull bypass are both closed
 
 - **Native kernels bit-exact but at parity:** `0x6D68` = **1.00×** (563 vs 568 ns/call); `0xAF98`+`0xB238` = **1.03×**
