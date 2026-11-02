@@ -3,6 +3,15 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (tooling decision): no Ghidra SPU import, no emulator FP
+
+- Ghidra 12.1.2 has no SPU processor; GhidraSPU builds for it, but the MCP is bound to the EBOOT and cannot switch
+  programs, and the c690 module is already lifted to readable, bit-exact C. **Do not import the SPU program.**
+- anergistic (offline SPU emulator) has a flat EA model + MFC DMA but is **integer-only** (no `fma`/`cflts`/`frest`),
+  so it cannot run the geometry math without ~15 added FP instructions. **Do not invest in emulator FP.**
+- Use the lifted C + `tools/spu_disasm.py` for the thin low-LS runtime. Runtime per-format constants need
+  function-entry captures, not decompilation.
+
 ## 2026-11-01 (decision): commit to the whole-pipeline GPU offload
 
 Cheap levers are closed (per-function native 1.00×/1.03×; cull bypass loses). The only path to 60 fps is moving the
