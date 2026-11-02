@@ -3,6 +3,13 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (late, 2): offline capture/replay harness working
+
+`SPU_FN_CAPTURE=<lsa>[:dir]` (ps3recomp `a3a5564f`) dumps the full LS + 128 GPRs + pc at a function entry. First
+capture/replay: `0x6D68` at the pitch → `tools/replay/` loads it, runs the lifted body, prints a deterministic
+checksum (`0xfc2e9569dc2feb11`, loop 24) and **~563 ns/call**. This is the offline loop for native kernels — no
+game boot or match load. Next: native `0x6D68` diffed against the checksum, then `0xAF98`+`0xB238` as one unit.
+
 ## 2026-11-01 (late): cull-bypass A/B (negative) + research triage
 
 - **Cull bypass is a perf loss.** Porting the RPCS3 `MLB16_triangle_fix` idea (`bi $lr` on ICE handlers
