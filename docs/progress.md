@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (meter baseline): the stable meter is guest-cadence bound; NO_DRAW does not help it
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. X once at the pitch,
+fixed 10 s settle, 10 s segments, PIN on, x11, 2 s scene thumbnails + contact
+sheets. Details and PNGs: [`docs/meter-scene-baseline.md`](meter-scene-baseline.md).
+
+- **Harness:** `ab_live.sh`/`measure_fast.sh` now press X exactly once and
+  verify the meter from the frame dump against `ref/pitch_meter*.png`
+  (crop 370,95,395,120; WCB-on and WCB-off references); auto-settle replaced
+  by a fixed 10 s wait measured from the post-X walker plateau. Each run
+  saves `scene_<epoch-ms>.png` every 2 s and a `scene_sheet.png` with the
+  measured A/B bands.
+- **A/A, WCB=2, N=8:** A **29.34 +/- 0.64** vs B **29.93 +/- 0.89 fps**,
+  paired **-0.59 +/- 1.09** (CI -1.67..+0.50), segment std 0.77/1.07. Cleaner
+  than the old pitch A/A (~1.6 fps CI); point estimate 0.59 fps and CI covers
+  0.
+- **Ceiling, WCB=0, N=6:** baseline **33.55 fps** (walker 19.17, wait 10.76)
+  vs `EXP_NO_DRAW=1` **30.92 fps** (walker **3.78**, wait **28.60**), paired
+  **+2.63** (CI +1.78..+3.48). **NO_DRAW is slower here.** The meter asks for
+  a flip about every 30-32 ms (two 16 ms ticks); removing 15.4 ms of draw work
+  leaves the frame at two ticks. The old pitch-wait 41 fps NO_DRAW ceiling
+  does not reproduce on the stable meter.
+- **WALKER_FAST=1 is slower on the meter:** A **29.18** vs B **27.21 fps**,
+  paired **1.98** (CI +1.01..+2.94); walker 27.36 -> 30.71 ms, fetch 4.07 ->
+  6.57, tex 10.16 -> 11.39. Do not enable it as a cut.
+- **Per-phase (WCB=2 baseline):** walker 26.73 ms; engine 25.21 (tex 9.80,
+  draw 4.75, fetch 4.01, other 4.54, pipe 1.91, bind 0.21), parse 1.50;
+  source split main 10.20 ms/988 packets, mesh 11.57 ms/1393 packets. WCB=0
+  cuts tex to 4.29 and main to 4.25 (mesh 12.12), so the WCB readback path is
+  ~6 ms in the normal config.
+- **Draw fast-path order (ms/frame, headroom not fps):** mesh 11.57, tex
+  9.80, main 10.20, draw 4.75, fetch 4.01, pipe 1.91, parse 1.50. On the meter
+  the fps payoff is 0 until the guest cadence/tick changes; test
+  `EXP_TICK_US=8000` with NO_DRAW on the meter next.
+- **Launch check:** current `play_windowed.sh` (Xwayland default) launched
+  `build-play` to the title at **42.3-42.6 fps**, window `shown=63-68`, 0
+  no-slot drops, no address-0/frame_clock crash (74 s). The older native-Wayland
+  launcher reproduced the known present freeze, not a crash.
+
 ## 2026-11-02 (tick + resync): the 16 ms tick caps only NO_DRAW; FAST_WAKE still wedges
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, 6 x 10 s
