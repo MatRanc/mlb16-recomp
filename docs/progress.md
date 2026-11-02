@@ -34,6 +34,20 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentati
 - Use the lifted C + `tools/spu_disasm.py` for the thin low-LS runtime. Runtime per-format constants need
   function-entry captures, not decompilation.
 
+## Next steps (2026-11-01)
+
+Per-call offload is not viable (fence latency >> the ~0.5 us kernels). The offload must be **job-level**, and the
+pipeline is a chain of separate commands. To build a job-level shader we need the full chain from one job:
+
+1. **Co-temporal capture (recommended, one run).** Add a probe that captures the producing chain in a single job:
+   `0x6D68` -> `0xA798` -> `0xAF98`, the `0x0A` pack scale/offset (`sr9`/`sr10`), and the `0x29540` matrix for the
+   same job. Then build/validate the job-level shader offline against that one snapshot.
+2. **Whole-job replay (offline, no run).** Lift the low-LS SPURS runtime (`0x1690/0x22B0/0x1B08/0x1AE0`) and add
+   an EA/DMA model to the replay harness, then replay a job from the entry.
+
+Then: build the job-level shader for all streams, validate offline, integrate at the DMA boundary (one dispatch +
+one fence per job), and run the single go/no-go measurement. Function map: `docs/c690_function_map.md`.
+
 ## 2026-11-01 (decision): commit to the whole-pipeline GPU offload
 
 Cheap levers are closed (per-function native 1.00×/1.03×; cull bypass loses). The only path to 60 fps is moving the
