@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (walker cuts 1+3): fetch -1.63 ms, pipeline -1.09 ms per frame offline
+
+Branch `feat/walker-cuts` (`ps3recomp-probe`, off `feat/walker-prof`, not merged).
+`PS3RECOMP_WALKER_FAST=1` (default off) adds cut 1's fetch plan/remap memo and
+cut 3's pipeline input memo. `replay_rsx_engine` now also reports a per-frame
+digest of everything the null backend receives, so the replayed frame can be
+compared with the toggle on and off.
+
+Offline A/B on `recomp-work/walker_frame` (5 repeats per setting, 20 measured
+frames each; medians and min-max over repeats):
+
+| phase | off | on | delta |
+|---|---:|---:|---:|
+| fetch | 4.200 ms (4.174-4.240) | 2.572 ms (2.559-2.592) | **-38.8 %** |
+| pipe  | 2.067 ms (2.058-2.076) | 0.981 ms (0.972-0.986) | **-52.6 %** |
+| engine | 14.978 ms (14.870-15.087) | 12.377 ms (12.293-12.500) | **-17.4 %** |
+
+Output gate identical in all ten runs (`0f91a96c79a7aadf`, 20-frame chain) and
+`replay_rsx` still verifies at `0x85fc2ff5a1655c26`. The memo holds no guest
+vertex bytes (payloads are re-fetched), keys the fetch plan on the reference set
+and VTXFMT state, and keys the pipeline on program bytes plus the
+pipeline-relevant registers, so changed index/program data misses. Unit tests
+cover hits, reference-source and program-byte misses, and the pipeline key.
+Also fixes a latent replay-only staleness: `state_restore` now bumps the texture
+write generations it bypassed. Cut 2 (texture) is not implemented; Vulkan
+recording is untouched. Details and the one-run in-game check:
+[`docs/walker-cuts.md`](walker-cuts.md).
+
 ## 2026-11-02 (walker profile): fetch 3.6, texture 3.2, pipeline 1.9 ms per frame
 
 Branch `feat/walker-prof` (`ps3recomp-probe`, off `mlb16-work`, not merged). New
