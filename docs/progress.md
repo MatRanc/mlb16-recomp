@@ -3,6 +3,15 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (measure-and-decide): c690 offload verdict — no-go for A; B is the only 60 path
+
+One pitch run (34.63 fps, 10 s window, `PS3RECOMP_C690_STATS=1 VK_DRAWPROF=1`). c690: **429 jobs/frame**, job
+wall **73.5 ms/frame cumulative** (p50 115 µs, p90 239 µs), opcode `0x0A` 30.6 % / `0x2A` 7.9 % (every job) /
+culls 5.0 %. Fence round trip **41 µs p50 / 74 µs p99** (locked clocks). Design A per-job win 44.5 µs mean but
+−16.5 µs at p50/p99 → **~37–40 fps; no-go**. Design B (whole job on GPU, indirect draws, no CPU wait) → **~55–60
+fps but 2–4 months**. Next lever: tree/leaf lifter codegen (~34 % of the SPU wall). Full numbers + leaf
+cross-check: [`docs/c690-offload-decision.md`](c690-offload-decision.md).
+
 ## 2026-11-01 (correction): 0x2A is an assembler; 0x6D68 is a direction unpack
 
 - `0x10F78` (opcode 0x2A, selector 0) is a **vertex-format assembler**: it gathers four already-final planar
@@ -238,58 +247,6 @@ Current `mlb16-work` tree, pitch screen: **32.2 fps** (1 s buckets 32.1 ± 2.0);
 Next: cut the c690 job's time (the remaining hot functions `0xD540`, `0x10028`, `0x6D68`, `0xAF98`, `0x8160`) or
 offload skinning to the GPU. The walker is close to its practical limit.
 
-
-## Next steps (as of 2026-11-01 early morning)
-
-We have ceased all micro-optimizations (SPU assembly tweaks, micro-loop inlining, repeated PGO retraining). Gaining +1.3 fps from PGO or +0.4 fps from walker tweaks will not achieve 60 fps. A 24.2 fps frame is **41.3 ms**; a 60 fps frame is **16.6 ms**.
-
-### The Mathematical Reality & Pipelining Law (Why Triple Buffering Alone Isn't 3x)
-A common misconception is that triple buffering divides frame time by 3 (e.g. $41.3\text{ ms} / 3 \approx 13.7\text{ ms}$). **In computing, pipelining never divides execution time by the number of buffers; it overlaps independent stages.** Under pipelined execution, frame throughput is strictly bounded by the single slowest stage:
-
-$$\text{Pipelined Frame Time} = \max\left(\text{Stage 1 [PPU]}, \ \text{Stage 2 [SPU]}, \ \text{Stage 3 [RSX/GPU]}\right)$$
-
-| Stage | Subsystem & Workload | Current Time | Ready for 60 FPS ($\le 16.6\text{ ms}$)? |
-| :--- | :--- | :---: | :---: |
-| **Stage 1 (PPU)** | Game logic, animation poses, physics, job submission | **~8.0 ms** |  **YES** (Fast enough for ~125 FPS) |
-| **Stage 3 (RSX / GPU)** | Walker dispatch & RTX 3060 Ti rendering (Targets 1 & 2) | **~3.0 ms** |  **YES** (Fast enough for ~300+ FPS) |
-| **Stage 2 (SPU)** | **Edge Geometry vertex decompression & skinning (`c690c2f7b09a`)** | **~35.0 ms** | ❌ **NO — THE PRIMARY BOTTLENECK** |
-
-If we overlap the PPU (8 ms) with the SPUs (35 ms) and GPU (3 ms) via triple-buffered command rings (Target 3 alone):
-$$\text{Frame Time} = \max(8\text{ ms}, \ \mathbf{35\text{ ms}}, \ 3\text{ ms}) = \mathbf{35.0\text{ ms}} \implies \mathbf{28.5\text{ FPS}}$$
-Target 3 will eliminate the ~8 ms PPU wait in `Gfx_FrameEnd`, but **framerate will hit a hard ceiling at 28.5 FPS dictated by the 35 ms SPU skinning loop**. Reaching 60 FPS requires both Target 3 and Target 4.
-
-### The Macro Redesign Roadmap to 60 FPS:
-
-1. **Decoupled Vulkan Presentation Thread (Macro Target 1, COMPLETED & VERIFIED):**
-   - Implemented 2-queue architecture (`queue 0` for walker submissions, `queue 1` for presentation thread) in `rsx_vulkan_backend.c`.
-   - Triple-buffered `VK_PRESENT_MODE_MAILBOX_KHR` with non-blocking acquire and `__GL_SYNC_TO_VBLANK=0`.
-   - Verified in live benchmark: windowed presentation matches headless speed (23.34 fps vs 23.98 fps), completely eliminating the 12.00 FPS clamp.
-2. **Descriptor-Driven GPU Vertex Offload & Compute Unpack (Macro Target 2, COMPLETED & VERIFIED):**
-   - Implemented `vtx_unpack.comp` compute pipeline in Vulkan backend with dedicated fast paths (Modes 0, 1, 2) and Mode 3 Generic Descriptor Unpack.
-   - Dynamic GPU index remapping offloads non-contiguous vertex streams.
-   - Coverage: GPU offload surged from 15.0% to **98.28%** (2,239,363 draws offloaded), while CPU software fallbacks plummeted from 85.0% to **1.72%**.
-   - Verified 100% deterministic replay via `replay_rsx` (hash `0x85fc2ff5a1655c26`) and sub-pixel visual fidelity (diff 2.6 across full viewport).
-3. **PPU / RSX Frame $N+1$ Pipelined Overlap (Macro Target 3, Target: Overlap PPU 8 ms) -- IMMEDIATE FOCUS:**
-   - Double/triple-buffer command rings and frame-level sync fences so the PPU begins constructing Frame $N+1$ while the RSX walker and GPU actively process Frame $N$.
-   - Eliminates the PPU main game thread sleeping in `Gfx_FrameEnd` waiting on the closing fence, lifting the baseline toward the ~28.5 FPS SPU ceiling.
-4. **SPU Edge Geometry Skinning Loop Optimization / GPU Compute Skinning Offload (Macro Target 4, Target: Crush the 35 ms Wall):**
-   - SPU module `c690c2f7b09a` represents ~70% of all SPU compute time (~35 ms) executing software matrix-palette bone skinning and vertex decompression.
-   - *Option A (Lifted SPU Vectorization)*: Hand-vectorize hot loop `0x7C18` using AVX2 SIMD, keeping matrix palettes in vector registers and eliminating local-store byte-swap roundtrips.
-   - *Option B (GPU Compute Bone Skinning)*: Extend `vtx_unpack.comp` to accept bone matrix palettes via SSBO, performing matrix-palette skinning on the RTX 3060 Ti compute cores in $<1\text{ ms}$.
-   - Once SPU skinning drops from $35\text{ ms} \rightarrow \le 14\text{ ms}$:
-     $$\text{Pipelined Frame Time} = \max(\text{PPU: } 8\text{ ms}, \ \mathbf{\text{SPU: } 14\text{ ms}}, \ \text{GPU: } 3\text{ ms}) = \mathbf{14.0\text{ ms}} \implies \mathbf{71.4\text{ FPS (Rock-Solid 60 FPS Locked!)}}$$
-5. **Deterministic Headless Replay Tooling (VERIFIED):**
-   - Big-endian fix in `PS3RECOMP_DUMP_FIFO` (`__builtin_bswap32`) allows dumping real Kauffman Stadium gameplay traces (`kauffman_pitch.bin`).
-   - Replays 100% deterministically in 3 seconds via `tools/replay_rsx` (hash `0x85fc2ff5a1655c26`, 646 draws, 50 clears, 2,338 dispatcher calls) to benchmark walker and vertex changes without 4-minute game boots.
-
-### Ecosystem Context, Lineage & Clean-Room Standard:
-- **PS3 Complexity Hierarchy:** *MLB The Show 16* sits at Tier 1.5 ("Late-Gen First-Party Titans") alongside *LittleBigPlanet* and *God of War: Ascension*. Only the "Nightmare Tier" (*The Last of Us*, *Killzone 2/3*, *Gran Turismo 6*, *MGS4*) is more complex. Standard cross-platform games (e.g. *The Bigs 2*, *GTA IV*, *RDR*) sit at Tier 3 and are significantly easier.
-- **Naughty Dog ICE Team Heritage:** Official SCE GDC records verify PlayStation Edge Geometry was built by Sony WWS and Naughty Dog's ICE Team. SPU module `c690c2f7b09a` is the ICE mesh skinning program.
-- **RPCS3 Blueprints (Clean-Room):** RPCS3 PR #16907 (`elad335`) confirms PPU thread wait flags (`cpu_flag::wait`) prevent SPURS starvation during workload removal. RPCS3's `VKGSRender` ring-slot fence tracking ($N$-buffering) serves as the architectural pattern for Target 3.
-- **Zelda64Recomp / UnleashedRecomp Lesson:** Never emulate on CPU what a modern GPU can do natively; RTX 3060 Ti compute unpack (`vtx_unpack.comp`) bypasses CPU SPU DMA `memcpy` churn.
-- **MIT vs GPLv2 Clean-Room Policy:** RPCS3 is GPLv2 while `ps3recomp` is MIT. Code cannot be copied from RPCS3. All implementations must be 100% original, clean-room C/C++ to preserve MIT licensing and upstream mergeability.
-
----
 
 ## 2026-11-01: Descriptor-Driven GPU Vertex Compute Unpack & Presentation Thread Complete
 
@@ -973,3 +930,12 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   - NP auth, ID lookup and signaling are missing or stubbed.
 - ps3recomp's own docs recommend Sony's `libsre` (lifted from your firmware) over its built-in SPURS, which has hung
   most SPURS-heavy titles.
+
+## Reference
+
+- **Upstream PRs** (submitted to `sp00nznet/ps3recomp`, all open): #640 templates Vulkan-on-Linux; #641 cellFsAioWrite;
+  #642 cellVideoOut stereo; #643 cellSpurs taskset args; #644 sys_memory container size; #645 cellFsFtruncate;
+  #646 cellSpurs maxContention; #647 GCM handler thread; #648 GCM wrap JUMP slot; #649 cellSpurs maxContention clamp +
+  RequestIdleSpu; #650 PS3RECOMP_TRACE.
+- **Clean-room rule:** ps3recomp/mlb16-recomp are MIT; RPCS3 is GPLv2. Never copy or port RPCS3 (or other GPLv2) code;
+  write original code against ps3recomp's own structures. This keeps the project MIT-compliant and upstreamable.
