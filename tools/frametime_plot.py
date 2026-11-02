@@ -3,6 +3,10 @@
 
     tools/frametime_plot.py play_20261102_120000/MyGameRecomp_....csv
     tools/frametime_plot.py log.csv -o shot.png --no-plot
+    tools/frametime_plot.py log.csv --segments run_segments.txt
+
+`--segments FILE` reads "start_s end_s label" lines in the same time base as
+the plot's x axis (MangoHud elapsed seconds) and shades each A/B segment.
 
 Reads MangoHud's CSV format: a system-info line, then a header row that
 contains `fps` and `frametime`, then one row per sample. `frametime` is in
@@ -194,7 +198,22 @@ def fmt_summary(path, s, axis_label):
     return "\n".join(lines)
 
 
-def render_png(path, t, ft, s):
+def read_segments(path):
+    segs = []
+    if not path:
+        return segs
+    with open(path, "r", errors="replace") as f:
+        for line in f:
+            parts = line.split()
+            if len(parts) >= 3:
+                try:
+                    segs.append((float(parts[0]), float(parts[1]), parts[2]))
+                except ValueError:
+                    pass
+    return segs
+
+
+def render_png(path, t, ft, s, segments=None):
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
@@ -221,6 +240,16 @@ def render_png(path, t, ft, s):
     ymin = 0.0
     px = lambda x: ml + (x - x0) / (x1 - x0) * (W - ml - mr)
     py = lambda y: H - mb - (y - ymin) / (ymax - ymin) * (H - mt - mb)
+
+    # A/B segment bands, drawn behind the data. Labels A/B at the top.
+    for (a, b, label) in (segments or []):
+        if b < x0 or a > x1 or b <= a:
+            continue
+        col = (222, 235, 248) if label.upper() == "A" else (252, 235, 219)
+        xa, xb = px(max(a, x0)), px(min(b, x1))
+        d.rectangle([xa, mt, xb, H - mb], fill=col)
+        d.text(((xa + xb) / 2 - 4, mt + 3), label, fill=(60, 60, 60),
+               font=small)
 
     # grid and ticks
     for i in range(7):
@@ -281,6 +310,7 @@ def main():
     ap.add_argument("csv", help="MangoHud CSV log")
     ap.add_argument("-o", "--output", help="PNG path (default: <csv>.png)")
     ap.add_argument("--no-plot", action="store_true", help="text summary only")
+    ap.add_argument("--segments", help="\"start_s end_s label\" bands to shade")
     args = ap.parse_args()
 
     fps, ft, times = read_mangohud_csv(args.csv)
@@ -291,7 +321,7 @@ def main():
 
     if not args.no_plot:
         out = args.output or (os.path.splitext(args.csv)[0] + ".png")
-        written = render_png(out, t, ft, s)
+        written = render_png(out, t, ft, s, read_segments(args.segments))
         if written:
             print(f"plot: {written}")
 

@@ -3,6 +3,46 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (live A/B + ceilings): walker draw work is the limit; FAST_WAKE wedges
+
+Branch `exp/live-ab` (`ps3recomp-play`, off `play/multiscene`), `build-play`.
+One windowed run per arm pair, control file `PS3RECOMP_CTL` toggled every
+10 s, 6 segments/arm, WALKER_PROF + MangoHud. Details:
+[`docs/live-ab-and-ceilings.md`](live-ab-and-ceilings.md).
+
+- **Harness:** live toggles for `PS3RECOMP_WALKER_FAST`, `PS3RECOMP_WALKER_WAKE`,
+  `EXP_NO_DRAW`, `EXP_FAST_WAKE`; opt-in `PS3RECOMP_PIN=1` (walker cpu0,
+  ppu main cpu1, others 2-5,8-11) with the mapping printed; `ab_live.sh`
+  auto-settles until the pitch walker mean is <=20 ms for 8 s.
+- **The pitch is not stationary for 1-3 min:** asset streaming swings the
+  walker 14-45 ms/frame. A 10 s wait caught 16-38 fps segments. A/A after
+  settle: PIN off diff **-0.31 fps** (CI -5.56..+4.95, std 4.2/4.9); PIN on
+  **-0.11 fps** (CI -1.73..+1.51, std 2.2/1.7). Pinning cuts the spread ~2.5x;
+  the best CI resolves ~1.6 fps, not 0.5.
+- **NO_DRAW ceiling:** baseline **30.26 fps** (walker 24.94 ms, wait 10.76) vs
+  **41.22 fps** (walker **2.15 ms**, wait 22.11), paired **-10.96 fps**
+  (CI -17.69..-4.23); every segment faster, NO_DRAW std 0.6 vs 6.5. **Walker
+  draw work is the frame limiter; the PPU side then caps at ~41.5 fps.**
+  Draw source is mixed: PPU main ring 3.8-34.6 ms/frame, SPU mesh rings
+  4.4-11.1 ms/frame. A native fast path should cover both, mesh first.
+- **FAST_WAKE:** wedged the pitch twice at the same 5th B segment (guest
+  ~300.8 s): jump-park resync, frame commands dropped, flips stop. The busy
+  poll re-reads an unpatched park; the 4 ms block was giving the PPU time.
+  Start-screen A/B: no gain (46.5 vs 46.5 fps); the 16 ms tick is the pacer
+  (draw frames wait 14-19 ms, idle frames 28-33 ms; walker own 0.1-0.6 ms).
+- **Pipeline cache:** none in `rsx_vulkan_backend.c`; a whole run is only
+  ~340-430 creates, **30-41 ms total** (p50 29-36 us, max 0.4-6.9 ms). Not the
+  scene-change stutter.
+- **Timing:** flip completion is gated by the 16 ms tick (`main.cpp:263`);
+  >60 fps needs a tick/timing change, not a faster walker alone.
+- **Wayland:** native-Wayland FIFO froze again (showed 0 for the run); the
+  runs used `SDL_VIDEODRIVER=x11` (Xwayland), the documented fallback.
+- Frametime PNGs: `recomp-work/ab_live_aa_pin0_settled_20261102_140417_ft.png`,
+  `..._aa_pin1_settled_20261102_141235_ft.png`,
+  `..._ceil_nodraw_20261102_142204_ft.png`,
+  `..._start_fastwake_20261102_143955_ft.png` (plus the invalid early runs,
+  listed in the doc).
+
 ## 2026-11-02 (visuals): WCB ondemand fixes crowd/faces/field; gamma TXD gap and team logo explained
 
 Windowed pitch A/B on `play/multiscene`, `build-play`, FIFO present, MangoHud
