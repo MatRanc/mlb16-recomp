@@ -3,6 +3,30 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (walker profile): fetch 3.6, texture 3.2, pipeline 1.9 ms per frame
+
+Branch `feat/walker-prof` (`ps3recomp-probe`, off `mlb16-work`, not merged). New
+`PS3RECOMP_WALKER_PROF=1` splits the real `sink_end` path per frame, and
+`PS3RECOMP_WALKER_CAPTURE=<prefix>` images one pitch frame (FIFO words +
+dispatcher state + every guest page the draws read, 107 MB). `replay_rsx_engine`
+replays that capture through the real draw engine with a null backend; the
+existing dispatcher-state hash still verifies at `0x85fc2ff5a1655c26`.
+
+One pitch window (`measure6` flow, both switches on, 537 reports / 15.9 s,
+37.07 fps): walker **17.19 ms/frame** at 500 draws. Split: parse 1.21, fetch
+**3.56** (7.1 µs/draw), texture bind+hash **3.23** (6.5 µs/draw), pipeline
+**1.86** (3.7 µs/draw), bind 0.19, Vulkan draw 4.78 (9.6 µs/draw), other 1.82.
+Profiler overhead is inside noise (offline A/B 14.06–14.09 vs 13.95–14.91 ms per
+14 ms drain). Offline replay (668 draws, 0 read misses) is 14.0–14.9 ms and
+matches fetch/pipeline/draw per draw, but its warm texture phase is 0.2 µs/draw
+against 6.5 in-game because one static frame has no texture updates — it is not
+an A/B for the texture cut.
+
+Top cuts (not implemented): fetch/remap caching **1.4–2.1 ms**, texture
+page-dirty generations **1.9–2.6 ms**, pipeline-key/program memo **0.6–0.9 ms**;
+together 3.9–5.6 ms off the 17.2 ms drain (~37 → ~42–44 fps if the producer wait
+does not absorb it). Details and the capture format: `docs/walker-prof.md`.
+
 ## 2026-11-02 (critical path): the frame is walker drain (17.3 ms) + walker producer wait (11.8 ms)
 
 One traced pitch run (34.58 fps / 10 s; steady window 361 frames, 10.47 s, 34.47 fps; trace window 411 frames,
