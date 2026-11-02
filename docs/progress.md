@@ -3,6 +3,25 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (wake): waking the walker on the slot PUT removes e2 but not the frame time
+
+Branch `feat/walker-wake` (`ps3recomp-probe`, off `mlb16-work`). The present thread waits on its kick event with a
+4 ms timeout (`templates/project/main.cpp:220`, `cellGcmSys.c:1922`); the SPU PUT that fills the parked slot did not
+signal it, so PUT->resume was p50 527 µs / p90 2.15 ms. `gcm_note_spu_put` now signals that event when the PUT range
+contains the parked `get` (opt-in `PS3RECOMP_WALKER_WAKE=1`, default off; unit test
+`tools/test_gcm_walker_wake.py`).
+
+- **e2 removed:** PUT->resume **p50 8 µs / p90 11 µs** in a 398-frame, 12.98 s pitch window. But total wait stayed
+  **11.64 -> 11.28 ms/frame** and fps fell **33.29 -> 30.67** traced (**33.44 -> 30.95** on the 10 s counter; the
+  no-trace run with the watcher was 32.22 vs the 34.63 baseline). The wait moved to "job not yet pushed"
+  (1.82 -> 3.65 ms/frame) and passes/frame rose 6.2 -> 35.4: the walker is caught up with the producer, so waking
+  per slot just batches less and costs more walker CPU. Off by default.
+- **`u` writer identified:** the park is patched by the PPU, not an SPU DMA. `Gfx_FrameEnd` (guest 0x00066530)
+  writes the JUMP into the mesh ring at **0x00066ae0**; the put register is written by `FUN_00065760` (guest
+  0x00065760) at **0x00065af8**. `u_park` waits are p50 11.7 ms and end near a flip/kick: the walker is early, and
+  the real fix is to pipeline the PPU producer (`Mesh_WaitPrevJobList`, 0x0006ed24) with it, not just wake on the
+  write. Numbers, tables and the proposed `u` fix: [`docs/walker-wake.md`](walker-wake.md).
+
 ## 2026-11-02 (attribution): the walker's 10 ms wait is mostly PPU/cadence, not c690 throughput
 
 One pitch run (`measure_fast.sh`, 33.44 fps / 10 s; trace window 393 frames, 11.80 s, 33.29 fps; instrumentation
