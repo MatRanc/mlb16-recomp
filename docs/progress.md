@@ -3,6 +3,17 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-01 (correction): 0x2A is an assembler; 0x6D68 is a direction unpack
+
+- `0x10F78` (opcode 0x2A, selector 0) is a **vertex-format assembler**: it gathers four already-final planar
+  arrays (UV0 `0x21C30`, COLOR0 `0x20FB0`, POSITION `0x20330`, NORMAL `0x1F6B0`) into 36-byte records at `0x2F870`,
+  with one float→u8 color pack (`0x7D40`, `cfltu 149`). It does **not** unpack/transform/normalize.
+- `0x6D68` is a **12/12/11 SNORM direction/tangent unpack** (4th field 0), not position. The real per-vertex chain
+  is: unpack `0x6D68` → 3x4 transform `0xA798` (matrix LS `0x29540`) → normalize `0xAF98` (frsqest+fi) →
+  snorm pack `0x7C18`/`0x8160` → planar arrays → `0x2A` assemble.
+- The captures are from **different job instances**, so they cannot be concatenated byte-exactly; a co-temporal
+  capture (or whole-job replay) is needed to validate the full pipeline.
+
 ## 2026-11-01 (capture): pitch pipeline is multi-command; per-call offload not viable
 
 - Captured the pitch frame's `0x10F78` (0x2A handler), `0x10B88`, `0xA798`, `0xAF98`, `0x6D68` in one run
