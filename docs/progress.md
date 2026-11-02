@@ -3,6 +3,28 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (critical path): the frame is walker drain (17.3 ms) + walker producer wait (11.8 ms)
+
+One traced pitch run (34.58 fps / 10 s; steady window 361 frames, 10.47 s, 34.47 fps; trace window 411 frames,
+34.08 fps). New `ppu.usleep` trace span (short `sys_timer_usleep`, guest LR) plus a fix to close the `ppu.gcm_finish`
+poll run at the next block (`ps3recomp-probe` `mlb16-work`, trace-only, off by default). Analysis:
+`tools/analyse_ppu_path.py` (new) and `tools/analyse_walker_wait.py`.
+
+- **Frame = walker drain + walker put_wait**: 17.25 + 11.77 = **29.02 ms mean** (p50 33.8; distribution bimodal and
+  the 10 s counter is 28.9 ms). `ppu main` runs 9.3 ms (already overlapped) and blocks **19.7 ms** in one place:
+  `FUN_000655cc` (0x000655cc) waits on the ref cond (`0x1245090`) for the reused buffer. During that wait the walker
+  drains 11.6 ms and starves 8.1 ms.
+- **Only block on main**: the ref wait. `Mesh_WaitPrevJobList`/`FUN_0006f998` (mesh job list), the flip throttle
+  (`0x1245100`, 17 ms) and the post-kick ref spin are **not taken at the pitch** — main has zero usleep spans.
+  DisplayFlip blocks 9.3 ms on ref + 19.6 ms on flip-done; it is a pacer, not the limiter.
+- **Walker split** (same shape as the attribution run): `u` PPU/park **6.16** ms, `e2` resume **2.80**, c690 `a+d`
+  **2.71**, queueing **0.10**. 412 c690 jobs/frame, 41 % lane busy. The PPU and walker wait on each other for ~8 ms
+  per frame: main waits for the ref, the walker waits for the PPU's own append (`u_park` 4.1 + `u_caught` 2.0).
+- **Levers**: (1) cut walker drain CPU ~5 ms → ~42 fps (low–medium risk); (2) deeper ring / pipeline the PPU append,
+  hides up to ~8 ms → ~45–48 fps (high risk, the `(id+1)&3` reorder is not enough); (3) c690 earlier/offload,
+  −2.7 ms → ~38 fps (medium/high). 1+2 is the ~50–60 fps path; lever 3 alone is not. Full thread map, addresses,
+  overlap/ordering analysis and caveats: [`docs/ppu-critical-path.md`](ppu-critical-path.md).
+
 ## 2026-11-02 (wake): waking the walker on the slot PUT removes e2 but not the frame time
 
 Branch `feat/walker-wake` (`ps3recomp-probe`, off `mlb16-work`). The present thread waits on its kick event with a
