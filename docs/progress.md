@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-02 (visuals): WCB ondemand fixes crowd/faces/field; gamma TXD gap and team logo explained
+
+Windowed pitch A/B on `play/multiscene`, `build-play`, FIFO present, MangoHud
+CSV, 10 s `[flip]` windows, one run per arm plus two ondemand repeats.
+
+- **Game fps:** WCB off **35.94**; ondemand (`PS3RECOMP_RSX_WCB=2`) **30.87 /
+  31.88 / 30.60** (mean **31.12**); async (`=3`) **28.71**. WCB costs about
+  4.8 fps, async is slower than ondemand here.
+- **Ondemand counters:** ~2.0-2.5 demand copies/frame, 292-395 KB, 0.6-0.7
+  waits/frame (avg 1.5-2.1 ms, max ~28 ms), 3.4-4.3 ms copy, 0 timeouts,
+  ~50-55 armed. Async also had a single **642 ms** read wait.
+- **Visuals:** the dark crowd, dark/uniformless players, neon-yellow field and
+  the rainbow/oil-slick catcher mask in the WCB-off frame all read correctly
+  with ondemand or async (coloured crowd, skin tones, blue/white uniforms,
+  natural green field). `HeadFaceCacheFile` was backed up and deleted before
+  the WCB arms and regenerated correctly. The `[RSX fp] opcode 25` warnings
+  remain in the WCB frames but did not cause the chrome faces there.
+- **Team-select rotating logo:** pixel-identical with WCB off/2/3, so not a
+  readback issue. The FIFO walker's jump-park resync (`cellGcmSys.c:2701`)
+  still drops draws in the skipped range (`:1651-1745`); the 2026-10-27 note
+  that the logo appears with an effectively infinite park grace points at the
+  same cause. Proposed: raise `GCM_PARK_GRACE_MS` as a test, or replay draws
+  on a resync. Not implemented.
+- **Gamma/sign-expand:** `TEX/TXP/TXB/TXL` already decode both; the logged
+  opcode 25 is `TXD`, where gamma fails the whole program (`rsx_fp_decompiler.c:876`)
+  and sign-expand reads unexpanded (`:1078`). Because WCB removed the observed
+  artefacts, the `PS3RECOMP_FP_GAMMA=1` work was left for an approved change.
+- **Crowd patch:** the recomp applies no equivalent of
+  `mlb-show-rpcs3-fixes/patches/MLB16_crowd_fix.yml` (one branch at
+  `0x009bd544`); crowd placement still needs it.
+- Details and images: [`docs/visuals-wcb-gamma.md`](visuals-wcb-gamma.md),
+  `recomp-work/visuals/compare.png`.
+
 ## 2026-11-02 (window freeze): native-Wayland MAILBOX present stalls; FIFO by default
 
 The player's window froze for 15-50 s at a time while the game kept running;
