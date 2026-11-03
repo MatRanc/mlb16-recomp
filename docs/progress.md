@@ -3,6 +3,42 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (HLE contract audit): how many more return/out-param bugs?
+
+Static-only audit of every imported HLE function this title calls, prompted by
+the `cellGcmSetPrepareFlip` bug. **433** imports; **407** called (**1,604** call
+sites); **26** never called. At **548** call sites the lifted code reads `r3`;
+**234** imports have at least one such site. **32** contract mismatches found;
+none fixed, no game run.
+
+Top ones (guest addresses, evidence and one-line fixes in
+[`docs/hle-contract-audit.md`](hle-contract-audit.md)):
+
+- `_cellSpursTaskAttributeInitialize` mis-decodes the descriptor form used by
+  the Bink SPU task: context becomes the stack descriptor address, size 0,
+  lsPattern 0; the task parks in `WAIT_SIGNAL` (11-02 log).
+- The SPURS core error base is the fiber base (`0x80410700` instead of
+  `0x80410800`), so the guest's `RemoveWorkload == 0x8041080A` BUSY test never
+  matches; `ShutdownWorkload`/`WaitForWorkloadShutdown` are also success stubs.
+- `cellAudioOutGetState` writes downMixer/soundMode at `+4/+8` instead of
+  `+8/+12`; the Bink path reads `soundMode.channel` at `+13` and gets 0,
+  choosing 6/8-channel instead of stereo.
+- `cellAdecOpenEx` is not implemented and the first handle is 0, which the
+  guest rejects; streamed AAC/ATRAC audio never opens.
+- The POSIX `cellAudio` mixer free-runs at 200-500 blocks/s vs 187.5 and
+  publishes that read index to the guest.
+- GCM offset tables are published only by `cellGcmGetOffsetTable`, so pages
+  from a later `cellGcmMapMainMemory` stay `0xFFFF` in guest memory.
+- `cellFsRename`/`cellFsTruncate` use the libs `./gamedata` mapping while
+  open/write use `$PS3_VFS_ROOT`, so renames of installed USRDIR files fail.
+- Default lwcond wait polls 1 ms and ignores timeouts; lwmutex destroy is a
+  no-op.
+- `cellSearch*` is entirely unimplemented (fake success, no callback or
+  out-params).
+- `cellFsWrite` returns OK on a short/failed write (cache worker can spin);
+  `cellSaveDataDelete2` is a no-op; `cellGameDataCheck` reports `NOTCALC` for
+  `sizeKB` and `cellGameGetSizeKB` always writes 0.
+
 ## 2026-11-03 (backward frames): `cellGcmSetPrepareFlip` returned 0, so every flip named buffer 0
 
 The whole-frame backward step is fixed. The title renders alternately into
