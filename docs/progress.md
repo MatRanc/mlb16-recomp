@@ -3,6 +3,48 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (hitch census): the 5.1 s load gap is shader translation, boot gaps are SPU jobs
+
+Two launches (`ab_live_hitchcold2_20261103_155504` cold census,
+`ab_live_hitchwarm_20261103_160035` warm pipeline cache), plus one discarded
+first attempt. Details, tables and artifacts in
+[`docs/hitch-census.md`](hitch-census.md).
+
+- **824 frames > 50 ms** in the 318 s cold run (10,051 flips): 67.4 s of
+  frame time, 39.9 s above a 33.3 ms budget. Boot 18/5.92 s, menus **0**,
+  match load 1/5.11 s, pregame cinematics 798/55.97 s, pitch meter 7/0.37 s.
+- **5,112 ms match-load gap = first-use shader translation.** The walker
+  drains 3.74 s, of which 2.95 s is our HLSL -> SPIR-V translation (352
+  spans, 176 pipelines) and 0.25 s `vkCreateGraphicsPipelines`; tex 0.31 s,
+  surface 0.04 s, c690 0.24 s. The frame thread waits 5.10 s on its flip
+  lwcond and main waits 3.79 s on ref + 1.15 s in usleep. File I/O is **20
+  reads / 514 KiB / 0.16 ms**, all on `ppu DataStream Process Thread`; none
+  on the frame/main thread, so this is not synchronous `cellFsRead`.
+- **237-654 ms boot gaps = SPU asset loading.** 18 boot frames of
+  353-589 ms; e.g. 589 ms: DisplayFlip flip lwcond 577 ms, main `usleep`
+  576 ms over 2,300 calls, walker idle 569 ms, six SPU lanes 1.53 s
+  lane-union; one 40 KiB/0.02 ms read, no pipeline. The menus themselves
+  had no >50 ms frame, so the old "boot/menu" label lands in boot.
+- **Cinematics are c690.** 790/798 cinematic hitches are `c690.job`-
+  dominated (79.1 s lane-union); six are first-use shader translation.
+  Same producer/drain as the meter.
+- **Persistent `VkPipelineCache` is not the fix.** Implemented behind
+  `PS3RECOMP_VK_PIPELINE_CACHE` (default off, keyed by
+  `pipelineCacheUUID`+driver). Cold -> warm: driver `pipe.create` 322 ->
+  33 ms whole run, 248 -> 19 ms in the load frame, but `shader.compile`
+  2.95 -> 3.01 s and the load frame 5.11 -> 5.26 s. First 261 s: 66.9 ->
+  66.2 s of hitch time (-1.1 %, inside variation). Cache removes ~0.3 s
+  of 67 s; a disk cache of our translated SPIR-V would target ~3.8 s.
+- **Instrumentation:** hitch-only timeline (`PS3RECOMP_TIMELINE_HITCH_US`,
+  new `pipe.create`/`shader.compile`/`tex.upload`/`surface.create`/
+  `fs.read`/SPURS-add/remove/overlay-verify/resync events), and
+  `tools/analyse_hitches.py` + `tools/hitch_run.py`. Raw 229 MB/804 MB
+  timelines deleted after analysis; `check_spu_context_abi.sh` passes.
+- **Deviation:** the warm run did not reach the pitch menu (stayed in
+  cinematics ~800 s); the comparison uses the first 261 s that both runs
+  followed identically. The cold run reached the meter at 264 s. No
+  changes to the play scripts; the cache switch stays off.
+
 ## 2026-11-03 (flip deadline): the tick is starved by the walker drain; earlier completion loses
 
 Two meter launches (`ab_live_flipdiag_20261103_150246` diagnosis,
