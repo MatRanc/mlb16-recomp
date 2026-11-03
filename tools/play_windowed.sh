@@ -1,8 +1,9 @@
 #!/bin/bash
 # Windowed multi-scene play session for the play/multiscene build.
 #
-#   ./play_windowed.sh          MangoHud overlay + CSV, WCB off
-#   ./play_windowed.sh wcb      also PS3RECOMP_RSX_WCB=3 (async readback)
+#   ./play_windowed.sh          MangoHud overlay + CSV, readback WCB=2 (ondemand), cube RTs on
+#   ./play_windowed.sh nowcb    readback off (wrong visuals; for comparison)
+#   ./play_windowed.sh wcb      PS3RECOMP_RSX_WCB=3 (async readback) instead
 #   ./play_windowed.sh nohud    no MangoHud (use if it breaks the window)
 #   ./play_windowed.sh wcb nohud
 #
@@ -30,11 +31,12 @@ EXE="$W/$BUILD/MyGameRecomp"
 DUMP_EVERY=${PLAY_DUMP_EVERY:-30}
 
 HUD=1
-WCB=0
+WCB=2
 for arg in "$@"; do
     case "$arg" in
         nohud) HUD=0 ;;
-        wcb)   WCB=1 ;;
+        wcb)   WCB=3 ;;
+        nowcb) WCB=0 ;;
         -h|--help)
             awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
             exit 0 ;;
@@ -106,8 +108,10 @@ export PS3RECOMP_VK_DUMP_EVERY="$DUMP_EVERY"
 # Real controller, not pad.txt.
 unset PAD_FILE
 unset PS3RECOMP_RSX_WCB PS3RECOMP_RSX_WCB_STATS
-if [ "$WCB" = 1 ]; then
-    export PS3RECOMP_RSX_WCB=3
+# Env PS3RECOMP_RSX_CUBE_RT=0 turns the GPU cube render-target path off.
+export PS3RECOMP_RSX_CUBE_RT="${PS3RECOMP_RSX_CUBE_RT:-1}"
+if [ "$WCB" != 0 ]; then
+    export PS3RECOMP_RSX_WCB=$WCB
     export PS3RECOMP_RSX_WCB_STATS=60
 fi
 
