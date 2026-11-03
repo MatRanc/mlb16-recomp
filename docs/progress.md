@@ -3,35 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
-## 2026-11-03 (pinning and idle): layout switch, link-anchor fix, SPU back-off; no clean A/B
+## 2026-11-03 (pinning and idle retest): `lanes` no longer wedges, no layout winner; back-off neutral
 
-Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Details, failures and
-the retest plan: [`docs/pinning-and-idle.md`](pinning-and-idle.md).
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Full numbers and method:
+[`docs/pinning-and-idle.md`](pinning-and-idle.md). Two launches (the retest
+budget), both completed.
 
-- **`PS3RECOMP_PIN` was a silent no-op in `build-play`.** The pin helper was
-  reached only through a weak reference, so the linker never extracted
-  `thread_affinity.c.o` (`nm` had no symbol and no log had a `[pin]` banner).
-  A non-weak `ps3_thread_pin_link_anchor()` referenced from
-  `templates/project/main.cpp` fixes it; the first real pinned segment is
-  30.38 fps, p50 34.25 / p90 44.91 / p99 50.21 ms, std 11.06, walker drain
-  18.59 ms (243 flips).
-- **`PS3RECOMP_PIN_LAYOUT=today|lanes|os`** is implemented and live-switchable
-  through `PS3RECOMP_CTL`. `lanes` is the proposed mapping: walker 0, main 1,
-  c690 lanes 2/3/4/5/10, present 8, DisplayFlip 9, spurs kernel 11. c690
-  worker 0 still runs 1.30x fewer jobs than the others under `today`.
-- **Layout `lanes` stopped flipping on its first live switch** (14 s, `rc=7`).
-  The run used a registry that also tracked transient guest threads; a
-  recycled `pthread_t` (re-applied with `pthread_setaffinity_np`) is a
-  use-after-free, later reproduced as a segfault. The registry now keeps only
-  long-lived roles, so the wedge is confounded and needs a retest.
-- **SPU idle back-off** (GETLLAR: 32 pauses, then yield, then at most one
-  100 us nap per ms) is behind `PS3RECOMP_SPU_IDLE_BACKOFF=1` (env + live
-  key), default off. Not measured: the last run's load sample was invalid
-  (a harness arm-quoting bug caused 107,588 re-applies; the walker's 81.6 %
-  is the storm, not guest work).
-- **No winner, no `play_windowed.sh` change.** Three launches: one killed by
-  the orchestration timeout, one layout-b wedge, one contaminated run that
-  ended in the (now fixed) segfault.
+- **`PS3RECOMP_PIN` is live in `build-play`.** The earlier weak-reference bug
+  is fixed by `ps3_thread_pin_link_anchor()` referenced from
+  `templates/project/main.cpp`; the `[pin] PS3RECOMP_PIN=1 topology ...`
+  banner appears in both runs. The registry and layout-name fixes were
+  revalidated offline: 12 layout switches produced 12 `[pin] layout` lines,
+  and launch 2 (no layout change) produced 0, not the old 107,588-line storm.
+- **`lanes` retested with the fixed registry: no wedge, still a loss.**
+  Three 10 s segments at the meter: **29.17 fps** vs **30.82** for `today`,
+  and three presented-frame gaps > 100 ms (699.7 / 899.8 / 707.6 ms) with 20
+  skipped flips; `today` and `os` never exceed 96 ms. Rejected.
+- **`today` vs `os` is lane affinity only, and is inside run-to-run noise.**
+  Both pin walker cpu 0 and ppu main cpu 1. Launch 1: 30.82 vs 30.53 fps,
+  p99 50.96 vs 51.14 ms, std 11.12 vs 10.41, walker+wait 31.66 vs 32.58 ms;
+  the lane-0 job rate is 2,371 vs 2,482 jobs/s (max/min 1.25 vs 1.23).
+  `today` repeated at **31.33 fps** in launch 2, so the 0.95 % gap is noise.
+  No controlled `PIN=0` vs `PIN=1` arm; `PIN` is still not enabled in
+  `play_windowed.sh`.
+- **Loading is not a spin problem.** Valid 30 s `top -H` samples: no thread
+  reaches 90 %. With back-off off, `spurs pm` means 19-35 % (max 78.8),
+  `rsx walker` 34.0 % (max 85.8), `ppu main` 23.7 % (max 87.8). The on half is
+  later in the same load (total CPU 219 % -> 444 %), so its higher SPU numbers
+  are the load stage, not the back-off.
+- **SPU idle back-off at the meter is neutral.** Six segments per arm on
+  `today`: 31.33 fps off vs 31.40 on, p50 34.18 vs 34.14, p99 50.45 vs
+  49.04 ms, walker/wait within 0.13 ms, c690 rates within 1 %; one 540.8 ms
+  one-off outlier in the on arm. Left default-off.
+- **No `play_windowed.sh` change.** `today` is the in-code default when
+  `PIN=1`; no layout or back-off beat the baseline outside noise.
 
 ## 2026-11-03 (native c690 Edge, step 2): corpus fix, 0xFDA0 kernel, live attempt
 
