@@ -3,6 +3,42 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (cube render targets + frame depth): players lit, one render frame in flight by design
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
+PIN=1, x11. Details, tables and PNGs:
+[`docs/cube-rt-and-frames-in-flight.md`](cube-rt-and-frames-in-flight.md).
+
+- **Part A (static):** `FUN_000655cc` waits for the **previous** frame's ref
+  (`DAT_01245058[DAT_011203d4 & 3]`, where `DAT_011203d4` is the last frame id
+  set by `FUN_00065760`), and that token is the `SET_REFERENCE` (method 0x0050)
+  appended at the **end** of frame N-1. The guest therefore allows exactly one
+  render frame in flight. `Gfx_FrameEnd`'s `DAT_01120410 + 1` gate allows three
+  *display* flips; it is a separate `submitted - completed` queue and is not the
+  measured 19-21 ms block. Our ref publication is not late: the token is queued
+  when the walker executes 0x0050 and published at drain end / by the poll
+  publisher; a dropped token would time out at ~9 s, not 19 ms. No fix
+  implemented; the lever is faster walker drain, not the fence.
+- **Part B:** the 8x8 cube probes are six separate 8x8 colour targets at
+  `base + face * 0x200` (`0x059F3000`, `0x059F3C00`), written by one fragment
+  program (`0xbd8ae188ddb5b0b8`, pipes 48/88/260) in a burst, not every frame.
+  `PS3RECOMP_RSX_CUBE_RT=1` (default off, live key) copies the six faces into
+  one six-layer cube image on the GPU, cached by face handles + colour serials;
+  incomplete cubes keep the dummy and count a new `cube` census reason.
+- **Runs:** A/B on the meter (N=6): off **30.06 +/- 0.53 fps**, on
+  **30.09 +/- 0.58**, paired **+0.03** (CI -0.19..+0.25). Census at the meter:
+  off 25,800-29,796 misses/10 s, on **0** after the switch. With
+  `VK_DUMMY_BLACK` unset, **0 magenta pixels** at the meter and no visible
+  pink; players are brighter (batter's blue jersey, catcher's red, umpire's
+  grey), the field/crowd gain environment shading.
+- **Harness:** `ab_live.sh` gained `DUMMY_BLACK`, `IGNORE_MAGENTA`,
+  `CAPTURE_PREFIX`, `FINAL_SHOT`; `nav3.py`/`poll_pitch.py`/`same.py` mask
+  magenta pixels out of the luma diff, so the magenta arm navigates on the first
+  attempt.
+- **Tests:** `test_rsx_draw_engine` (six faces, rewrite serial, incomplete,
+  stacked) and `test_rsx_tex_miss` (new reason) pass; both are in
+  `tools/test_video_fixtures.py`.
+
 ## 2026-11-02 (dummy census): the dark players are cube surfaces read as 2-D; MangoHud now counts flips
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. WCB=2, PIN=1, x11,

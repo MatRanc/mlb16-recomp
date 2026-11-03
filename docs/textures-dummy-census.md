@@ -210,6 +210,12 @@ the faces exist in the host target, not in guest pages; the resolve is driven
 by guest accesses, so this would sample stale bytes), and sample one face as
 the whole cube (wrong orientation and five faces missing).
 
+**Follow-up (2026-11-03):** implemented as
+[`cube-rt-and-frames-in-flight.md`](cube-rt-and-frames-in-flight.md) behind
+`PS3RECOMP_RSX_CUBE_RT=1` (default off). The census rows were confirmed to be
+six separate 8x8 targets at `base + face * 0x200`; at the meter the cube misses
+drop to 0 and the frame has no pink with the dummy unset.
+
 ## 5. `PS3RECOMP_VK_PRESENT_NEW_ONLY=1` (task 5)
 
 Implemented in `rsx_vulkan_backend.c` (`:2244-2272`): `vk_present_window` asks
