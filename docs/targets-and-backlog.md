@@ -96,6 +96,18 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
    rename/truncate root, #10 cellSearch, #12 save delete, + the remaining audit findings.
 9. Controller presses ignored under load (re-check after batch 1 and the flip fix).
 
+**Also tracked (from earlier plans; lower priority or needs a decision)**
+- Codegen/build: dead XER.CA elimination (NHL #272), SPU_FAST_FLOAT trial (risky, exactness), PGO on the current
+  build (+5.8 % measured on an older build), call-bracket inlining (NHL #138).
+- Stale geometry: GCM_SEMA_ACQUIRE is off by default; check whether any draws still read a mesh/crowd buffer before
+  its SPU writer finished (residual after the PREPARE_FLIP fix).
+- Bink SPU program spinning ~99 % of a core with no movie (progress.md 10-27); job manager thread ~84 %.
+- Harness parity: ab_live.sh should take its defaults from play_windowed.sh (today two were missing).
+- Menu fps vs 11-02 (42-46 on the start screen then; user saw ~20-30 today): check whether it is the honest count
+  after PRESENT_NEW_ONLY/PREPARE_FLIP or a regression.
+- Lighting: lighting-drift-notes.md "next checks" (black sky-light reading, cube fallback after scene change).
+- Long term: native renderer (engine-level hooks, walker as reference), upstreaming fixes to ps3recomp.
+
 **Visual backlog (parked)** - see below: jerseys, team-select 3D logos, lighting changes, crowd patch, tiled wipe,
 1080p/300 % scale.
 
