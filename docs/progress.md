@@ -3,6 +3,48 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (frame timeline): the meter's waits are work, not late wake-ups
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One windowed meter run
+(`ab_live_timeline_20261102_233854`), X once, WCB=2, PIN=1, CUBE_RT=1,
+`PRESENT_NEW_ONLY=1`, PACE=1, x11, the four cheap-win live switches on.
+Analysis and instrumentation only; no optimisation. Details, inventory,
+tables and PNGs: [`docs/frame-timeline.md`](frame-timeline.md).
+
+- **New `PS3RECOMP_TIMELINE=<path>|1`**: the existing per-thread trace rings,
+  written as a binary record stream (`PSTL`, 32-byte records, thread-name and
+  event chunks) instead of Chrome JSON. Trigger file + `PS3RECOMP_TIMELINE_SECS`
+  window, as `PS3RECOMP_TRACE` already had. New events: frame begin/end, the
+  ref/flip lwcond waits with their awaited value, walker pass / FIFO put /
+  idle wait, ref set/publish, SPU PUT, c690 job, WCB done, draw submit,
+  present queue/submit/fence/vkQueuePresent/shown, GCM user handler, and a
+  `wait.wake_lag` instant = wake minus the newest causal event. With the
+  variable unset every hook is one load/branch and no state changes.
+- **Overhead, same launch:** 45 s recorded vs the 30-80 s after the sink shut
+  down. Guest flip-to-flip p50 +0.03 ms, p90 +0.29, p99 +0.71, mean
+  **+0.32 ms/frame**. 6,815,181 events / 218 MB / 0 dropped / 41 threads.
+- **Frame time, 300 consecutive meter frames:** p50 **33.85 ms**, p90 51.3,
+  p99 59.6 (full 45 s: 33.90 / 51.0 / 58.6). Walker drain is 26.4 ms/frame
+  (78 %); the walker idle wait is 3.17 ms and its wake lag **0.00 ms**. Main
+  is 12.5 ms work + 20.5 ms ref wait (the same walker work from the PPU
+  side), ref wake lag **0.18 ms/frame** (0.50 on the 37 frames where it is
+  the critical chain).
+- **Short/long is the c690/mesh hand-off.** 256/300 frames are walker-drain
+  critical: 35.7 ms frames, 28.7 ms drain, 24.7 ms c690 lane time, 3.4 ms
+  idle. 37/300 have an empty FIFO (11.4 ms drain, 0.4 ms idle, 2.3 ms c690):
+  main's 19.5 ms ref cycle is the frame. Transitions are 35 each way;
+  lag-1 autocorrelation 0.02. The present side is already even (shown
+  intervals p50 37.6, <8 ms 0.15 %).
+- **Ranked wake-up lags:** ref lwcond 0.18 ms/frame (event-driven buys 0 at
+  p50/p99, best case -0.18 ms mean), walker idle 0.00 (already an auto-reset
+  event), present fence 3.30 ms but that is GPU blit execution, DisplayFlip
+  flip-done 0.40 ms off the guest chain, SPU channels 0. c690's end-to-first
+  PUT is p50 3 µs and the walker's kick-to-run lag ~10 µs.
+- **Loading 100 % cores:** static deduction, not sampled (the planned
+  `top -H` helper produced no file). The only no-OS-wait loops are lifted SPU
+  poll loops (`GETLLAR`/128-byte GET, no LLAR back-off); with PIN=1 the walker
+  is cpu0 and main cpu1, so CPU 10/11 are two unpinned `spurs pm` workers.
+
 ## 2026-11-03 (cheap wins): X skips the pregame, four live cuts, and the AVX2/FAST_LS build
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
