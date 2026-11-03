@@ -89,6 +89,17 @@ export PS3RECOMP_C690_STATS=1
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
+# On-disk cache of translated guest shaders (docs/shader-disk-cache.md): a warm
+# run rebuilds first-use pipelines without glslang. Keyed by the guest program
+# identity plus the translator version; recomp-work/shader_cache/.
+export PS3RECOMP_SHADER_DISK_CACHE="${PS3RECOMP_SHADER_DISK_CACHE:-1}"
+# Hitch recorder: keep only frames longer than 250 ms, with the work inside
+# them, next to the MangoHud CSV. tools/hitch_table.py turns it into a table.
+# Overhead at the meter was below run-to-run noise; the rings stay bounded.
+export PS3RECOMP_TIMELINE="${PS3RECOMP_TIMELINE:-$OUTDIR/hitches.pstl}"
+export PS3RECOMP_TIMELINE_HITCH_US="${PS3RECOMP_TIMELINE_HITCH_US:-250000}"
+export PS3RECOMP_TIMELINE_RING_MB="${PS3RECOMP_TIMELINE_RING_MB:-16}"
+export PS3RECOMP_TIMELINE_FLUSH_MB="${PS3RECOMP_TIMELINE_FLUSH_MB:-2}"
 # Cheap wins (mlb16-recomp/docs/cheap-wins.md), all individually switchable:
 #   SPU_MFC_LOOKUP_CACHE  per-host-thread MFC engine memo (no registry SRW lock)
 #   GCM_NOP_SKIP          skip NV4097 NO_OPERATION (0x0100) runs in the walker
