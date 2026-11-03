@@ -3,6 +3,44 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (walker own work): texture hashing, Vulkan recording, vertex fetch
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch
+(`ab_live_metercap_20261103_002238`) captured one frame and produced the live
+phases; the per-draw split is offline replay of that capture. Details, tables,
+ranked plan and exactness gates: [`docs/walker-profile.md`](walker-profile.md).
+
+- **Live meter, 552 draws/frame:** walker drain **27.64 ms**, engine
+  **26.02 ms**, parse 1.62 ms. Per draw: 50.1 us drain / 47.2 us engine.
+- **Engine split:** `tex` **11.33 ms** (43 %), `draw` **5.51** (21 %),
+  `fetch` **4.28** (16 %), `other` 2.61, `pipe` 2.07, `bind` 0.23, layout
+  ~0.40. Texture work is the cache (98 % of `sink_bind_textures` is
+  `eng_texture_slot`: lookup + sparse/full content hash), not surface scans.
+- **Vulkan recording** (`VK_DRAWPROF`, 526 draws/frame): vtxgpu 1.53 ms,
+  rp_begin 0.89, copy 0.79, desc 0.68, barrier 0.42, state/bind_draw/rp_end
+  0.21 each = 4.94 ms. The null replay's `draw` (1.4 ms) is CPU conversion
+  only.
+- **Readback** is a separate 6.2 ms/frame (4.60 copy + 1.57 wait,
+  `readback-cost.md`) in the walker wall wait, outside the drain.
+- **Capture frame:** 502 draws, 525 groups, 114,688 vertices, 4.0 MiB
+  converted, 276 texture binds, 0 new pipelines after warm-up, 525 pipeline
+  lookups/frame.
+- **Offline replay now models a steady scene:** `rsx_draw_engine_replay_advance_frame()`
+  ticks `g.frames` after each replay frame (the replay has no display buffer,
+  so texture revalidation used to stay on frame 0). The last-frame hash
+  `a6fcc849341eba9b` and the 10-frame gate `02a922c9b2620fa1` are unchanged.
+- **New `PS3RECOMP_WALKER_PROF2=1`** (default off): 22 nested terms around the
+  fetch plan, conversion, pipeline key/analysis/create, texture slot/upload,
+  constants, index build, backend binds, surface tracking and draw recording.
+  `REPLAY_NULL_HASH=0` disables the null-backend digest for timing runs.
+- **Plan to <= 8 ms:** texture page-dirty revalidation (-6 to -9), readback
+  cuts (-3 to -4.5), Vulkan recording (-2 to -3), fetch/pipeline memo
+  (-2.2 to -3.2), cheaper parse/other (-1.5 to -2.5), GPU vertex conversion
+  (-1 to -1.5), then a parse/record split (-3 to -5). Each item's exactness
+  is the meter/pitch replay hash plus a per-item test.
+- **Not run:** `perf` (absent; `perf_event_paranoid=2`) and a second live
+  window. The live phases are from the post-capture A/B window (2 x 20 s).
+
 ## 2026-11-03 (c690 profile): 165 us/job, 14.4 ms per worker, and no repeat output
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Three meter launches
