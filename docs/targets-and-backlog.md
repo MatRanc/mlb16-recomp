@@ -91,10 +91,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 4. Untested: PIN=0 vs PIN=1; SPU_CODE_DMA_MEMO measured neutral (off).
 
 **Hitches (100-160 ms frames, startup/cinematics/loading)**
-5. Hitch census: boot through startup and pregame cinematics (SKIP_CINE=0) with the timeline; for every frame
-   > 50 ms log pipelines created, texture uploads, file reads, readbacks, resyncs; rank by stall time.
-6. Likely fix: persistent Vulkan pipeline cache (NHL #128, absent here).
-7. Menu lag / CPUs at 70-90 % on menus; start-menu and match-load hangs.
+5. Hitch census: DONE (docs/hitch-census.md). Cold run: 824 frames > 50 ms. Cinematics 798 (c690, same lever as
+   the meter), boot 18 (353-589 ms, SPU asset jobs), load 1 (5.1 s: 2.9 s our shader translation, 0.25 s driver
+   pipelines; file I/O is async and negligible), meter 7. Menus 0.
+6. Persistent VkPipelineCache: built (PS3RECOMP_VK_PIPELINE_CACHE, off). Removes ~0.29 s driver time only; not kept.
+   Next: an on-disk cache of our translated shaders (SPIR-V) targets the ~3.8 s of translation (load + cinematics).
+6b. Boot 0.35-0.6 s stalls: SPU asset jobs on the spurs pm lanes while the main thread usleeps; not yet explained.
+6c. Warm census run stayed in cinematics ~16 min and never reached the pitch menu: nav miss or a real cinematic
+   loop? Check if it recurs.
+7. Menu lag / CPUs at 70-90 % on menus: census saw no menu frames > 50 ms; recheck in the user's windowed play test.
 
 **Correctness**
 8. HLE fix batch 2: audit #1 Bink task attribute, #4 cellAudioOutGetState layout, #5 cellAdecOpenEx, #8 fs
