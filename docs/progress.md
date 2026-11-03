@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (frame timeline 2): the long frame is the c690 burst, not the walker drain
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch,
+45 s `PS3RECOMP_TIMELINE` window armed 22 s after the meter. Details, tables
+and the counterfactuals: [`docs/frame-timeline-2.md`](frame-timeline-2.md).
+
+- **p50 did not move, the tail did.** 300 frames: p50 **34.23 ms** (old
+  33.85), p90 **44.33** (51.32), p99 **49.14** (59.60), mean 32.43 (33.64).
+  Full 45 s: 34.11 / 43.55 / 49.96. The >45 ms frames collapsed into 35-45.
+- **The walker drain left the critical chain.** 26.37 -> **18.85 ms**; the
+  saved time went into producer waits: kick-idle 3.17 -> 6.47 and
+  `rsx.put_wait` 4.10 -> 7.12 ms. `drain + idle + put` is the whole frame.
+- **A long frame is one c690 burst + ~6 ms.** Long >35 ms: L 41.6, c690 union
+  36.0, burst wall 37.0, drain 25.8 (below c690), idle 10.0, put 5.9; frames
+  with the whole burst inside: 42.1 = 36.1 + 6.0.
+- **The five c690 lanes are 64 % occupied inside the burst.** Big bursts:
+  wall 37.1, union 35.1, per-lane busy 20.0-24.9 ms, mean 3.19/5 lanes busy;
+  ramp 0.86 ms, tail 0.39 ms. The idle is 139,664 inter-job gaps (p50 60 us,
+  85 % < 0.1 ms), staggered across lanes (k=0 only 5 %): per-job
+  dispatch/turnover, not a global scheduler tick or lane start skew.
+- **Not two game frames per burst.** `gfx.frame_end` / `ppu.frame_end` /
+  `flip_request` are 1.00 per frame, user handler 0.70/frame, and a 1 ms
+  burst holds 0.77 flip ends (1.27 at 2 ms). 135 bursts touch one frame, 81
+  touch two (pattern long 34.0 -> short 16.9: the tail spills over).
+- **Halving c690 wall (per-frame counterfactual):** p50 **16.9-18.7**, p99
+  **28.7-30.5**, mean 19.4-20.3. c690 x0.8 -> p50 27.0/p99 41.6; x0.69
+  (perfect lane packing) -> 23.1 / 37.5.
+- **Next levers:** (1) c690 lane packing / per-job dispatch (-11 ms p50,
+  -12 p99); (2) native unpack/pack, skin and normalize kernels (-4-7 ms, and
+  with (1) p50 19-22 / p99 32-36); (3) PPU main work only after c690 < 20 ms.
+  Present fence rose 3.30 -> 7.18 ms but is off the guest chain. The walker
+  is no longer a p50 lever.
+
 ## 2026-11-03 (pinning and idle retest): `lanes` no longer wedges, no layout winner; back-off neutral
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Full numbers and method:
