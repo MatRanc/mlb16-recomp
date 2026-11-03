@@ -205,9 +205,8 @@ A new default-off live key, `PS3RECOMP_PREPARE_FLIP_KEEP_STATUS` (enum
 `PS3_LIVE_PREPARE_FLIP_KEEP_STATUS`), leaves the status alone when set. With
 `PS3RECOMP_FLIP_PREPARE_STATS=1`, a two-second
 `[flip-prepare] calls=... clobbered=... keep=...` line counts calls that saw
-`WAITING` while the write was active. (The counter is a "saw WAITING with the
-write enabled" count, not proof that the write caused a specific lost
-completion.)
+`WAITING` and then overwrote it (zero with `KEEP_STATUS=1`). It counts the
+write, not that a particular lost completion followed.
 
 The A/B result rules the status write out as the main cause:
 
