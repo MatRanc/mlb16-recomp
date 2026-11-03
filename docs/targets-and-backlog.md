@@ -30,7 +30,11 @@ the per-flip frame-time distribution at the meter, and the goal is stated on it:
 | stddev | ~15 ms | <= 3 ms | <= 2 ms |
 | frames outside 15-25 ms | most | <= 5% | n/a |
 
-A change that raises fps but widens p99 or stddev is not a win. The two halves have different levers: p50 comes down
+The Stage 1 numbers are provisional: the p99/stddev/outside-band values are estimates from the user's 19-24 ms
+reading, not a measurement. Replace them with a MangoHud frame-time log of RPCS3 on the same meter scene. Pacing
+alone can shrink the spread without speeding anything up (holding every frame to 33 ms gives stddev ~0 at 30 fps),
+so the spread targets only count together with the p50 target. A change that raises fps but widens p99 or stddev is
+not a win. The two halves have different levers: p50 comes down
 by removing work (PPU, walker drain, c690); the spread comes down by fixing hand-offs and pacing (who waits for whom,
 present timing).
 
