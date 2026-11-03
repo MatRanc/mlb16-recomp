@@ -3,6 +3,35 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (c690 profile): 165 us/job, 14.4 ms per worker, and no repeat output
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Three meter launches
+(one killed by the run harness, two usable); details, tables and the ranked
+plan: [`docs/c690-profile.md`](c690-profile.md).
+
+- **Job cost:** c690 job wall p50/p90/p99 = 121/248/980 us, mean 164.6 us,
+  437 jobs/frame. Cumulative 72 ms/frame across five lanes = **14.4 ms
+  per worker**; the "35-40 ms" figure is the frame/union span on long frames,
+  not each lane.
+- **Hot spots:** `0xFDA0` tree traversal/culling 19 %, `0xD4A8` skin 8.1 %,
+  `0x6D68` SNORM unpack 7.1 %, `0xAF98` normalize 6.2 %, `0x7C18` pack 5.7 %
+  (already native). Compute is 90.5 % of running time; dispatch 5.2 %, MFC/DMA
+  1.9 %, coherency 1.4 %.
+- **Five lanes are the game's SPURS config:** `MeshJobs0/1` use
+  `maxContention=5` and priority lane 5 = 0. Overriding lane 6 wedged the
+  guest in run 3; rejected.
+- **Caching is dead:** 40.3 % of sampled jobs re-read identical input
+  (25.9 % across frames), but only **0.07 %** produce identical output.
+- **Ceiling probe:** +50 us/job (+4.4 ms/worker) cost 1.95 fps (CI 0.63-3.28)
+  and +2.2 ms walker SPU wait. Frame time follows c690 with ~0.55 elasticity;
+  below the 19.5 ms main cycle further c690 cuts stop helping p50.
+- **Instrumentation kept (all default-off):** `PS3RECOMP_C690_HASH=<stride>`
+  per-job input/output hashes, `C690_SPIN_US` live cost probe,
+  `SPURS_LANE6` live lane-5 override.
+- **Not run:** `perf` (absent; `perf_event_paranoid=2`, no system change) and
+  the fresh psample window (watcher picked the `timeout` wrapper). Per-function
+  shares come from the existing gdb profiles `prof_spu2/3.prof`.
+
 ## 2026-11-03 (frame timeline): the meter's waits are work, not late wake-ups
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One windowed meter run
