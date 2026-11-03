@@ -100,6 +100,12 @@ export PS3RECOMP_RSX_TEX_PIN="${PS3RECOMP_RSX_TEX_PIN:-1}"
 # hashing their bytes (docs/texture-dirty.md): -3.4 ms walker drain, tex
 # 10.3 -> 5.9 ms/frame at the pitch meter.
 export PS3RECOMP_TEX_DIRTY="${PS3RECOMP_TEX_DIRTY:-1}"
+# Pipeline answer memo (docs/walker-quick-wins.md): -0.47 ms of walker `pipe`
+# at the pitch meter, 85 % hit live, replay gates unchanged. The fetch plan
+# memo (PS3RECOMP_FETCH_MEMO / PS3RECOMP_WALKER_FAST) is deliberately NOT on:
+# live its reference sets change every frame, it hits ~5 %, and it costs
+# ~2.4 ms/frame (see the same doc).
+export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
 # Present the window only when the title produced a new frame. Without it the
 # frame clock's outer pass re-presents on a flip request, so MangoHud's row
 # rate (one per vkQueuePresentKHR) reads above the guest [flip] fps. The

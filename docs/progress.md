@@ -3,6 +3,33 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (walker quick wins): remap cache, fetch memo, pipeline memo, `[unknown]`
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Offline replay A/B plus
+two live meter launches; details, tables and the perf call-site map:
+[`docs/walker-quick-wins.md`](walker-quick-wins.md).
+
+- **Pipeline memo is the only live win.** `PS3RECOMP_PIPE_MEMO=1`, 85.0 % hit
+  live, walker `pipe` **2.107 -> 1.633 ms** (-0.47) and -0.84 ms offline.
+  Enabled in both `play_windowed.sh` copies.
+- **The fetch plan memo is a live loss and explains the old `WALKER_FAST`
+  regression.** Live hit rate **5.4 %** (reference sets change every frame):
+  `fetch` 4.080 -> 6.493 ms (+2.41) in the bundled arm. The one-frame replay
+  hits 497/502 and hides it. Left off.
+- **Remap cache (`rsx_vertex_remap_build`, 20.3 % of the offline replay) is
+  exact and -1.74 ms offline, but live-neutral:** 28.5-30.2 % hit, `fetch`
+  +0.31 ms, fps -0.21 +/- 0.69. Left off.
+- **Offline all three: 10.283 -> 8.077 ms/frame (-2.21).** Replay gates
+  unchanged for every switch: meter `a6fcc849341eba9b` /
+  `ff2a220c28750bc3`, pitch `416abee2c5bff47d` / `3e6f6ad4ebb23ed6`.
+- **The 27.6 % `[unknown]` is not a JIT.** Walker samples by DSO: 80.4 % our
+  symbolized binary, 11.3 % libc (memmove/syscalls), 8.3 %
+  `libnvidia-glcore` (Vulkan driver). The driver time is per-draw recording
+  from `vk_eng_draw_from`: `vkCmdBeginRenderPass` 14.5 % of driver samples,
+  `vkCmdDispatch` (vertex unpack) 12.8 %, descriptor alloc/update ~7 %,
+  `vkCmdEndRenderPass` 4.1 %, `vkCmdBindPipeline` 5.7 %, `vkQueueSubmit`
+  2.3 %.
+
 ## 2026-11-03 (native c690 Edge, step 1): perf, corpus, 0xFDA0 reference
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One successful meter
