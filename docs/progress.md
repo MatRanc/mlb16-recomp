@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (readback attribution): the meter's WCB bill is guest transfers and faults, not texture binds
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
+PIN=1, CUBE_RT=1, x11. Details, tables and images:
+[`docs/readback-cost.md`](readback-cost.md).
+
+- **Attribution added:** `PS3RECOMP_RSX_WCB_ATTR=1` (default off) counts every
+  WCB=2 copy per surface, per trigger (`texbind`, `guest`, `other`) and per
+  copy/wait ms, in 60-frame windows. The trigger is set around the
+  `sink_bind_textures` depth/reinterpret calls; the module records the
+  guest-thread wait per region.
+- **Meter (N=2, 35 steady windows):** 1.32 copies/frame, 4.60 ms/frame copy,
+  1.57 ms/frame guest wait (~6.2 ms, the WCB=2-vs-WCB=0 gap). Trigger split
+  **0.00 texbind / 0.66 guest / 0.66 other**. The `other` third is a 512x512
+  RGBA target copied whole once per ~3 frames (3.13 ms/frame) through the
+  guest's NV3089 blit (`cellGcmSys.c:1168`); the `guest` third is a
+  32x32+2x2+1x1 mip chain read by PPU/SPU faults (1.47 ms copy + 1.57 ms wait
+  for 4 KB, i.e. submission stalls).
+- **The bind path exists only off the meter.** Menus bind a 2560x720 Z24S8
+  depth target as A8R8G8B8 and the engine stores 2.5 MB to guest memory
+  (~3.3 ms) because Vulkan has no `depth_as_color` backend hook (Metal does,
+  `rsx_metal_backend.m:3250`). At the meter that bind does not occur.
+- **Consequence:** serving texture binds from the GPU target
+  (`PS3RECOMP_RSX_RT_TEX_GPU`) cannot move the meter; there are no
+  bind-triggered readbacks to serve. The A/B was stopped rather than run as a
+  no-op. If wanted for menus, the concrete work is the Vulkan
+  `depth_as_color` hook; the engine already prefers it.
+- **Real levers:** resolve only the NV3089 rectangle instead of the whole
+  512x512 target; submit the tiny mip resolves together instead of one
+  `submit_and_wait` each; skip the copy when the target's colour serial has
+  not moved since the last read.
+
 ## 2026-11-03 (cube render targets + frame depth): players lit, one render frame in flight by design
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
