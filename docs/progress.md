@@ -3,6 +3,36 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (native c690 Edge, step 1): perf, corpus, 0xFDA0 reference
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One successful meter
+launch with a 20 s whole-process `perf record` plus an env-gated c690 corpus;
+details, tables and the ranked plan: [`docs/edge-native-step1.md`](edge-native-step1.md).
+
+- **Per-flip (20.008 s perf window, 640 intervals):** p50 **34.05 ms**,
+  p90 43.58, p99 49.35, mean 31.19, std 11.20, 32.0 fps. Measured from
+  `PS3RECOMP_FLIP_LOG`, not the every-10th `[flip]` decimation.
+- **New c690 ranking (48,116 c690 samples):** `0xFDA0` 19.7 %, `0xD4A8` 8.4 %,
+  `0x6D68` 6.4 %, `0xFA58` 5.9 %, `0xAF98` 5.7 %, `0x8160` 5.1 %,
+  `0x7C18` 5.0 % (already native), `0xD2B8` 4.9 %, `0xFCB8` 3.2 %,
+  `0xF520` 2.8 %. Tree/cull family **31.8 %** (~4.6 ms/worker/frame);
+  unpack/pack 23.5 %; skin/transform 13.6 %; normalize 8.2 %.
+- **Corpus:** 2,000 jobs / 227 frames / 19 opcode layouts; 12,138 DMA GETs
+  (1,217 B/job); 4 `0xFDA0` stage pairs. 0 PUTs: the output DMA is in the
+  submit epilogue after the job-end command. Record format and variant counts
+  in the doc; capture data stays in `recomp-work/`.
+- **Reference:** `ps3recomp-play/tools/c690_ref/` - a 1,799-line C
+  transliteration of the 45-block `0xFDA0` state machine (runtime plumbing
+  removed, exact `spu_helpers.h` arithmetic). **4/4 stage pairs bit-exact**
+  (0 LS bytes, 0 GPRs differ). NHL's stage split/corpus method credited in
+  `THIRD_PARTY_NOTICES.md`; no NHL code copied.
+- **Plan:** tree/cull -> unpack/pack -> skin/transform -> normalize ->
+  format/parser, then the remaining codegen tail. Hook at the outermost
+  `0xFDA0` call, keep the job framework lifted, fall back on layout mismatch,
+  exactness = corpus LS+GPR diff + in-game shadow + per-job hash. Expected
+  c690 union 35 -> ~23 ms after the first three stages, ~19 ms after the tail;
+  the 19.5 ms main-ref cycle is the floor.
+
 ## 2026-11-03 (texture dirty): revalidation by guest-page write generation
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter A/B launch
