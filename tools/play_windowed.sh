@@ -118,6 +118,12 @@ export PS3RECOMP_VK_PRESENT_NEW_ONLY=1
 # pairs instead of a steady ~34 ms. The pacer holds each present until
 # its arrival-cadence slot, at most one frame interval (docs/frame-pacing.md).
 export PS3RECOMP_VK_PACE="${PS3RECOMP_VK_PACE:-1}"
+# cellGcmSetPrepareFlip must return the display buffer id, as the real SDK
+# and RPCS3 do. It used to return CELL_OK (0), so every flip named
+# display buffer 0 while the title rendered alternately into 0 and 1;
+# a shown frame then repeated one already replaced (the whole-frame
+# backward step, docs/backward-frames.md). Default on, 0 restores it.
+export PS3RECOMP_PREPARE_FLIP_RET="${PS3RECOMP_PREPARE_FLIP_RET:-1}"
 # Disabled texture units read magenta otherwise, which makes the picture pink.
 # measure_fast uses the same black dummy.
 export VK_DUMMY_BLACK=1

@@ -54,6 +54,17 @@ User follow-up from the video: the camera/zoom stays steady; the players AND the
 (`GCM_SEMA_ACQUIRE=0`, frame-timeline.md inventory), so a draw can read a mesh/crowd buffer before the SPU job that
 fills it has written this frame's data; and any vertex/upload cache keyed by address without write tracking.
 
+**Resolved 2026-11-03 (whole-frame order, not class (b)).** The user's newer
+observation that the pitch-meter HUD and the camera also step back rules class
+(b) out for the main symptom. `cellGcmSetPrepareFlip` returned `CELL_OK` (0)
+instead of the display buffer id, so every flip named buffer 0 while the title
+rendered alternately into buffers 0 and 1; a re-shown older buffer produced the
+backward step. Fixed behind `PS3RECOMP_PREPARE_FLIP_RET` (on in
+`play_windowed.sh`): 4.71 % -> 0.038 % stale-source presents and 219.9 -> 6.2
+backward frames per 1000 moving frames. See
+[`backward-frames.md`](backward-frames.md). The class-(b) leads are still worth
+checking if any geometry-only regression remains.
+
 ## Priority: speed and frame-time stability first
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame

@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (backward frames): `cellGcmSetPrepareFlip` returned 0, so every flip named buffer 0
+
+The whole-frame backward step is fixed. The title renders alternately into
+display buffers 0 (`0x10000`) and 1 (`0x890000`), but our
+`cellGcmSetPrepareFlip` returned `CELL_OK` (0) instead of the buffer id. The
+title stores that value in its flip queue (`Gfx_FrameEnd`, 0x00066530) and its
+display thread passes it, masked to 8 bits, to `cellGcmSetFlipImmediate`
+(`Gfx_DisplayFlip`, 0x000692dc), so every flip named buffer 0. When buffer 0
+still held a frame from two frames earlier, the window showed that image after
+a newer buffer-1 frame; the next flip went forward again. Camera, HUD and pitch
+meter are all in that buffer, which is why the whole frame stepped back. The
+real SDK and RPCS3 both return the buffer id.
+
+- **Fix:** return `bufferId` from `cellGcmSetPrepareFlip`, live key
+  `PS3RECOMP_PREPARE_FLIP_RET` (default off; now exported as 1 by both
+  `play_windowed.sh` copies). It still does not queue a FIFO flip: this title
+  flips through `SetFlipImmediate`, and queueing here would flip twice.
+- **Instrumentation:** `PS3RECOMP_PRESENT_TRACE=1` logs the flip index,
+  requested buffer id/offset, source surface and its last colour-write serial,
+  and flags a present whose source is older than the previous present's
+  (`back=1`); `PS3RECOMP_PRESENT_DUMP_DIR` writes 160x90 PGMs of the frames
+  actually displayed (after the `PRESENT_NEW_ONLY` gate).
+- **Live A/B at the meter (one launch, N=6, 2 s drop):** stale-source presents
+  **4.71 % -> 0.038 %**; source buffers 0/1 went from 2403/414 to 1370/1292
+  (the flips now alternate). Guest fps A **30.34 +/- 0.29**, B **29.34 +/-
+  2.38** (one 24.77 fps resync segment; other five mean 30.25), paired
+  **+1.00 fps**, 95 % CI **[-1.27, +3.28]**. Present intervals A p50 **35.24**
+  / p99 **57.45 ms**, B p50 **34.91** / p99 **61.14 ms**.
+- **Dumped images (moving frames, nearest-of-previous-8 match):** **219.9**
+  backward frames per 1000 moving frames with the fix off (210 of 955; peaks
+  90/min in the pregame cinematics, most exactly two frames back), **6.2** with
+  it on (5 of 804, all at cuts). Example: frames 5300 and 5302 are identical
+  with 5301 between them when off; monotonic when on.
+- **Offline:** `test_rsx_draw_engine` and the other engine fixtures pass;
+  `test_gcm_fifo_user_command` still fails to link on the pre-existing missing
+  `rsx_draw_engine_set_*` stubs. `spu_context` ABI check passes.
+
+Details, tables and images: [`docs/backward-frames.md`](backward-frames.md).
+
 ## 2026-11-03 (freeze): the 08:30 stall was a `spu_context` ABI split; VFS exonerated
 
 The first post-08:30 boot with commit `decb3fb8` added `uint64_t src_seq` in
