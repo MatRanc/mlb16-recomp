@@ -85,6 +85,16 @@ export PS3RECOMP_C690_STATS=1
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
+# Cheap wins (mlb16-recomp/docs/cheap-wins.md), all individually switchable:
+#   SPU_MFC_LOOKUP_CACHE  per-host-thread MFC engine memo (no registry SRW lock)
+#   GCM_NOP_SKIP          skip NV4097 NO_OPERATION (0x0100) runs in the walker
+#   GCM_REF_IMMEDIATE     publish SET_REFERENCE at execution, not at drain tail
+#   PS3RECOMP_RSX_TEX_PIN never evict a texture bound this frame
+# Set any to 0 in the environment to turn it off.
+export SPU_MFC_LOOKUP_CACHE="${SPU_MFC_LOOKUP_CACHE:-1}"
+export GCM_NOP_SKIP="${GCM_NOP_SKIP:-1}"
+export GCM_REF_IMMEDIATE="${GCM_REF_IMMEDIATE:-1}"
+export PS3RECOMP_RSX_TEX_PIN="${PS3RECOMP_RSX_TEX_PIN:-1}"
 # Present the window only when the title produced a new frame. Without it the
 # frame clock's outer pass re-presents on a flip request, so MangoHud's row
 # rate (one per vkQueuePresentKHR) reads above the guest [flip] fps. The

@@ -3,6 +3,35 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (cheap wins): X skips the pregame, four live cuts, and the AVX2/FAST_LS build
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
+PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, PACE=1, x11. Details, tables and PNGs:
+[`docs/cheap-wins.md`](cheap-wins.md).
+
+- **Nav: boot-to-meter 245 s -> 153-157 s** with `SKIP_CINE=1` (X only on a
+  frame that matches no menu, is not black, and is not the pitch camera; the
+  exact pitch-menu match still triggers the one meter X). The first version
+  pressed X on the loose pitch-camera match and that X was consumed by the
+  batter-view transition; the meter then needed a second X. The final flow
+  waits for the exact menu, which is the safe trigger.
+- **Live bundle (SPU_MFC_LOOKUP_CACHE, GCM_NOP_SKIP, GCM_REF_IMMEDIATE,
+  PS3RECOMP_RSX_TEX_PIN): 28.54 -> 29.90 fps** (N=6, 10 s, 2 s dropped; paired
+  -1.37 fps, 95 % CI -2.66..-0.07), walker wait 7.75 -> 6.78 ms. The run's A/A
+  check is not at the A/A level (first A segment 26.4 fps warm-up); excluding
+  it the gain is +0.94 fps. `SPU_MFC_LOOKUP_CACHE` alone was inside noise.
+- **Build A/B (base vs FAST_LS+AVX2+VMX on): 22.35 vs 28.35 and 26.76 vs
+  28.68 fps.** c690 job wall 65.5 -> 48.5 ms and 60.8 -> 47.7 ms; walker SPU
+  wait 11.6 -> 7.2 and 10.9 -> 7.8 ms. `-mavx2`/`-mfma` were already implied
+  by `-march=native`; `-ffp-contract=off` was not, and FAST_LS is the main
+  driver. `-march=x86-64-v3` is a no-op under native.
+- **Correctness:** AVX2 exactness 446.8 M lanes bit-identical, FAST_LS
+  helpers 72/72, VMX op oracle + 200 k-vector accessor fuzz clean, replay
+  hash `416abee2c5bff47d` (gate `67f03d06377de89b`) identical with the
+  texture pin off/on. Meter frames unchanged.
+- `play_windowed.sh` (both copies) enables the four live switches;
+  `build-play` is reconfigured to the winning build options.
+
 ## 2026-11-03 (exposure + readback cuts): the meter's exposure readback is fresh and flat; the cuts do not change it
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
