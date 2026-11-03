@@ -75,12 +75,17 @@ times until we match RPCS3.
 Updated 2026-11-03 afternoon. One game-running mission at a time.
 
 **Running**
-- HLE fix batch 1 (audit #9 lwcond, #6 audio pacing, #11 cellFsWrite, #2+#3 SPURS shutdown/error base, #7 GCM
-  offset tables), behind switches, meter A/B + full menu/match-load boot.
+- None. HLE fix batch 1 landed (audit #9 lwcond, #6 audio pacing, #11 cellFsWrite, #2+#3 SPURS shutdown/error
+  base, #7 GCM offset tables), switches on in the play scripts; the flip-deadline investigation is done.
 
 **Speed: steady frames (meter)**
-1. The 33 ms deadline: per frame, did `Gfx_DisplayFlip` (0x000692dc) leave its wait by the flip handler or by the
-   2x16683 us timeout, and what was still running then (walker, c690, present)? (flip-quantisation.md)
+1. ~~The 33 ms deadline: per frame, did `Gfx_DisplayFlip` (0x000692dc) leave its wait by the flip handler or by the
+   2x16683 us timeout, and what was still running then (walker, c690, present)?~~
+   **Done 2026-11-03** ([`flip-deadline.md`](flip-deadline.md)): 28.6 % of frames leave by the deadline, present
+   queued p50 0.35 ms, completion beat delayed by the walker drain (tick and drain share a thread). Earlier
+   completion (`FLIP_ON_DONE`) and the status-preserving candidate both lose; both default off. Follow-up: decouple
+   the display tick from the walker drain (separate tick thread or a tick checkpoint) without exposing the
+   buffer-ref wait.
 2. Native Edge rewrite of the c690 stages (decision with the user; edge-native-step2.md has the algorithm).
 3. Walker plan leftovers: readback cuts (#2), Vulkan recording (#3), GPU vertex conversion (#7), parse/record split.
 4. Untested: PIN=0 vs PIN=1; SPU_CODE_DMA_MEMO measured neutral (off).

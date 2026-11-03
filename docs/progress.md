@@ -3,6 +3,36 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (flip deadline): the tick is starved by the walker drain; earlier completion loses
+
+Two meter launches (`ab_live_flipdiag_20261103_150246` diagnosis,
+`ab_live_prepflip_20261103_151553` A/B). Details in
+[`docs/flip-deadline.md`](flip-deadline.md).
+
+- **The 33 ms mode is the title's 2-vblank deadline, and it fires often.**
+  369/1,289 frames (28.6 %) at the meter left `Gfx_DisplayFlip` by its
+  `2 x 16683 us = 33.37 ms` deadline; they are a tight **34.15 ms**. The wait
+  is `sys_lwcond_wait(0x1245100, 17000 us)`; two 17 ms timeouts reach the
+  deadline. When the completion arrives it is fast: request -> present p50
+  2.45 ms, request -> tick completion 6.75 ms, handler +0.1 ms, wait exit
+  +0.02 ms.
+- **The flip is presentable; the completion beat is late.** Deadline frames
+  queue the present p50 0.35 ms after the request (368/369 before the
+  deadline), but no completion beat lands in the frame. At the deadline the
+  walker drain is active 80.2 % of the time and a c690 job 59.9 %; present
+  fence and `vkQueuePresentKHR` 0 %. The display tick and the drain share the
+  `rsx walker` thread, so a 23.3 ms drain (+10.8 ms) spans the deadline; the
+  next completion lands p50 7.5 ms after it.
+- **Neither candidate wins.** `FLIP_ON_DONE` was already 34.06 -> 26.00 fps
+  (ref hand-off); a new default-off `PS3RECOMP_PREPARE_FLIP_KEEP_STATUS`
+  (do not let `SetPrepareFlip` complete the outstanding flip) is **32.54 ->
+  28.21 fps**, p50 34.15 -> 37.13 ms, walker 17.75 -> 21.84 ms, worse on all
+  six paired segments, and it does not remove the deadline frames (823 -> 776
+  per 60 s arm). Both switches stay off.
+- **No >200 ms frames at the meter with batch 1 on**: max 83.96 ms; the run's
+  18 gaps >200 ms (237-654 ms, one 5,152 ms) are all pre-meter asset loads /
+  match load, not lwcond timeouts.
+
 ## 2026-11-03 (batch 1): lwcond, audio pacing, fs write, SPURS teardown, GCM offset tables
 
 Five audit findings fixed, each behind its own default-off switch; the play
