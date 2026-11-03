@@ -92,6 +92,11 @@ export PS3RECOMP_PUMP_MS=8
 # affect responsiveness; the confirm run measured 42.57 rows/s vs 42.66 [flip]
 # fps at the start screen (docs/textures-dummy-census.md).
 export PS3RECOMP_VK_PRESENT_NEW_ONLY=1
+# Even out the window present cadence: the guest finishes frames in
+# bursts (two flips ~1 ms apart, then a ~46 ms gap), so the display saw
+# pairs instead of a steady ~34 ms. The pacer holds each present until
+# its arrival-cadence slot, at most one frame interval (docs/frame-pacing.md).
+export PS3RECOMP_VK_PACE="${PS3RECOMP_VK_PACE:-1}"
 # Disabled texture units read magenta otherwise, which makes the picture pink.
 # measure_fast uses the same black dummy.
 export VK_DUMMY_BLACK=1

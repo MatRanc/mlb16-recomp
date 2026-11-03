@@ -3,6 +3,47 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (frame pacing + cube fallback): the present pairs are two flips handed over back to back
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
+PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, x11. Details, tables and images:
+[`docs/frame-pacing.md`](frame-pacing.md).
+
+- **Per-flip log:** `PS3RECOMP_FLIP_LOG=1` prints `req/fin/pres/show` for every
+  flip on one microsecond clock (`show_gap` is the display interval). For this
+  title `req == fin` (statically linked libgcm, the drain decodes the
+  `0xFEAD` word; no HLE markers), so the measurable split is
+  `fin -> pres` (walker -> window handoff) and `pres -> show` (present thread).
+- **Where the pairs are:** with `PRESENT_NEW_ONLY=1` and PACE off, 32 % of
+  present intervals are < 8 ms and 60 % > 40 ms at a 34.5 ms mean. The
+  per-flip log already shows two frames at `pres` 1-4 ms apart: the guest
+  runs up to 3 flips ahead, the drain catches up and hands two frames over
+  back to back. It is not re-presenting (`flips not shown: 0`) and not FIFO
+  queueing (`pres -> show` p50 4 ms).
+- **Fix:** `PS3RECOMP_VK_PACE=1` (live key, default off) holds each queued
+  present in the present thread until its slot in an arrival-cadence
+  schedule. Interval EWMA is measured on *new frame arrivals*, not on our own
+  presents (the first attempt fed back and ratcheted B to 6 fps). The
+  schedule is capped at one interval of wait and abandoned when presents are
+  already queued; a late frame is presented at once. The blit is submitted
+  when the frame ends, so only `vkQueuePresentKHR` is delayed.
+- **A/B (one launch, 6 x 10 s per arm, 2 s dropped):** guest fps A 29.30
+  +/- 0.86 vs B 29.07 +/- 0.76, paired +0.22 (95 % CI -0.35..+0.79), A/A
+  PASS. Present intervals from the per-flip log: p50 **46.46 -> 38.43 ms**,
+  p90 **58.30 -> 51.60**, std **24.28 -> 14.90**, < 8 ms **32.2 -> 0.0 %**,
+  > 40 ms **61.8 -> 45.2 %**. MangoHud CSV agrees (p50 45.71 -> 39.04 ms,
+  std 23.80 -> 15.96, < 8 ms 28.8 -> 3.2 %).
+- **Cube probes:** an incomplete probe now binds the last complete cube image
+  for that guest address (`cube_target_last` hook, address-keyed backend
+  cache); the dummy stays only when no complete image ever existed. Unit
+  test covers a face recreated out of format and a never-complete probe.
+  Pregame in the same run: 20 addresses (368 frames) were logged incomplete
+  after their first complete frame and are now served the last image; the
+  1,435 remaining `cube` census misses are never-complete probes. No 2 s
+  thumbnail pair within a scene shows a brightness flip.
+- **Defaults:** `ab_live.sh` exports `PS3RECOMP_VK_PRESENT_NEW_ONLY=1`;
+  `play_windowed.sh` (both copies) sets `PS3RECOMP_VK_PACE=1`.
+
 ## 2026-11-03 (readback attribution): the meter's WCB bill is guest transfers and faults, not texture binds
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
