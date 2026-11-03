@@ -38,6 +38,17 @@ not a win. The two halves have different levers: p50 comes down
 by removing work (PPU, walker drain, c690); the spread comes down by fixing hand-offs and pacing (who waits for whom,
 present timing).
 
+## Backward frames (confirmed by the user, 2026-11-03)
+
+User slow-motion video: some shown frames repeat an OLDER image, so motion steps back and forward (a batter's arm
+swinging forward moves back a little for a frame or two, then forward again). Present everywhere (menus and game),
+not in RPCS3, and has been there "since forever". This is the "garbled, jumpy" look, distinct from uneven frame
+times. Two candidate classes: (a) whole-frame order: we present a stale display buffer (wrong flip buffer index,
+PRESENT_NEW_ONLY/PACE queue, blit before the frame finished); (b) stale geometry: a draw uses last frame's c690 mesh
+output (ring slot reuse/timing), so only animated meshes step back while camera/HUD stay correct. Check: log flip
+buffer id requested vs blitted per present; dump consecutive presented frames and test monotonic motion; per-draw
+c690 output slot/frame tag.
+
 ## Priority: speed and frame-time stability first
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
