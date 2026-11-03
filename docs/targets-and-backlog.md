@@ -49,6 +49,11 @@ output (ring slot reuse/timing), so only animated meshes step back while camera/
 buffer id requested vs blitted per present; dump consecutive presented frames and test monotonic motion; per-draw
 c690 output slot/frame tag.
 
+User follow-up from the video: the camera/zoom stays steady; the players AND the fans step back. So it is class
+(b), stale animated geometry, not whole-frame order. Leads: the walker ignores GCM semaphore ACQUIRE by default
+(`GCM_SEMA_ACQUIRE=0`, frame-timeline.md inventory), so a draw can read a mesh/crowd buffer before the SPU job that
+fills it has written this frame's data; and any vertex/upload cache keyed by address without write tracking.
+
 ## Priority: speed and frame-time stability first
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
