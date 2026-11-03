@@ -114,6 +114,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - White pants on pitcher, catcher, batter, umpire (lighting/colour, known). Mesh holes around the pitcher's eyes,
   same as RPCS3 when upscaled (see 6d).
 
+**Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
+- ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
+  EIO. clearerr() before the write.
+- cellFsUtility.c:92: reads PS3RECOMP_FS_WRITE_CHECK directly, ignores the live key; use fs_write_check_on().
+- lwcond_real.h:99: tombstone (-1) matches guest address 0xFFFFFFFF; exclude it.
+- (Checked, not a bug: the SDL audio room check paces on the device queue; no device falls back to clock pacing.)
+- Not reviewed: ppu_sysprx.cpp past line 163 (output limit).
+
 **Correctness**
 8. HLE fix batch 2: audit #1 Bink task attribute, #4 cellAudioOutGetState layout, #5 cellAdecOpenEx, #8 fs
    rename/truncate root, #10 cellSearch, #12 save delete, + the remaining audit findings.
