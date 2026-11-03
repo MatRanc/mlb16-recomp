@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (texture dirty): revalidation by guest-page write generation
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter A/B launch
+plus one paranoid-check launch. Details, coverage table and limitations:
+[`docs/texture-dirty.md`](texture-dirty.md).
+
+- **Replaced the texture content hash** (`eng_texture_slot`'s sparse hash
+  every frame plus a full hash every 8) with a per-4K-guest-page write
+  sequence. A texture stores the sequence sampled before its upload;
+  revalidation is a max over its pages. Writers bump the sequence at their
+  choke point (SPU PUT/atomic, 2D transfers, WCB/engine readback, file and
+  network reads, HLE memcpy/memset); the PPU's own lifted stores fault
+  through `PROT_READ` pages into the existing WCB handler. WCB-armed pages
+  and texture pages share one protection state.
+- **Live meter A/B (6 x 10 s per arm):** walker drain **26.64 -> 23.27 ms**,
+  `tex` **10.34 -> 5.89 ms** (-4.45), engine 25.16 -> 21.64, guest fps
+  **29.21 -> 31.13**. Per flip p50 **33.80 -> 32.00 ms**, p99
+  **44.57 -> 41.06**, stddev 4.12 -> 3.73.
+- **Paranoid mode** (`PS3RECOMP_TEX_DIRTY_PARANOID=30`, full hash of every
+  bound texture every 30 frames compared with the uploaded bytes):
+  **44,656 checks, 0 stale** over the meter run.
+- **Gates unchanged** with `PS3RECOMP_TEX_DIRTY` on and off: meter
+  `a6fcc849341eba9b` / `ff2a220c28750bc3`, pitch `416abee2c5bff47d` /
+  `3e6f6ad4ebb23ed6`. New unit test drives a tracked writer and a direct PPU
+  store and asserts the next bind re-uploads.
+- **Default:** engine off, `play_windowed.sh` now exports
+  `PS3RECOMP_TEX_DIRTY=1`; the live key can flip it per run. Off is the old
+  hash path unchanged.
+- **Left on the table:** `tex` is still 5.9 ms, mostly the real decode/upload
+  of textures that do change. Sub-page/rectangle dirty regions or persistent
+  GPU textures per target are the next step; the readback cuts and Vulkan
+  recording items in `walker-profile.md` are unaffected.
+
 ## 2026-11-03 (walker own work): texture hashing, Vulkan recording, vertex fetch
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch
