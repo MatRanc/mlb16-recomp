@@ -79,6 +79,10 @@ export __GL_SYNC_TO_VBLANK=0
 export GCM_HANDLER_THREAD=1 GCM_FLIPCB_ONTICK=1 GCM_FLIPCOUNT=1
 export PS3RECOMP_VK_GUEST_PROGRAMS=1 PS3RECOMP_VK_WINDOW=1 PS3RECOMP_VK_FULLSCREEN=0
 export SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1
+# Keep a still-ready policy module in the same worker for up to 8 jobs before
+# the coordinator round trip (docs/c690-job-gaps-ab.md). SPU_CODE_DMA_MEMO is
+# left off: it was measured alone and did not move the frame metrics.
+export SPURS_PM_FAST_RESCHED="${SPURS_PM_FAST_RESCHED:-8}"
 export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 export PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W"
 export PS3RECOMP_C690_STATS=1
