@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (exposure + readback cuts): the meter's exposure readback is fresh and flat; the cuts do not change it
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
+PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, PACE=1, x11, two runs of 240 s each.
+Details, tables and images: [`docs/exposure-and-readback-cuts.md`](exposure-and-readback-cuts.md).
+
+- **The uncommitted RECT/BATCH/SKIP cuts are committed and gated** (live keys,
+  default off; off path is the old path). Fixed one gating bug: `guest_dirty`
+  was cleared in `guest_read` even with the cuts off. Added the missing
+  walker-profiling/capture stubs to the two GCM fixtures; all 29 video fixtures
+  pass. `exp/live-ab` pushed to `fork`.
+- **Static:** `Lighting_InitStadium` (`0x4f0380`) creates `ToneMapSample`
+  (32x32, 6 mip levels, RGBA8, `0x14008`), `QuickAmbientSky` (32x32, 1 level,
+  `0x14008`) and `HarmonicsSample` (32x32, 1 level, `0x10008`).
+  `Lighting_RenderExposureRT` (`0x4f48c8`) renders the temp camera and
+  `ToneMapMipGen`; `Lighting_UpdateFrame` (`0x4f2198`) writes the per-material
+  lighting block every frame.
+- **Continuous, not once at start:** the new `PS3RECOMP_LIGHT_PROBE=1` (default
+  off) logged the `ToneMapSample` 32x32/2x2/1x1 chain read 4,198 times per
+  level in 255 s (16.5/s, ~every second frame) at the meter.
+  `QuickAmbientSky`/`HarmonicsSample` were only read in boot/transition bursts.
+- **No stale/partial reads:** every copy was at the surface's current serial
+  (`fresh=1`, `covers=1`, no ticket mismatch). 1x1 exposure **78.7 +/- 0.3**
+  (A, cuts off) vs **78.7 +/- 0.2** (B, RECT+BATCH+SKIP), drift **-0.1** vs
+  **0.0** over 4 min; thumbnail luma **101.2** in both. The reported live-game
+  lighting drift did not reproduce on the meter; no fix was made and the third
+  run was not used. PNGs: `recomp-work/visuals/exposure/`.
+
 ## 2026-11-03 (frame pacing + cube fallback): the present pairs are two flips handed over back to back
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
