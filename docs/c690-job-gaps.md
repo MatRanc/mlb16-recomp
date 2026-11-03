@@ -3,9 +3,10 @@
 Date: 2026-11-03. Branch `exp/live-ab` in `ps3recomp-play`, binary
 `recomp-work/build-play`. One mapping launch with `PS3RECOMP_C690_GAP=1`,
 `PS3RECOMP_C690_STATS=1`, a 45 s `PS3RECOMP_TIMELINE` window and a 25 s
-`perf record` on the game process; one A/B launch (baseline vs the fix bundle)
-that was stopped by a runtime crash in the second arm. The mission cap was two
-game launches and has been used. Details of the run: section 6.
+`perf record` on the game process; one A/B launch stopped by a runtime crash in
+its second arm; a follow-up A/B launch (double-unlock fix + the O(1) code memo)
+that wedged in the baseline arm before any measured segment. Details of the
+runs: section 6.
 
 This is the follow-up to [`frame-timeline-2.md`](frame-timeline-2.md): the long
 meter frame is one c690 burst, the five lanes are 64 % occupied inside it, and
@@ -46,15 +47,19 @@ part is ours, and what was implemented.
 * **Implemented, default off:** `SPURS_PM_FAST_RESCHED=<n>` (re-run a still
   ready PM in the same worker, at most n times, before yielding to the
   coordinator) and `SPU_CODE_DMA_MEMO=1` (skip a code GET already byte-identical
-  in local store; exact, unit-tested). Both are live control-file keys.
-* **The live A/B did not complete.** The first B segment crashed with a
+  in local store). The memo now has an O(1) path: after one full-byte
+  comparison it tracks the source range with the TEX_DIRTY page write sequence,
+  so later GETs are one generation compare instead of a second 67 KB scan.
+  Untracked ranges still compare. Both are live control-file keys.
+* **No live A/B result, and no winner.** The first A/B crashed in B with a
   double `spu_lockline_unlock()` in the fast-reschedule consume path
-  (`pthread_mutex_lock` owner assertion). The defect is fixed and the tree
-  rebuilt, but the two-launch cap was already used, so the fixed bundle was not
-  re-measured. In the 13 s before the crash B looked better (gap p50 67.7 vs
-  79.8 us, p90 112.7 vs 186.0, lane busy 0.548 vs 0.512), but that is one
-  short, aborted segment and is **not** a result. No switch was enabled in
-  either `play_windowed.sh`.
+  (`pthread_mutex_lock` owner assertion); that is fixed and now covered by the
+  scheduler fixture. The follow-up one-launch A/B wedged in the **baseline**
+  arm (both switches off) during the pregame cinematic, before any measured
+  segment: no flips after 08:32:34, five `spurs pm` lanes halted at
+  `pc=0x108E8`, three c690 jobs with `in-flight=5`, then the pitch poll timed
+  out. That launch is not a result. No switch was enabled in either
+  `play_windowed.sh`.
 
 ## 1. What "the gap" is
 
@@ -217,22 +222,43 @@ order is still decided by the PM's own ticket protocol; and the only guest
 state the coordinator would write is written identically. The bound preserves
 cross-workload fairness.
 
-### 5.2 `SPU_CODE_DMA_MEMO=1` (`runtime/spu/spu_channels.c`, `spu_dma.h`)
+### 5.2 `SPU_CODE_DMA_MEMO=1` (`runtime/spu/spu_channels.c`, `spu_dma.h`, `libs/video/rsx_wcb.c`)
 
 For a GET that lands entirely inside a **VERIFIED** streamed-code span, at the
-matching source offset (`ea == source_ea + (lsa - base)`), compare the source
-bytes with the local-store bytes. If they are identical the GET cannot change
-local store: skip the copy and do **not** mark the overlay pending, so the span
-stays verified and the next dispatch skips the 67 KiB verification too. This is
-exact by construction -- the bytes are compared, not assumed from the source
-address. Changed source or changed local store falls back to the normal copy
-and pending/verify path.
+matching source offset (`ea == source_ea + (lsa - base)`), the memo skips the
+copy when the source bytes already equal local store, and does **not** mark the
+overlay pending, so the span stays verified and the next dispatch skips the
+67 KiB verification too.
 
-Unit test: `runtime/spu/tests/run_code_dma_memo_test.sh`, which builds the real
-runtime units and checks identical/full, identical/partial, wrong offset,
-outside span, changed source and changed local-store cases. Passes.
+The first check after a load is still the exact byte comparison. That
+comparison also registers the full source span with the TEX_DIRTY page write
+sequence (`rsx_texdirty_track_range`). Registration write-protects the source
+pages, so an inlined PPU store faults into the same page writer, while an SPU
+PUT/MFC or HLE writer reaches it through the guest-write hook; either moves a
+per-range generation. When the whole span has
+been proven equal and no source write moved the generation since, every later
+GET is **one generation compare** -- O(1) in the transfer size -- and never
+reads the 67 KB. A source write moves the generation; the next GET falls back
+to the byte compare, re-verifies and re-tracks. If TEX_DIRTY is off, the host
+cannot protect pages, or the small range table (16 entries) is full, the range
+is untracked and the byte comparison is used, exactly as before. The
+destination span is a VERIFIED code span, which the runtime already treats as
+immutable except through the tracked GET path (see the dispatch-cache note in
+`spu_channels.c`).
 
-Live key `SPU_CODE_DMA_MEMO`.
+Unit tests:
+
+* `runtime/spu/tests/run_code_dma_memo_test.sh` -- identical/full,
+  identical/partial, wrong offset, outside span, changed source, changed
+  local-store, generation establishment, and a source page made `PROT_NONE` to
+  prove the tracked path does not read it.
+* `libs/video/tests/run_texdirty_range_test.sh` -- the real `rsx_wcb.c` range
+  tracker: tracked write, direct PPU store (page-protected fault), unrelated
+  ranges, disable/enable epochs.
+
+Live key `SPU_CODE_DMA_MEMO`. The extra per-write range scan is skipped
+entirely (one load) until a range is registered, so the baseline write path is
+unchanged with the switch off.
 
 Both keys are seeded from their environment variable and can be flipped from
 `PS3RECOMP_CTL`; both default off, so the standard play configuration is
@@ -244,17 +270,29 @@ unchanged.
 |---|---|---|
 | 1 | `ab_live_jobgap1_20261103_074128` | mapping launch, complete. Meter at 161 s; timeline 45 s from meter+20 s; perf 25 s. 1.221 M gaps in the 86 s window; tables above. |
 | 2 | `ab_live_jobgap2_20261103_080547` | A/B launch, aborted. Segment 0 A completed; segment 1 B ran ~13 s and died with `Fatal glibc error: pthread_mutex_lock.c:88 ... __owner == 0` on `spurs pm`. `ab_live.sh` stopped with rc=7 (no flips). |
+| 3 | `ab_live_jobgap3_20261103_083027` | follow-up A/B (one-launch cap), no result. Boot arm A (both switches off). The title wedged during the pregame cinematic at 08:32:34: no `[flip]` after that, five `spurs pm` lanes at `pc=0x108E8` (`[pm-end]`), c690 jobs=3, `in-flight=5`; the pitch poll then timed out. No arm was ever switched and no segment was measured. |
 
-The crash is a double unlock in `spurs_pm_fast_consume`: it called
+The run-2 crash is a double unlock in `spurs_pm_fast_consume`: it called
 `ef_line_end()` (which already unlocks the lock-line mutex) and then
 `spu_lockline_unlock()` again. The second unlock left the mutex in an invalid
 state; the next `spu_lockline_lock()` from another path hit the glibc owner
 assertion. Fixed by deleting the extra unlock (the function now mirrors the
-coordinator's two-line critical section exactly) and rebuilt. `run_code_dma_memo_test.sh`
-still passes.
+coordinator's two-line critical section exactly) and rebuilt. The scheduler
+fixture now drives `spurs_pm_fast_consume` and every `spurs_pm_fast_can_rerun`
+early return, re-acquiring the lock line after each call
+(`tests/test_spurs_scheduler.c`), so a missing or duplicate unlock fails
+offline.
 
-Because the mission's hard cap is two game launches and both were used, the
-fixed bundle was not re-run. What run 2 did show before the crash:
+Run 3 is **not** attributable to either switch: the control file for the whole
+launch was `SPURS_PM_FAST_RESCHED=0` / `SPU_CODE_DMA_MEMO=0`, so the
+fast-reschedule path and the code memo were never entered. It is also not a
+measured wedge of B, and the cap allowed no retry. The run-3 binary carried an
+ungated 16-entry range scan on every guest write (range tracking was not yet
+lazily gated); that scan is now skipped when no range is registered, so the
+baseline write path is identical to run 1's binary. The launch remains the
+only live datum from the follow-up: the title did not reach the meter.
+
+What run 2 did show before its crash:
 
 * A segment (valid, one 15 s segment, 2 s dropped): **28.37 fps**, walker
   19.36 ms, wait 15.94 ms; gap p50 79.8 us, p90 186.0, lane busy 0.512.
@@ -269,12 +307,18 @@ keep.
 
 ## 7. Next steps (in order)
 
-1. Re-run the A/B with the double-unlock fix: `A = both 0`, `B =
-   SPURS_PM_FAST_RESCHED=8, SPU_CODE_DMA_MEMO=1`, N=6, 15 s segments, 2 s
-   dropped, timeline off, `C690_GAP` off (its 9 % lane overhead is not needed
-   for the A/B; the 2 s `c690-gap-window` lines are enough). Kill criteria:
-   no wedge, no guest-visible job-order/atomic change; keep a switch only if
-   the paired frame p50/p99 and lane busy both move outside the A/A spread.
+1. Re-run the A/B on a clean launch with the double-unlock fix and the O(1)
+   memo: `A = both 0`, `B = SPURS_PM_FAST_RESCHED=8, SPU_CODE_DMA_MEMO=1`,
+   N=6, 10 s segments, 2 s dropped, timeline off, `C690_GAP` off. The run-3
+   wedge in arm A must first be shown to be intermittent (it is not on either
+   switch); if it repeats, capture the lane PC and treat it as a separate
+   title/runtime issue. Kill criteria: no wedge, no guest-visible
+   job-order/atomic change; keep a switch only if the paired frame
+   p50/p99 and lane occupancy both move outside the A/A spread.
+   Also verify the memo's O(1) path live: with `SPU_CODE_DMA_MEMO=1` the
+   `code_get` byte count should stay the same but the `ovl_verify`/`code_get`
+   copy cost in `perf` should drop, and the first B segment must not show a
+   code-verification rejection.
 2. If fast reschedule wins, try `n = 32/64` and measure whether the bound is
    reached (it should not be for MeshJobs). If the coordinator wake is still
    visible, consider a short park/spin in the worker instead of the full CV
@@ -319,8 +363,11 @@ TAG=jobgap2 N=6 SEG=15 DROP=2 METER=1 SKIP_CINE=1 PIN=1 WCB=2 \
 * Perf was taken process-wide; only `spurs pm` leaf samples are tabulated.
   DWARF call graphs were recorded but not usable within the time budget on this
   host, so there is no per-caller tree.
-* The A/B B segment is invalid: 13 s, then a crash. Its numbers are quoted only
-  to show the direction, not as a win.
+* The run-2 B segment is invalid: 13 s, then a crash. Its numbers are quoted
+  only to show the direction, not as a win.
+* Run 3 is a failed launch, not an A/B: arm A wedged before any segment was
+  measured, and the one-launch cap left no retry. The O(1) memo is offline
+  tested only.
 * The job-code re-DMA rate is measured from GET destinations in
   `0x4000..0x14840`; a GET that lands there for data rather than code would be
   counted too, but the 70 KiB/gap match to the 67,648 B module makes that

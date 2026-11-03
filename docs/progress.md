@@ -3,6 +3,39 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (c690 code memo, O(1)): generation-tracked reloads; A/B launch wedged in baseline
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. The follow-up mission had
+a **one-game-launch** cap. Unit tests run before it; the launch was used and
+failed to reach the meter. Details and tables:
+[`docs/c690-job-gaps.md`](c690-job-gaps.md).
+
+- **`SPU_CODE_DMA_MEMO` now has an O(1) check.** The first GET after a load
+  still compares the bytes, then registers the full source span with the
+  TEX_DIRTY page write sequence (write-protecting the pages). Later GETs skip
+  on one per-range generation compare, not a 67 KB `memcmp`; a source write
+  (including a direct PPU store, which faults into the page writer) moves the
+  generation and the next GET falls back to the exact compare. Untracked
+  ranges (switch off, TEX_DIRTY off, 16-entry table full) always compare. The
+  per-write range scan is skipped while no range is registered, so the
+  baseline write path is unchanged with the switch off.
+- **Offline tests, all passing.** `run_code_dma_memo_test.sh` (byte cases,
+  generation establishment, source page `PROT_NONE` to prove the tracked path
+  does not read it), a new `libs/video/tests/run_texdirty_range_test.sh`
+  against the real `rsx_wcb.c` range tracker (tracked write, direct PPU store,
+  unrelated ranges, enable/disable epochs), and the SPURS scheduler fixture,
+  which now drives `spurs_pm_fast_consume` and every
+  `spurs_pm_fast_can_rerun` early return and re-acquires the lock line after
+  each call (the run-2 double-unlock class). `runtime/spu/tests/run_tests.sh`
+  is 11/11 after weak c690 stubs were added to the shared fixture support.
+- **No A/B result, no winner.** The one launch (`jobgap3`) wedged in the
+  **baseline** arm (both switches off) during the pregame cinematic, before
+  any segment: no flips after 08:32:34, five `spurs pm` lanes at `pc=0x108E8`,
+  c690 jobs=3 with `in-flight=5`, then the pitch poll timed out. The switches
+  were never entered, so this is not a measured B wedge; the cap allowed no
+  retry. Both `play_windowed.sh` copies are unchanged; both switches remain
+  default off.
+
 ## 2026-11-03 (c690 job turnover): the gap is tail + host dispatch + head, not one lock
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One mapping launch
