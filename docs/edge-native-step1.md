@@ -364,6 +364,15 @@ elasticity says do not expect the full 20 ms of lane-union saving in p50.
 * **4 stage pairs** - the stage cap was on job index, not on `0xFDA0`
   entries. A follow-up corpus should key it on the stage.
 * **No live hook** was added in this mission, as requested.
+* **Stage-snapshot instrumentation is in the generated lifted tree.**
+  The corpus stage hooks need a 6-line wrapper around the lifted
+  `0xFDA0` body (it calls `c690_corpus_stage_enter`/`_exit`, and
+  tail-calls the body when the corpus is off). It lives in
+  `recomp-work/spu_lifted/jobmod_c690c2f7b09a_eF5B8/spu_recomp.c`
+  and is deliberately not committed: that tree is regenerated game
+  data. Reproduce it by renaming the generated body to `_body` and
+  adding the wrapper shown in `tools/c690_ref/README.md`.
 * Perf data is 1.9 GB under `recomp-work/perf_edge1_20261103_012604.data`
-  (not committed). The corpus is 19 MB under
-  `recomp-work/corpus_edge1_20261103_012604/` (not committed).
+  (not committed). The corpus is 21 MB under
+  `recomp-work/corpus_edge1_20261103_012604/` (19 MB of job files plus
+  2.2 MB of extracted stage images; not committed).
