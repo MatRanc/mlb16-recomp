@@ -94,8 +94,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 5. Hitch census: DONE (docs/hitch-census.md). Cold run: 824 frames > 50 ms. Cinematics 798 (c690, same lever as
    the meter), boot 18 (353-589 ms, SPU asset jobs), load 1 (5.1 s: 2.9 s our shader translation, 0.25 s driver
    pipelines; file I/O is async and negligible), meter 7. Menus 0.
-6. Persistent VkPipelineCache: built (PS3RECOMP_VK_PIPELINE_CACHE, off). Removes ~0.29 s driver time only; not kept.
-   Next: an on-disk cache of our translated shaders (SPIR-V) targets the ~3.8 s of translation (load + cinematics).
+6. Shader disk cache: DONE, default on (docs/shader-disk-cache.md). Load freeze 5.1 s -> 2.06 s warm. Review
+   fix: hash seeded with the translator build stamp (stale entries after translator changes). Open review nits:
+   orphaned .tmp files and no pruning (dir grows across versions), key includes render state (duplicate files),
+   static s_eng_pipe_key handoff, mutex held across file I/O. Remaining ~2 s load = walker drain (3,484 draws) +
+   texture uploads. Hitch recorder on in play tests (hitches.pstl + tools/hitch_table.py).
 6b. Boot 0.35-0.6 s stalls: SPU asset jobs on the spurs pm lanes while the main thread usleeps; not yet explained.
 6c. Warm census run "stuck in cinematics": user watched it; it was the idle b-roll after a nav miss (X landed on
    the pitch view, not the meter). Harness nav issue, not a game loop.
