@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (native c690 Edge, step 2): corpus fix, 0xFDA0 kernel, live attempt
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Details, algorithm
+description, exactness tables and the updated stage plan:
+[`docs/edge-native-step2.md`](edge-native-step2.md).
+
+- **Corpus fixed.** Stage snapshots are capped on outermost `0xFDA0` entries and
+  written to a per-lane spool independent of job sampling; the job file stays
+  open through the submit epilogue. The job-file run records **249,886 PUTs**
+  (step 1: 0). Four spool runs collected **403 / 400 / 400 / 401** pairs; the
+  last is a meter burst (frames 9116-9125; the meter stage is bursty so a
+  >= 2 s spread of 300 meter pairs is not achievable).
+- **Native kernel, bit-exact offline.** The 45-block `0xFDA0` state machine is
+  flattened into one C function (locals for `sr0..sr93`, continuation calls as
+  gotos, unchanged `spu_helpers`). Full 256 KiB LS + all 128 GPRs match on
+  **1,604 / 1,604 spool pairs and 12 / 12 job-file pairs** with the shipped
+  runtime TU. The in-game mismatches were harness/TU bugs: stale fallback
+  compare, exit-MXCSR use, and the runtime TU missing `SPU_FAST_FLOAT`.
+- **Speed: 1.30x, not 5x.** Lifted 136.7 us -> native 106.1 us median on 12
+  pairs (1.28-1.35x). That is ~-1.0 ms per worker per frame at the 31.8 %
+  tree/cull share, below the frame A/B noise. The step-1 kill criterion was
+  5x.
+- **Not landed live.** Two meter arms with `PS3RECOMP_C690_NATIVE_CULL=1`
+  wedged the guest (`FIFO resync 0x0136E970`, `w=2136E970`, no flips ~10 s
+  after the switch). The switch exists, default-off, and is not enabled in
+  `play_windowed.sh`. Next: capture the live meter class with the fixed spool
+  (10x cap) and shadow for 60 s, or move to unpack/pack (23.5 %, 5-10x target).
+
 ## 2026-11-03 (walker quick wins): remap cache, fetch memo, pipeline memo, `[unknown]`
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Offline replay A/B plus
