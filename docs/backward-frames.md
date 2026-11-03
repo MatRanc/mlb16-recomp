@@ -19,8 +19,7 @@ Date: 2026-11-03. Branch `exp/live-ab` in `ps3recomp-play`, built as
   that return value in its own flip queue and its display thread later passes
   it, masked to 8 bits, to `cellGcmSetFlipImmediate`. So the flip after a
   frame rendered into buffer 1 still named buffer 0. The real SDK returns the
-  buffer id; RPCS3's `gcmSetPrepareFlip` does the same
-  (`return not_an_error(id)`).
+  buffer id, and the guest code uses it that way.
 * **Fix:** return the buffer id (`PS3RECOMP_PREPARE_FLIP_RET`, live key,
   default off, now on in both `play_windowed.sh` copies). One line in
   `cellGcmSys.c`.
@@ -62,10 +61,9 @@ frame and `SetFlipImmediate` always received 0. The title does alternate its
 render target (the engine creates and draws into both display surfaces), which
 is why half the displayed frames were the older buffer-0 image.
 
-The real SDK returns the display buffer id from `cellGcmSetPrepareFlip`;
-RPCS3's `gcmSetPrepareFlip` returns `not_an_error(id)` and the old RPCS3
-wrapper stores the same value. Our return value was the only divergence in
-this path.
+The real SDK returns the display buffer id from `cellGcmSetPrepareFlip`, and
+the guest's flip queue (Ghidra, 0x00066530 / 0x000692dc) stores and reuses it.
+Our return value was the only divergence in this path.
 
 ### Instrumentation used to find it
 
@@ -100,8 +98,7 @@ const int ret_id = gcm_live_get(PS3_LIVE_PREPARE_FLIP_RET,
 return ret_id ? (s32)bufferId : CELL_OK;
 ```
 
-It deliberately still does **not** queue a flip into the FIFO. RPCS3 also
-emits a flip command there, but this title's display thread performs the flip
+It deliberately still does **not** queue a flip into the FIFO: this title's display thread performs the flip
 through `cellGcmSetFlipImmediate`; queueing here as well would flip every
 frame twice. The return value is the only behavioural change.
 
@@ -250,6 +247,6 @@ above so it can be re-created without the run-specific scratch file.
   default off. The dump holds `present_mu` while it writes, so it perturbs
   timing; do not measure fps with it on.
 * The fix is in the HLE return path shared by every title that uses
-  `cellGcmSetPrepareFlip`. Returning the buffer id matches the SDK and RPCS3,
+  `cellGcmSetPrepareFlip`. Returning the buffer id matches the SDK,
   but the switch defaults off for a title that might rely on the old 0; the
   MLB `play_windowed.sh` copies opt in.
