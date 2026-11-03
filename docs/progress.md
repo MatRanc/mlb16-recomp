@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (c690 job turnover): the gap is tail + host dispatch + head, not one lock
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One mapping launch
+(timeline + 25 s `perf` + `PS3RECOMP_C690_GAP`) and one A/B launch that was
+aborted by a runtime crash in its second arm; the two-launch cap is used.
+Full tables, the code changes and the crash: [`docs/c690-job-gaps.md`](c690-job-gaps.md).
+
+- **The inter-job gap is three phases.** 628,783 same-lane gaps under 2 ms:
+  job end -> policy-run end **28.6 us** p50, policy-run end -> next start
+  **27.5 us**, start -> next job **26.2 us** (gap p50 **85.1 us**, mean 118.5).
+  The host phase has the long tail (mean 52.5, p99 471 us), so at the mean it
+  is the largest single term.
+- **The PM runs once per job.** ~136k jobs and ~139k policy spans per lane;
+  policy span p50 196 us vs job 136 us, inter-policy gap 27.5 us. The PM exits
+  to the kernel after each job and the coordinator re-dispatches it.
+- **The c690 module is re-DMA'd every job.** 86 s window: 7.74 M code GETs /
+  **85.4 GiB** (70 KiB per gap = the 67,648 B module), and the overlay verifies
+  67 KiB again once per job. This is the avoidable half of the head.
+- **Atomics are not the bottleneck.** 2.56 GETLLAR and 2.55 PUTLLC per gap,
+  7 % of PUTLLCs fail; the gap phases show no lock-dominated tail. The c690
+  job body is 47 % of `spurs pm` perf samples; PM + runtime are small leaves.
+- **Implemented default-off:** `SPURS_PM_FAST_RESCHED=<n>` (bounded re-run of
+  a still-ready PM in the same worker, mirroring the coordinator's ready /
+  signal / contention bookkeeping) and `SPU_CODE_DMA_MEMO=1` (skip a code GET
+  already byte-identical in local store; exact, unit-tested).
+- **A/B aborted, no winner.** B crashed after ~13 s with a double
+  `spu_lockline_unlock()` in the fast-reschedule consume path
+  (`pthread_mutex_lock` owner assertion). Fixed and rebuilt, but not re-run
+  because the cap was reached. The invalid B stretch looked better (gap p50
+  67.7 vs 79.8 us, lane busy 0.548 vs 0.512); that is a direction, not a
+  result. Both `play_windowed.sh` copies are unchanged.
+
 ## 2026-11-03 (frame timeline 2): the long frame is the c690 burst, not the walker drain
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch,
