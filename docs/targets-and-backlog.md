@@ -97,8 +97,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 6. Persistent VkPipelineCache: built (PS3RECOMP_VK_PIPELINE_CACHE, off). Removes ~0.29 s driver time only; not kept.
    Next: an on-disk cache of our translated shaders (SPIR-V) targets the ~3.8 s of translation (load + cinematics).
 6b. Boot 0.35-0.6 s stalls: SPU asset jobs on the spurs pm lanes while the main thread usleeps; not yet explained.
-6c. Warm census run stayed in cinematics ~16 min and never reached the pitch menu: nav miss or a real cinematic
-   loop? Check if it recurs.
+6c. Warm census run "stuck in cinematics": user watched it; it was the idle b-roll after a nav miss (X landed on
+   the pitch view, not the meter). Harness nav issue, not a game loop.
+6d. Visual: "cheese-grated" holes in some meshes (user, 2026-11-03; long-standing). Check whether Edge's small/no-pixel
+   triangle culling uses a viewport size different from what we render at (would also explain seams when upscaled).
 7. Menu lag / CPUs at 70-90 % on menus: census saw no menu frames > 50 ms; recheck in the user's windowed play test.
 
 **Correctness**
