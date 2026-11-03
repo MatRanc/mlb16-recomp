@@ -114,6 +114,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - White pants on pitcher, catcher, batter, umpire (lighting/colour, known). Mesh holes around the pitcher's eyes,
   same as RPCS3 when upscaled (see 6d).
 
+**Next user play test: prepared probes (docs/edge-holes-native-plan-audio.md)**
+- Audio: `PS3RECOMP_AUDIO_DIAG=1 ./play_windowed.sh` (SDL device/spec + per-second mix line). The game does open
+  cellAudio and our SDL backend opens a device, so the silence is downstream (sink routing or PCM/read index).
+- Mesh holes: `MLB16_CULL_BYPASS=1` (all Edge screen culls off; 2 = 0x2C only, 3 = 0x25/0x26). Holes gone => Edge
+  sub-pixel cull vs the 2x1 AA sample grid. (Our size/pixel centres match the game's 1280x720 / 2560x720.)
+- Native Edge: the step-2 wedge is a coverage/switch bug (fixable), not a dead end. Kernel bit-exact but 1.30x.
+  Plan: prove the live class, then hand-write to ~5x or start with unpack/pack (23.5 %). Non-native levers: 1-3 ms
+  each (AVX2/FAST_LS, PGO), more lanes 0-1 ms. Decision with the user.
+
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
   EIO. clearerr() before the write.
