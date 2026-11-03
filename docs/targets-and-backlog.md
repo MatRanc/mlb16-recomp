@@ -103,6 +103,17 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
    triangle culling uses a viewport size different from what we render at (would also explain seams when upscaled).
 7. Menu lag / CPUs at 70-90 % on menus: census saw no menu frames > 50 ms; recheck in the user's windowed play test.
 
+**Play test 2026-11-03 16:37 (user, play_20261103_163747)**
+- Fixed per user: main menus responsive, clicks register; frame jitter (backward frames) gone. ~35 fps avg in game.
+- Start menu laggy on the Start press.
+- Team select: d-pad up switches team, then ~1 s with no input accepted while frame times stay steady (<=38 ms).
+  Possibly the same asset path as the missing floating team logo.
+- 3.0 s freeze mid-game right after an out at first (MangoHud, ~187 s after launch); 5.06 s at match load;
+  0.33-0.39 s frames in game. Running: shader disk cache mission + hitch recorder for play tests.
+- No audio heard on headphones; log has no [cellAudio] lines. Running: static check (edge/holes/audio mission).
+- White pants on pitcher, catcher, batter, umpire (lighting/colour, known). Mesh holes around the pitcher's eyes,
+  same as RPCS3 when upscaled (see 6d).
+
 **Correctness**
 8. HLE fix batch 2: audit #1 Bink task attribute, #4 cellAudioOutGetState layout, #5 cellAdecOpenEx, #8 fs
    rename/truncate root, #10 cellSearch, #12 save delete, + the remaining audit findings.
