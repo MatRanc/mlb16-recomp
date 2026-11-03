@@ -3,6 +3,36 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (pinning and idle): layout switch, link-anchor fix, SPU back-off; no clean A/B
+
+Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Details, failures and
+the retest plan: [`docs/pinning-and-idle.md`](pinning-and-idle.md).
+
+- **`PS3RECOMP_PIN` was a silent no-op in `build-play`.** The pin helper was
+  reached only through a weak reference, so the linker never extracted
+  `thread_affinity.c.o` (`nm` had no symbol and no log had a `[pin]` banner).
+  A non-weak `ps3_thread_pin_link_anchor()` referenced from
+  `templates/project/main.cpp` fixes it; the first real pinned segment is
+  30.38 fps, p50 34.25 / p90 44.91 / p99 50.21 ms, std 11.06, walker drain
+  18.59 ms (243 flips).
+- **`PS3RECOMP_PIN_LAYOUT=today|lanes|os`** is implemented and live-switchable
+  through `PS3RECOMP_CTL`. `lanes` is the proposed mapping: walker 0, main 1,
+  c690 lanes 2/3/4/5/10, present 8, DisplayFlip 9, spurs kernel 11. c690
+  worker 0 still runs 1.30x fewer jobs than the others under `today`.
+- **Layout `lanes` stopped flipping on its first live switch** (14 s, `rc=7`).
+  The run used a registry that also tracked transient guest threads; a
+  recycled `pthread_t` (re-applied with `pthread_setaffinity_np`) is a
+  use-after-free, later reproduced as a segfault. The registry now keeps only
+  long-lived roles, so the wedge is confounded and needs a retest.
+- **SPU idle back-off** (GETLLAR: 32 pauses, then yield, then at most one
+  100 us nap per ms) is behind `PS3RECOMP_SPU_IDLE_BACKOFF=1` (env + live
+  key), default off. Not measured: the last run's load sample was invalid
+  (a harness arm-quoting bug caused 107,588 re-applies; the walker's 81.6 %
+  is the storm, not guest work).
+- **No winner, no `play_windowed.sh` change.** Three launches: one killed by
+  the orchestration timeout, one layout-b wedge, one contaminated run that
+  ended in the (now fixed) segfault.
+
 ## 2026-11-03 (native c690 Edge, step 2): corpus fix, 0xFDA0 kernel, live attempt
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Details, algorithm
