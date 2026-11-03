@@ -18,6 +18,22 @@ RPCS3's SPU usage was 40-50% and its RSX thread 4-6%. On the meter we spend ~15-
 ~17 ms in the guest SPU mesh producer and ~25 ms in the walker (see meter-pacing.md), so our overhead, not the game's
 own work, is the gap. Targets: first match RPCS3 (46-48 at the meter with ~20 ms steady frames), then 60.
 
+### The target is frame time, not fps (decided with the user 2026-11-02)
+
+fps is an average and hides alternating short/long frames (ours swing between ~6 and 60-80 ms). Every A/B reports
+the per-flip frame-time distribution at the meter, and the goal is stated on it:
+
+| Metric (pitch meter, per game flip) | Now | Stage 1: match RPCS3 | Stage 2 |
+|---|---|---|---|
+| p50 frame time | ~34 ms | <= 21 ms | <= 16.7 ms |
+| p99 frame time | ~60 ms | <= 28 ms | <= 20 ms |
+| stddev | ~15 ms | <= 3 ms | <= 2 ms |
+| frames outside 15-25 ms | most | <= 5% | n/a |
+
+A change that raises fps but widens p99 or stddev is not a win. The two halves have different levers: p50 comes down
+by removing work (PPU, walker drain, c690); the spread comes down by fixing hand-offs and pacing (who waits for whom,
+present timing).
+
 ## Priority: speed and frame-time stability first
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
