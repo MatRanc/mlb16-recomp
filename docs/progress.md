@@ -3,6 +3,48 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (batch 1): lwcond, audio pacing, fs write, SPURS teardown, GCM offset tables
+
+Five audit findings fixed, each behind its own default-off switch; the play
+scripts now default them on. Details, line references and the test list are in
+[`docs/hle-fixes-batch1.md`](hle-fixes-batch1.md).
+
+- **#9 `PS3_LWCOND_REAL`**: the real wait/signal/timeout core already existed
+  (it was left off as neutral, not because it was broken). Its gap was destroy:
+  lwcond now returns EBUSY while parked and otherwise frees the slot
+  (tombstone, so the probe chain survives), and lwmutex destroy does the same
+  for its 24-byte structure. Live A/B: poll 314,893 waits/57 timeouts vs real
+  34,336 waits/4,619 timeouts in the measured windows; the flip-done cond left
+  by signal 1,236 times and by deadline 822 times. A boot handshake still
+  relies on the designed 10 ms fallback wake.
+- **#6 `PS3RECOMP_AUDIO_PACE`**: POSIX cellAudio now uses backend room or a
+  monotonic 5333 us deadline instead of 2/5 ms sleeps. A/B audio 190.7 ->
+  187.5 blocks/s; armed from boot it is 187.5 from the first window.
+- **#11 `PS3RECOMP_FS_WRITE_CHECK`**: `cellFsWrite` (runtime and libs paths,
+  plus `cellFsUtilWriteFile`) returns EIO on a short/failed write instead of
+  OK, through one shared predicate.
+- **#2+#3 `PS3RECOMP_SPURS_TEARDOWN`**: core SPURS base is `0x80410800` (BUSY
+  `0x8041080A`), fiber `0x80410700`; Shutdown stops dispatch and Wait drains
+  `active[wid]` with a bound (default 2 s), returning BUSY on expiry. Off, the
+  old swapped BUSY literal is preserved so the stub cannot cause a hot spin.
+- **#7 `PS3RECOMP_GCM_OFFSET_SYNC`**: populate/clear also write the guest
+  io/ea offset tables, and init/reset republish them. Clear now rounds partial
+  pages up like populate.
+
+Live A/B at the pitch meter (N=6, 10 s, 2 s drop, one launch): fps A
+**32.42 +/- 0.97**, B **32.24 +/- 0.23**, paired **+0.19 [-0.97, +1.34]**;
+per-flip fin p50/p90/p99 A 34.1/41.5/49.5 ms, B 34.2/41.4/47.7 ms; walker and
+wait unchanged. B's std is inflated by one segment with three long gaps (max
+921 ms, still 32 fps); without it std 13.4 vs 10.7 ms. A second launch with all
+five on from boot navigated menus and a match load with `SKIP_CINE=0` and
+reached the pitch in 246 s, no hang, audio 187.5 blocks/s, SPURS workloads 0-6
+dispatched normally.
+
+Offline: new tests for each switch pass; `check_spu_context_abi.sh` passes;
+video fixtures 28/29 (the pre-existing `test_gcm_fifo_user_command` link
+failure). Full `tools/test_*.py` sweep: 46 failures at HEAD, 45 now (the batch
+fixes `test_lwcond_layout.py` and `test_gcm_io_mappings.py`); no new failure.
+
 ## 2026-11-03 (HLE contract audit): how many more return/out-param bugs?
 
 Static-only audit of every imported HLE function this title calls, prompted by

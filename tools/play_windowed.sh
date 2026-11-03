@@ -109,6 +109,18 @@ export PS3RECOMP_TEX_DIRTY="${PS3RECOMP_TEX_DIRTY:-1}"
 # memo (PS3RECOMP_FETCH_MEMO / PS3RECOMP_WALKER_FAST) is deliberately NOT on:
 # live its reference sets change every frame, it hits ~5 %, and it costs
 # ~2.4 ms/frame (see the same doc).
+# Library fixes batch 1 (mlb16-recomp/docs/hle-fixes-batch1.md). All are
+# default on here and individually switchable; 0 restores the old behaviour.
+#   PS3_LWCOND_REAL            real lwcond waits/timeouts/signals, lwm destroy
+#   PS3RECOMP_AUDIO_PACE       POSIX audio at the real 5333 us block period
+#   PS3RECOMP_FS_WRITE_CHECK   cellFsWrite errors on a short/failed write
+#   PS3RECOMP_SPURS_TEARDOWN   Shutdown/Wait drain a workload before Remove
+#   PS3RECOMP_GCM_OFFSET_SYNC  guest io/ea offset tables follow map/unmap
+export PS3_LWCOND_REAL="${PS3_LWCOND_REAL:-1}"
+export PS3RECOMP_AUDIO_PACE="${PS3RECOMP_AUDIO_PACE:-1}"
+export PS3RECOMP_FS_WRITE_CHECK="${PS3RECOMP_FS_WRITE_CHECK:-1}"
+export PS3RECOMP_SPURS_TEARDOWN="${PS3RECOMP_SPURS_TEARDOWN:-1}"
+export PS3RECOMP_GCM_OFFSET_SYNC="${PS3RECOMP_GCM_OFFSET_SYNC:-1}"
 export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
 # Present the window only when the title produced a new frame. Without it the
 # frame clock's outer pass re-presents on a flip request, so MangoHud's row
