@@ -70,6 +70,39 @@ checking if any geometry-only regression remains.
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
 times until we match RPCS3.
 
+## Work queue (kept current; nothing gets dropped)
+
+Updated 2026-11-03 afternoon. One game-running mission at a time.
+
+**Running**
+- HLE fix batch 1 (audit #9 lwcond, #6 audio pacing, #11 cellFsWrite, #2+#3 SPURS shutdown/error base, #7 GCM
+  offset tables), behind switches, meter A/B + full menu/match-load boot.
+
+**Speed: steady frames (meter)**
+1. The 33 ms deadline: per frame, did `Gfx_DisplayFlip` (0x000692dc) leave its wait by the flip handler or by the
+   2x16683 us timeout, and what was still running then (walker, c690, present)? (flip-quantisation.md)
+2. Native Edge rewrite of the c690 stages (decision with the user; edge-native-step2.md has the algorithm).
+3. Walker plan leftovers: readback cuts (#2), Vulkan recording (#3), GPU vertex conversion (#7), parse/record split.
+4. Untested: PIN=0 vs PIN=1; SPU_CODE_DMA_MEMO measured neutral (off).
+
+**Hitches (100-160 ms frames, startup/cinematics/loading)**
+5. Hitch census: boot through startup and pregame cinematics (SKIP_CINE=0) with the timeline; for every frame
+   > 50 ms log pipelines created, texture uploads, file reads, readbacks, resyncs; rank by stall time.
+6. Likely fix: persistent Vulkan pipeline cache (NHL #128, absent here).
+7. Menu lag / CPUs at 70-90 % on menus; start-menu and match-load hangs.
+
+**Correctness**
+8. HLE fix batch 2: audit #1 Bink task attribute, #4 cellAudioOutGetState layout, #5 cellAdecOpenEx, #8 fs
+   rename/truncate root, #10 cellSearch, #12 save delete, + the remaining audit findings.
+9. Controller presses ignored under load (re-check after batch 1 and the flip fix).
+
+**Visual backlog (parked)** - see below: jerseys, team-select 3D logos, lighting changes, crowd patch, tiled wipe,
+1080p/300 % scale.
+
+**User checks**
+- Play test after each batch that lands in play_windowed.sh (what to watch is in each mission's report).
+- RPCS3 MangoHud frame-time log on the meter (to replace the provisional spread targets above).
+
 ## Visual backlog (parked)
 
 - Jerseys missing (not the cube probes; cause unknown).
