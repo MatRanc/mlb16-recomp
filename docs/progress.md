@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (freeze): the 08:30 stall was a `spu_context` ABI split; VFS exonerated
+
+The first post-08:30 boot with commit `decb3fb8` added `uint64_t src_seq` in
+the **middle** of `spu_context` (`resident_code[]`). The lifted SPU modules are
+compiled against the other copy of `spu_context.h` reached through
+`recomp-work/runtime -> ps3recomp-native/runtime`, so every field after
+`resident_code` (`dcache_id`, `host_depth`, `steps`, ...) moved in the runtime
+but not in the lifted code. The c690 job dispatch then read stale state and
+took the invalid-command `stop 0x1` at LS `0x1095C`; all five `spurs pm` lanes
+ended at `pc=0x108E8`, `jobs=3 in-flight=5`, and the FIFO park/resync lines were
+a downstream symptom. The 08:09 glibc crash was the already-fixed
+`SPURS_PM_FAST_RESCHED` double unlock and is unrelated.
+
+- **VFS was not the cause.** No `recomp-work/vfs` file changed between 07:40
+  and 08:36; the 08:05 good run and the 08:30 bad run opened the same six
+  CACHE files at the same relative times; both VFS WADs and SDATs are
+  byte-identical to the ISO. The `.corrupt` files from 11-01 are a separate
+  incident.
+- **`build-good` "stalls too" is not evidence:** it was configured with a
+  non-existent `SPU_DIR`, so it has zero lifted SPU sources and no jobs.
+- **Fix:** keep the memo, move its state to the **end** of `spu_context`
+  (`resident_code_src_seq[4]`); the shared prefix offsets match the lifted
+  modules again. Offline ABI probe confirms every shared field matches (only
+  `sizeof` differs, by 32 B). `run_code_dma_memo_test.sh` 15/15,
+  `run_texdirty_range_test.sh` 16/16, the three SPURS fixtures PASS.
+- **Guard:** `recomp-work/ab-tools/check_spu_context_abi.sh` compares the build
+  header with the lifted header and refuses to start `play_windowed.sh` /
+  `ab_live.sh` on a shared-field mismatch (`SPU_ABI_CHECK=0` overrides).
+- **Verified in 3 launches** (cap 6): reverted `decb3fb8` works (968,913
+  c690 jobs), pre-fix HEAD stalls (`jobs=3`), fixed HEAD works (1,092,754 jobs,
+  no resync/`[pm-end]`, pitch meter confirmed at 162 s).
+
+Details and the offset table: [`docs/freeze-20261103.md`](freeze-20261103.md).
+
 ## 2026-11-03 (c690 code memo, O(1)): generation-tracked reloads; A/B launch wedged in baseline
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. The follow-up mission had
