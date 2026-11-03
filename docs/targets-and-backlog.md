@@ -123,6 +123,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Plan: prove the live class, then hand-write to ~5x or start with unpack/pack (23.5 %). Non-native levers: 1-3 ms
   each (AVX2/FAST_LS, PGO), more lanes 0-1 ms. Decision with the user.
 
+**Team select / logos / Start (docs/team-select-and-logos.md, static)**
+- Team-switch ~1 s input lock: no stall in the run (max frame 41 ms, no I/O); likely the game's scripted wheel
+  transition with the missing logo hiding the cue. Pad probe if it persists: `PAD_ALWAYS_CHANGE=1`.
+- Missing floating 3D logo: not a failed load; the FIFO jump-park resync drops its draw range. Probe:
+  `GCM_PARK_GRACE_MS=600000` (or `PS3RECOMP_WALKER_RESYNC_FIX=1`). Fix: never abandon a park whose skipped range
+  has draw/state commands.
+- Start press lag: frontend construction (up to 887 ms frames, walker idle) = guest PPU work + ~27 pipeline
+  creations. Recheck with the shader disk cache warm; if unchanged, profile the frontend PPU path.
+
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
   EIO. clearerr() before the write.
