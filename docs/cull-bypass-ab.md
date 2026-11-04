@@ -85,7 +85,7 @@ window is missing; every measured segment is complete.
 Per-flip `fin` is the walker executing the flip; fps is frames per
 (segment - drop). MangoHud fps is the CSV **row rate** in the same window (its
 instantaneous `fps` column is noisy; the row rate agrees with the per-flip
-count to 0.1 fps). `c690 job wall` is the sum of all lane job time per second;
+count to within ~0.5 fps). `c690 job wall` is the sum of all lane job time per second;
 `burst wall` is the mean c690 batch wall from the timeline.
 
 | metric | A (off) | B (bypass 3) | C (union) |
@@ -115,7 +115,7 @@ both costs are far outside the noise.
 
 B's extra geometry is not constant. Its extra vertices fall from 13.5-13.8 k in
 the first three B segments to 11.6-12.6 k in the last three, and its p50 falls
-from 41.2 to 34.2-35.9 ms. A is flat (52.5-55.4 k vertices, p50 34.15 every
+from 41.2 to 34.2-35.9 ms. A is flat (6.1-6.4 k vertices, p50 34.15 every
 segment), so this is the bypassed geometry, not a global scene change. Even in
 B's best window (segments 10, 13, 16) it is still slower than the adjacent A
 segments:
