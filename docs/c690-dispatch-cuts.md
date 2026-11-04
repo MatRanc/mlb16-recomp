@@ -265,9 +265,9 @@ TAG=dispatch1 N=6 SEG=10 DROP=2 METER=1 SKIP_CINE=1 WCB=2 PIN=0 VIDEODRIVER=x11 
   PS3RECOMP_TIMELINE_SECS=95 PS3RECOMP_TIMELINE_RING_MB=64 \
   PS3RECOMP_TIMELINE_FLUSH_MB=16 PS3RECOMP_TIMELINE_HITCH_US=0 \
   PS3_LWCOND_STATS=1 SPURS_SCHED_TRACE=1 ./ab-tools/ab_live.sh
-# frames and per-arm rollup
-python3 ab-tools/pin_ab.py --log ../ab_live_dispatch1_*.log \
-  --marks ../ab_live_dispatch1_*.marks --seg 10 --drop 2
+# frames and per-arm rollup (from recomp-work)
+python3 ab-tools/pin_ab.py --log ab_live_dispatch1_*.log \
+  --marks ab_live_dispatch1_*.marks --seg 10 --drop 2
 # burst wall and gap phases split by arm (streaming variant of
 # analyze_burst.py that only keeps policy/job spans; also hist_arm.py for the
 # 2 ms histogram and schedstat.py for the fast/coordinator share)
