@@ -226,6 +226,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   final count is written by the 0x132E0 caller, so a fused pass needs that modelled). c690 lane busy ~0.54 while the
   burst wall ~36 ms ~ frame: the burst looks latency-bound, so faster stages alone don't move the frame. Running:
   PIN A/B + burst critical-path analysis before more native stages.
+  Review of b14617a5 (all default off; fix before any default-on): run_mode0 skips the host_depth/spu_img_restore
+  bracket (c690_native_screen.c:219); shadow PC check compares r0 with ctx->pc after spu_drain_call (false
+  mismatches possible) and never compares the published pc (:286); non-atomic env/dump/progress statics (:84);
+  native mode 2 enables the union for 0x25/0x26 but not 0x2C (c690_cull_fix.c:106).
 - Game queue: PIN A/B + burst critical path (running) -> lever chosen from it (scheduling/gaps vs native unpack/pack) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
