@@ -179,6 +179,9 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Until then PS3RECOMP_C690_CULL_FIX=1 runs the OLD unsafe single-grid fix: do not use. Fallback if the union
   doesn't remove the holes: full candidate superset (= BYPASS=3 without editing the original list).
   Review fixes from 8a082ddb: done in 1d3633aa.
+  Review of 1d3633aa: append cap = entry count at +0x114, not a proven list capacity. Before merging, confirm what
+  +0x114 holds and the real index-buffer size (Ghidra/LS layout), so the append can neither overflow LS nor
+  silently drop the added triangles. Also count skipped unions (range/realloc fail) instead of silent skip.
 - 2.2 GB of stage pairs under recomp-work/ from run 2 (delete once no longer needed).
 
 **Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
