@@ -22,10 +22,15 @@ replay gate.
   grid, keeps that index list, restores the real input, runs the unpatched
   cull, then appends only the sample-grid triangles the original list does not
   contain. The original list is never edited or reordered.
+* **The append cap is the cull's real buffer, not the entry count.**
+  `+0x114` is the candidate *count* the cull consumes (it is not a
+  capacity); `+0x1E0` is the end of the index buffer / start of the next
+  allocation. The union appends inside `[+0x110, +0x1E0)`, so it cannot
+  reach the next live structure, and no addition is dropped on this corpus.
 * Gate on all **400** captured pairs: **0** baseline LS mismatches, **0**
   removed triangles, **7** added triangles total (all in one pair, max 7),
-  0 LS changes outside the index list. The switch is default off and inert
-  when off.
+  0 LS changes outside the index list, and 0 cap/range/realloc skips. The
+  switch is default off and inert when off.
 
 ## 1. Review fixes in the cull path
 
@@ -46,6 +51,13 @@ replay gate.
    the destructor closes anything still owned by the exiting thread. The
    stage/cull spool pointers and sequence numbers now survive
    `finish_tail()`'s per-job reset, so a sampled job no longer forgets them.
+5. **Index-buffer cap and skipped unions (review of `1d3633aa`).** The append
+   cap used to be the entry count at `+0x114`. That field is the candidate
+   count, not a proven capacity; the buffer end is `+0x1E0` (see §4.1). The
+   append now uses `(+0x1E0 - +0x110)/2` entries, validates the three context
+   fields first, and counts every skipped union (`union_skip_setup`,
+   `union_skip_range`, `union_skip_realloc`, `union_cap_hits`,
+   `union_cap_skipped`) instead of returning silently.
 
 ## 2. The second fixed screen bound
 
@@ -105,13 +117,61 @@ if (mode == 1) {
 * The original index list and its order are preserved. Added triangles are
   appended (canonical vertex-set membership, so the opposite winding of a
   triangle the game already keeps is not duplicated).
-* The append is capped by the entry list capacity, so it cannot overrun the
-  cull's buffer. `union_cap_hits` is reported if it ever happens (0 on the
-  400 pairs).
+* The append is capped by the cull's real index-buffer extent,
+  `(+0x1E0 - +0x110) / 2` u16 entries, so it cannot overwrite the next live
+  allocation. Every skip path is counted (`union_cap_hits`,
+  `union_cap_skipped`, `union_skip_setup`, `union_skip_range`,
+  `union_skip_realloc`); all are 0 on the 400 pairs.
 * Cost when enabled: one extra lifted `0x132E0` body per cull plus a 256 KiB
   LS + 2 KiB GPR snapshot per lane. Cost when disabled: one
   predicted-not-taken branch. No `spu_context` fields were added (ABI
   unchanged).
+
+### 4.1 What `+0x114` holds and the real buffer size
+
+The cull context (`r3`, LS `0x1F000` on every captured pair) describes the
+index list with three fields:
+
+| offset | role |
+|---|---|
+| `+0x110` | pointer to the u16 index buffer |
+| `+0x114` | candidate count (3 indices per triangle) the cull consumes |
+| `+0x1E0` | end of that buffer / start of the next allocation |
+
+`+0x114` is a **count, not a capacity**. Two independent checks:
+
+* Changing it by `n` changes the kept-index count by `n` one-for-one on the
+  replay (first pair: `783 -> 240`; `-3 -> 237`, `+3 -> 243`;
+  `-30 -> 210`, `+30 -> 258`). The cull reads exactly the candidates the
+  field declares. Reproduce with the gate's probe mode:
+  `CULL_TEST_PROBE_SEQ=1 CULL_TEST_PROBE_DELTA=30 $OUT/test_cull_pairs <corpus>`.
+* In all 400 pairs the entry count is divisible by 3, the output count is
+  `<=` the entry count, and the output pointer equals the input pointer: the
+  list is filtered in place. `+0x114` is overwritten with the output count at
+  exit, which is exactly what a count field does.
+
+The real buffer extent is `+0x1E0 - +0x110`. Across the 400 pairs:
+
+* `+0x1E0` is 16-byte aligned, greater than `+0x110`, and
+  `(+0x1E0 - +0x110)/2 >= +0x114` (slack 24..1197 entries, 0 bad pairs).
+* `+0x1E0` is never modified by the cull (`400/400` input = output); it is
+  read and null-checked by both cull bodies (`0x132E0`, `0x12C08`) and the
+  family-2 allocator cursor `+0x340` advances to `+0x1E0 + 0x80` when it
+  allocates (pairs 3/4).
+* The bytes at `+0x1E0` are a live command header, not free space: after its
+  first word the same 32 bytes (`002d04d3 001902b7 c1cf0cb6 ...`) appear in
+  every pair. Seven captured buffers end *exactly* at another captured
+  buffer's `+0x110`, i.e. the arena tiles.
+* The cull itself never writes past its input count: with the entry count
+  unchanged, a 32-byte canary immediately after the input list is untouched
+  on the probed pairs.
+
+So the proven writable extent for the union is `[ptr, +0x1E0)`, capacity
+`(+0x1E0 - ptr)/2` entries. It is larger than the entry count (that is why
+the eye close-up can still get its additions), and it stops before the next
+allocation (that is why it cannot corrupt LS). `c690_cull_fix_begin()`
+validates the three fields; if they are inconsistent the union is skipped and
+`union_skip_setup` is incremented instead of guessing a cap.
 
 ### Gate (`tools/c690_ref/run_cull_pair_test.sh`)
 
@@ -126,7 +186,9 @@ if (mode == 1) {
 | original triangles | 78,903 |
 | added triangles | **7** (one pair, max 7) |
 | LS changes outside the index list | **0** |
-| cap hits / odd tails | 0 / 0 |
+| cap hits / cap-skipped triangles | 0 / 0 |
+| setup / range / realloc skips | 0 / 0 / 0 |
+| odd tails | 0 |
 
 The 87 inert pairs are cull layouts whose transform block does not match the
 `{595, 640, -335, 360}` first-quadrant pattern (they are unchanged, hence
