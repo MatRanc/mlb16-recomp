@@ -23,6 +23,13 @@ visible", and prepares the capture that settles which.
 | 4 | What actually draws the floating logo? | A `ScriptUIElem`/`ScriptModel` (UI element) whose scene is rendered by `.opd.FUN_009d611c` → `FUN_009d5c08` → `FUN_009d53bc` → `FUN_006bd388`/`FUN_006bde60`; the element is composited as a 2D textured quad. On the type-5/7 path it first renders into `ScriptUIElem_RT` and copies that back into the element texture. |
 | 5 | Most likely causes, in order | (1) element/model never submitted, (2) offscreen RT or RT→texture copy never composited, (3) draw submitted but killed by state/texture handling in our engine, (4) camera/visibility transform, (5) name/model-load hand-off. |
 
+> **Capture result (2026-11-04):** the capture answers the first question.
+> All 12 flips contain only primitive-8 quads; there is **no triangle batch
+> and no offscreen render-target pass** in the whole stream. The 3-D logo is
+> never submitted, so the loss is upstream of the RSX draw path (§5.6). The
+> capture is valid and complete; only the optional walker `.fifo` missed the
+> full UI frame.
+
 ## 1. The capture the user runs
 
 ### 1.1 What was added
@@ -270,6 +277,23 @@ The `draws` count must agree with the scanner's `draw_batches`; a mismatch
 means the scanner's header walk and the walker disagree (report it, do not
 bisect yet). `--verify` should stay deterministic across passes.
 
+2026-11-04: the raw replay used to segfault on the team dump
+(`gcm_2d_method`, an NV3062 inline transfer into local memory at
+`0xC0004390`, past the tool's `0x20100000`-byte VM). `tools/replay_rsx_core.c`
+now maps the full 32-bit guest window (anonymous, lazily committed), like
+`replay_rsx_engine` already does. The dump then dispatches **657 draws / 6
+clears** and is deterministic across runs (state hash
+`0x9a78d56f446ad930`). `--verify` still reports a per-call divergence on the
+second pass because the inline 2D writes change VM between passes; use the
+final state hash, not `--verify`, for this stream.
+
+The scanner had the matching off-by-12: it counted a draw once per *packet
+base method*, but the walker dispatches a batch for every data word of a
+non-incrementing (`type == 2`) `0x1814`/`0x1824` packet. The team dump has 12
+such packets with two words each, so the old scanner said 645 (and an extra
+empty frame); it now says 657 and 12 frames, and `tools/test_fifo_dump_scan.py`
+pins the rule (5/5).
+
 ### 5.3 If the draw is present: bisect the state
 
 The raw dump cannot supply vertex/texture bytes. If you also ran the optional
@@ -289,7 +313,15 @@ sed -n '1,120p' /tmp/rsxpass/passes.txt
 `draws.txt` gives pass/draw, pipeline, colour mask, blend, depth and every
 bound texture (unit, location, offset, format, width, height). Find the
 triangle batch from §5.2 and compare its texture offset/format and state with
-the 2-D draws. Then run the same replay with each switch, one at a time, and
+the 2-D draws.
+
+2026-11-04: this plan did **not** work on the capture, for two reasons.
+`rsx_engine_replay_run_frame()` advances with
+`rsx_draw_engine_replay_advance_frame()`, not `eng_present()`, so
+`pd_present()` never arms or closes the pass dump and `/tmp/rsxpass` stays
+empty. Separately, `logo_cap.fifo` is one of the 1-draw **display-copy**
+flips (65 words), not a full UI frame. Do not rely on §5.3 for this capture;
+the raw scanner already answers the submission question. Then run the same replay with each switch, one at a time, and
 diff the output hash/gate (`replay_rsx_engine` prints both):
 
 ```sh
@@ -313,6 +345,151 @@ log), and does `FUN_009d7b30` create the element (target-texture lookup
 `"Did not find target texture: %s"`)? A second user run with the title's own
 debug prints is the cheapest confirmation; do not change the capture setup
 mid-measurement.
+
+### 5.5 Result: the capture was taken, and the logo is never submitted
+
+Date 2026-11-04. **No game was launched.** Files (copied out of `/tmp`, still
+in `recomp-work/captures/logo/`; not committed):
+
+| File | Size | MD5 |
+|---|---:|---|
+| `logo_teamselect.bin` | 116,280 B | `251ca933c3cea935c047f013e2b69b88` |
+| `logo_cap.fifo` | 292 B | `e70701ec3ca04d01f7a1edda02515374` |
+| `logo_cap.state` | 148,008 B | `d74e4bc2bbdc61d7028310374e8c0261` |
+| `logo_cap.mem` | 10,012,744 B | `53e5404a943f6f05cc05fe0c2bfa3f01` |
+
+![](team-logo-capture-scan.png)
+
+#### 5.5.1 Capture validity
+
+* `logo_teamselect.bin` is a complete raw dump: 29,070 big-endian words, 12
+  `0xFEAD` flip markers, and the stream ends on the last marker. The fixed
+  scanner reports **frames=12, draw_batches=657, triangle_batches=0**;
+  `replay_rsx` dispatches the same 657 draws and 6 clears and is deterministic
+  across runs. The 12 flips are 6 full UI flips (1,408-1,422 words) and 6
+  display-copy flips (31 words), alternating.
+* `logo_cap.fifo` is **complete, not truncated**: 32-byte `RSXF` header with
+  `nwords = 0x41` (65) plus 260 bytes of payload, ending in `0xFEAD0001`; the
+  `.state` and `.mem` files match the header. However, it captured one of the
+  **1-draw display-copy flips**, not a full UI frame. It is therefore useless
+  for per-draw logo state (see §5.3), but it does not affect the answer: the
+  raw dump already shows the logo is not submitted.
+* This is not a capture-window problem: 12 consecutive flips at ~30 Hz cover
+  about 0.4 s of a screen that animates the logo every frame. The full UI
+  flips are the right frames; they contain no 3-D draw.
+
+#### 5.5.2 What the 12 frames contain
+
+* 6 full UI flips: 107/107/106/106/106/107 primitive-8 begin/end quads and
+  109/109/108/108/108/109 dispatched `0x1814` batches. The two extra batches
+  in each UI flip are the second data word of a non-incrementing `0x1814`
+  packet (two adjacent quads in one packet), not a model.
+* 6 display-copy flips: exactly one primitive-8 quad each, sampling
+  `t0 = 0x01110000` (and `t1 = 0x058D1500`) and writing `0x00890000`. This is
+  the main-target → display copy, not a logo composite.
+* Only **two colour surfaces** appear in the whole stream: the main target
+  `0x01110000` (1280x720, surface format `0x3148`) for the UI flips and the
+  display/copy target `0x00890000` (format `0x0148`) for the copy flips. The
+  UI flip sets the main surface, draws all 107 quads, then switches to the
+  copy surface at the very end with no draw before the flip.
+* Every draw is primitive 8. There is no primitive 5/6/7 batch, no third
+  surface, no offscreen pass, and no draw that samples a non-main surface.
+
+#### 5.5.3 Where the logo is lost
+
+**The 3-D logo is never submitted.** This rules out hypotheses #2-#4 for this
+symptom: there is no offscreen `ScriptUIElem_RT` pass to fail to resolve or
+alias, no triangle batch to cull/clip/blend away, and no composite sampling a
+logo RT. It is hypothesis #1/#5 (element/model never submitted), and the loss
+is upstream of the RSX.
+
+That is not a dump filter and not a renderer drop:
+
+* the dump writes every method word **before** dispatch
+  (`ps3recomp-play/libs/video/cellGcmSys.c:3367-3371`), and the run log has no
+  `FIFO resync`/park line;
+* the dispatcher does hand every present `0x1814`/`0x1824` to the draw sink
+  (`ps3recomp-play/libs/video/rsx_dispatch.c:453-460`): that is how the 657
+  quad batches reach the engine. A `0x1814` with `prim == 5` would be counted;
+  there is none.
+
+The element render (`FUN_009d611c`, EBOOT `0x009d611c`) binds the element's
+own texture before drawing even an empty scene. Because no element surface is
+ever bound, either the element was never created or `Render` returned before
+`FUN_009d5c08`. In EBOOT terms the silent sites are:
+
+| Site | Check that can stop the logo | Logs by default? |
+|---|---|---|
+| `FUN_009d7b30` (`0x009d7b30`) | `FUN_009847fc("DisableUIElem")` → `DAT_013561d8 = 1`; `FUN_009d4c68(param+7, param[0x33])` target-texture lookup returns 0; model object/state null | no (the lookup text is gated on `StressTestUIElem`) |
+| `FUN_009d611c` (`0x009d611c`) | `DAT_013561d8`; `DAT_011409a8+0x1f4`; `elem+0x10` texture null; `elem+0xc` model null; `model[3] == 0` | no |
+| `FUN_009d5c08` (`0x009d5c08`) | bails only if `DAT_013561e0 != 0`; that global is read but never written in the EBOOT (BSS 0) | no |
+
+`FUN_009d4c68` (`0x009d4c68`) walks the `"world"` scene for a node of type
+`0x900` whose name matches the element's target texture. A miss is silent
+unless the `StressTestUIElem` debug flag is on, and it skips element creation
+entirely. The title's debug-flag list is loaded from `BOOT/CONFIG_MAIN.TXT`
+(`FUN_00984c70` called from `FUN_00011ce8`); that file is absent on this disc
+and in the VFS (`[fs] open FAIL` in the 07:48 log), so `FUN_009847fc` returns 0
+for every name and `DisableUIElem` is **not** set. That makes the target-texture
+lookup/model hand-off the leading candidate, but the FIFO cannot distinguish it
+from "the script never called the element constructor". The next run must ask
+the title.
+
+The corresponding generated functions in the current tree are
+`func_009D4C68` (`recomp-work/recompiled/ppu_recomp_004.cpp:468615`),
+`func_009D611C` (`:470095`), `func_009D5C08`
+(`ppu_recomp_009.cpp:2183`) and `func_009D7B30` (`:2635`); they are generated
+and not committed.
+
+#### 5.5.4 The next run: make the title say why (no code change)
+
+Create the missing debug config in the VFS overlay with the title's own
+`StressTestUIElem` flag, then repeat the team-select capture. On the failure
+path the title then prints `Did not find target texture: <name>`:
+
+```sh
+cd /home/m/Documents/mlb16-online
+mkdir -p recomp-work/vfs/PS3_GAME/USRDIR/BOOT
+printf 'StressTestUIElem\n' > recomp-work/vfs/PS3_GAME/USRDIR/BOOT/CONFIG_MAIN.TXT
+cd recomp-work && ../mlb16-recomp/tools/play_windowed.sh 2>&1 | tee /tmp/logo_diag.log
+```
+
+Go to team select, wait ~5 s, close the window. Then:
+
+```sh
+grep -n 'Did not find target texture' /tmp/logo_diag.log
+```
+
+* If it prints, the target-texture name is the hand-off to follow next.
+* If it does not, either the element constructor was never reached (script
+  hand-off) or it succeeded with an empty model. Repeat and watch the element
+  counter, which `FUN_009d7b30` increments and the state machine decrements:
+
+  ```sh
+  cd /home/m/Documents/mlb16-online/recomp-work && \
+  PPU_WWATCH=0x013560d8 PPU_WWATCH_MAX=64 ../mlb16-recomp/tools/play_windowed.sh
+  ```
+
+  If `0x013560d8` stays 0 at team select, no `ScriptUIElem` is being created
+  and the problem is the script/name hand-off; if it rises, watch
+  `0x013561d8` (`DisableUIElem`) and `0x011409a8` (element scratch) instead.
+  Do **not** add `DisableUIElem` to the config; it suppresses the element.
+* Delete `recomp-work/vfs/PS3_GAME/USRDIR/BOOT/CONFIG_MAIN.TXT` after the run
+  so the normal test setup is unchanged.
+
+This is a diagnostic run, not a fix; no renderer change can be justified from
+the capture alone because the draw never reaches the renderer.
+
+#### 5.5.5 Tool fixes made for this mission (offline, `exp/live-ab`)
+
+* `tools/fifo_dump_scan.py`: count a batch for every dispatched data word of a
+  non-incrementing `0x1814`/`0x1824` packet, and report only non-empty frames.
+  Before: 645 batches / 13 frames; now: 657 / 12, matching `replay_rsx`.
+  Added `tools/test_fifo_dump_scan.py` (PASS 5/5).
+* `tools/replay_rsx_core.c`: map the full 32-bit guest window (anonymous,
+  lazily committed). The old `0x20100000`-byte image made the team dump's
+  NV3062 inline write to local `0xC0004390` write past `vm_base` and crash.
+  The pitch dump still replays unchanged (646 draws, deterministic).
 
 ## 6. Reproduction
 

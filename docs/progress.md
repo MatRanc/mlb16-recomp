@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (team logo capture): the capture is valid, and the 3-D logo is never submitted
+
+Offline only (no game launch). The user's armed team-select capture was
+replayed with `tools/fifo_dump_scan.py` and `replay_rsx`; the plan, the
+capture hashes, the scan figure and the next diagnostic run are in
+[`docs/team-logo.md`](team-logo.md) §5.5. Branch `exp/live-ab`, build
+`recomp-work/build-play`.
+
+- **The raw capture is complete:** 116,280 B / 29,070 big-endian words, 12
+  `0xFEAD` flip markers, ends on the last marker. Fixed scanner: **12 frames,
+  657 draw batches, 0 triangle batches**. `replay_rsx` dispatches the same 657
+  draws / 6 clears and is deterministic (state hash `0x9a78d56f446ad930`).
+- **The optional walker capture is complete but the wrong flip:** `.fifo` is
+  292 B (32-byte `RSXF` + 65 words, ends `0xFEAD0001`), the 1-draw
+  display-copy frame, not a UI frame. `.state` 148,008 B, `.mem` 10,012,744 B.
+- **No 3-D draw anywhere.** The 6 full UI flips are 107/107/106/106/106/107
+  primitive-8 quads (109/109/108/108/108/109 dispatched `0x1814`; the two
+  extra are a second word in a non-incrementing packet). The 6 copy flips are
+  one quad each sampling `0x01110000` into `0x00890000`. Only two surfaces
+  appear in the whole stream (main `0x01110000` fmt `0x3148`, copy
+  `0x00890000` fmt `0x0148`); there is no `ScriptUIElem_RT` pass and no draw
+  that samples a non-main surface. The logo is lost before submission, so
+  culling/blend/RT-resolve/texture decode are ruled out for this symptom.
+- **Likely silent site:** `FUN_009d7b30` target-texture lookup
+  (`FUN_009d4c68`, "world" scene) returning 0, or the script never calling the
+  element constructor. The title loads its debug flags from the missing
+  `BOOT/CONFIG_MAIN.TXT`, so `DisableUIElem` is not set; the failure path logs
+  only with `StressTestUIElem`. Next run (documented, no code change): create
+  the VFS config with `StressTestUIElem` and grep for
+  `Did not find target texture`.
+- **No logo fix was implemented** because the draw never reaches the
+  renderer; a speculative one could not be proven offline.
+- **Tool fixes (offline):** `tools/fifo_dump_scan.py` now counts each
+  dispatched data word of a non-incrementing `0x1814`/`0x1824` packet (645 ->
+  657) and reports 12 not 13 frames; `tools/test_fifo_dump_scan.py` PASS 5/5.
+  `tools/replay_rsx_core.c` maps the full 32-bit guest window so the raw dump
+  no longer segfaults on the NV3062 inline write to local `0xC0004390`; the
+  pitch dump is unchanged (646 draws, deterministic).
+
 ## 2026-11-04 (c690 0x21): the emit/ring wall is compute, not a wait
 
 One meter launch (`ab_live_op21meas_20261104_043452`), `N=3 x 10 s` (2 s
