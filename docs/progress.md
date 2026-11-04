@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 0x21): the emit/ring wall is compute, not a wait
+
+One meter launch (`ab_live_op21meas_20261104_043452`), `N=3 x 10 s` (2 s
+dropped), `PIN=0 WCB=2`, standard `ab_live.sh` plus `METER=1 SKIP_CINE=1
+PITCH_THRESH=35` and the new `PS3RECOMP_C690_OP21=1`. Full tables, static
+trace, and the fix estimate: [`docs/c690-emit-ring.md`](c690-emit-ring.md).
+Branch `exp/live-ab`, build `recomp-work/build-play`.
+
+- **0x21 is 99.9 % compute, 0 % wait.** 619,067 calls, 64.99 s inclusive
+  (43.4 % of the command wall), mean **104.98 us**, p50 54, p90 112, p99 926.
+  The run issued **0** MFC GET/PUT, **0** GETLLAR/PUTLLC, **0** tag-status,
+  **0** atomic-status and **0** decrementer reads during the command.
+- **The time is two emit/format sub-selectors.** `0x13080` dispatches through
+  an 8-entry table at LS 0x1311C: `0x13140 -> 0xBB80` is 15.7 % of calls but
+  **58.2 %** of the time (**390.4 us/call**); `0x131A0 -> 0xBB98/A3E0` is
+  84.3 % of calls and 41.5 % of the time (**51.7 us/call**). Both run the
+  `0xBCB4`/`0xA410` float-transform/pack kernels (`fm`/`fma`/`shufb`); the
+  first is a larger batch.
+- **The ring/DMA association was wrong.** The measured path never calls the
+  ring allocator (0xE0A8), never reserves a line and never DMAs; those live in
+  the inter-job gap. Walker publishing, cheaper reservations, a larger ring
+  and DMA-emulation speed are ruled out for this command.
+- **Native emit is the only lever and is not small.** At 1.3x on both
+  selectors it saves ~2.9 ms of the 24.4 ms critical-lane busy (burst 35.0 ->
+  ~32 ms); 2x saves ~5.2 ms (~29.8 ms). That stays on the 34.15 ms p50 floor
+  and is near the parity of the existing native stages. Nothing was
+  implemented, no live key was added; the second launch was not used.
+
 ## 2026-11-04 (native c690 step 5): the meter stage order is emit/ring, not unpack/pack; per-stage SIMD is at parity
 
 Two 90 s meter measurement launches (`ab_live_stage5meas_20261104_040459`,
