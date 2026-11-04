@@ -21,13 +21,15 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 
 | Stage (LS) | Path | Switch (default) | Positions | Normals/colour/UV | Cull | Verified on | Doc |
 |---|---|---|---|---|---|---|---|
-| 0x2A assembler (0x10F78), **36-byte record class only** (the meter mostly uses a 32-byte class, not covered) | GPU kernel `tools/replay/c690_2a_assembler.comp` / `c690_2a_batch.comp`; plumbing harness `test_c690_2a_plumbing.c` | offline only, not wired | exact | exact | n/a | 2 real captures + synthetic colour stress, 0 differing bytes; ring bytes and replay hash match (edge-gpu-plumbing.md) | edge-gpu-phase2a.md, -phase2b-step1.md |
+| 0x2A assembler (0x10F78), **36-byte record class** | GPU kernel `tools/replay/c690_2a_assembler.comp` / `c690_2a_batch.comp`; plumbing harness `test_c690_2a_plumbing.c` | offline only, not wired | exact | exact | n/a | 2 real captures + synthetic colour stress, 0 differing bytes; ring bytes and replay hash match (edge-gpu-plumbing.md); **0/128 meter 0x2A pairs are this class** | edge-gpu-phase2a.md, -phase2b-step1.md |
+| 0x2A assembler (0x10F78), **position-first 32-byte record class** (pos f32x3, normal 11:11:10, 4x s16, 2x f16, 4-byte SPU index pair) | no GPU kernel; layout and pack rules decoded offline (edge-gpu-2a-wiring.md §3) | none (not wired) | exact copy by construction (all sampled records) | pack rules proven per word (`trunc(v*scale)-1`); whole-pair gather/index contract not yet verified | n/a | layout probes on 2 real meter pairs; **55/128 meter 0x2A pairs** (43.0 %) | edge-gpu-2a-wiring.md |
+| 0x2A assembler (0x10F78), **20-byte / 48-byte / other classes** | no kernel | none | - | - | n/a | stride classifier on 128 meter pairs: 12 / 16 / 45 pairs; fallback with 36+32 kernels = 57.0 % of 0x2A (> 5 % gate) | edge-gpu-2a-wiring.md §2 |
 | 0x21 sel1 A730 leaf (0xB830) | GPU kernel `tools/replay/c690_b830_batch.comp` | offline only, not wired | exact | exact | n/a | 64/64 meter pairs, 0 ULP, 9 live GPRs exact | edge-gpu-phase2b-step4.md |
 | 0x22 tree/cull subtree (0xFDA0) | CPU native | `PS3RECOMP_C690_NATIVE_CULL` (off) | exact | exact | exact | replay corpus, live A/B | edge-native-step3/4/5.md |
 | 0x0A unpack/pack leaves (0x6D68, 0x7C18, 0x8160) | CPU native | per edge-native docs (off) | exact | exact | n/a | replay corpus | edge-native-step*.md |
 | 0x25/0x26 screen cull (0xD080) | CPU native | `PS3RECOMP_C690_NATIVE_SCREEN` (off) | exact | exact | exact | replay corpus | edge-native-step4/5.md |
 | 0x25/0x26 cull sample grid | lifted, patched | `MLB16_CULL_BYPASS` (0); =3 bypasses 0x25/0x26 | n/a | n/a | **not exact by design** (=3 keeps all; fixes eye holes, -7.6 fps) | user play test | edge-holes-fix.md, cull-bypass-ab.md |
-| 0x21 sel7 A3E0/BB98, 0x25/0x26 GPU, 0x2A wiring | planned | - | - | - | - | - | edge-gpu-plumbing.md |
+| 0x21 sel7 A3E0/BB98, 0x25/0x26 GPU, 0x2A wiring | planned | - | - | - | - | - | edge-gpu-plumbing.md, edge-gpu-2a-wiring.md §4–6 |
 
 Rows marked "not wired" do not run in the game yet. When a stage is wired into the walker, add its live key and change
 "Verified on" to include the A/B run.

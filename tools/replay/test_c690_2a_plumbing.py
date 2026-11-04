@@ -67,42 +67,84 @@ def parse_spool(path):
         meta = struct.unpack_from('<%dI' % META_WORDS, payload, 0)
         base = META_WORDS * 4
         ls = payload[base + BITMAP_BYTES:base + BITMAP_BYTES + LS_SIZE]
+        gpr = payload[base + BITMAP_BYTES + LS_SIZE:
+                      base + BITMAP_BYTES + LS_SIZE + GPR_SIZE]
         ent = {'type': rtype, 'op': meta[4], 'key': meta[5], 'seq': meta[7],
-               'ls': ls}
+               'ls': ls, 'gpr': gpr}
         pairs.setdefault(meta[7], {})['in' if rtype == T_IN else 'out'] = ent
     return {k: v for k, v in pairs.items() if 'in' in v and 'out' in v}
 
 
+def _prefix_set(ls):
+    """First 12 bytes of every 16-byte-aligned LS entry (the source stride)."""
+    return {ls[a:a + 12] for a in range(0, LS_SIZE - 16, 16)}
+
+
+def _stride_score(prefixes, ref, ob, delta, stride):
+    """Share of records whose first 12 bytes are a raw source entry."""
+    if stride <= 0 or delta <= 0 or delta % stride:
+        return -1.0
+    n = delta // stride
+    ok = sum(1 for k in range(n)
+             if ref[ob + k * stride:ob + k * stride + 12] in prefixes)
+    return ok / n
+
+
 def classify_2a(pairs):
-    """Count 36-byte (the GPU kernel's format) vs other 0x2A outputs."""
-    out = {'total': 0, 'fmt36': 0, 'other': 0, 'examples': []}
+    """Classify each 0x2A output by its record stride.
+
+    36-byte is the validated phase-2a kernel layout.  The meter tail is a mix
+    of strides selected by the command descriptor: a measured 32-byte class
+    (position-first: 3 x f32 + packed normal/tangent/uv), plus 20- and
+    48-byte and unclassified formats.  Strides are detected by checking that
+    every record starts with a raw 16-byte source entry (the assembler is a
+    gather); a wrong stride fails on the first records.
+    """
+    out = {'total': 0, 'fmt36': 0, 'fmt32': 0, 'fmt20': 0, 'fmt48': 0,
+           'other': 0, 'examples': []}
     for p in pairs:
         if p['in']['op'] != 0x2A:
             continue
         out['total'] += 1
         ls = p['in']['ls']
         ref = p['out']['ls']
-        r3 = struct.unpack_from('<I', p['in'].get('gpr', b'\0' * 16), 12)[0] \
-            if p['in'].get('gpr') else 0
-        # The spool reader above does not keep GPRs; the source table is at
-        # the fixed LS 0x1F260 in the captured pitch jobs.
-        tab = [be32(ls, 0x1F260 + i * 4) for i in range(4)]
-        ob = be32(ls, 0x1F0D0)
-        end = be32(ref, 0x1F0D0)
-        delta = end - ob
+        gpr = p['in'].get('gpr') or b'\0' * GPR_SIZE
+        r3 = struct.unpack_from('<I', gpr, 3 * 16)[0] & (LS_SIZE - 1)
+        tab = [be32(ls, (r3 + 0x260 + i * 4) & (LS_SIZE - 1))
+               for i in range(4)]
+        ob = be32(ls, (r3 + 0xD0) & (LS_SIZE - 1))
+        end = be32(ref, (r3 + 0xD0) & (LS_SIZE - 1))
+        delta = (end - ob) & (LS_SIZE - 1)
+        desc = be32(ls, 0x1F690) if LS_SIZE > 0x1F694 else 0
+
         is36 = False
-        if 0 <= ob and ob + REC_SIZE <= len(ref):
+        if ob + REC_SIZE <= len(ref):
             is36 = (ref[ob:ob + 8] == ls[tab[3]:tab[3] + 8] and
                     ref[ob + 12:ob + 24] == ls[tab[1]:tab[1] + 12] and
                     ref[ob + 24:ob + 36] == ls[tab[0]:tab[0] + 12])
+
+        scores = {}
         if is36:
             out['fmt36'] += 1
+            cls = '36'
         else:
-            out['other'] += 1
-        if len(out['examples']) < 4:
+            prefixes = _prefix_set(ls)
+            scores = {s: _stride_score(prefixes, ref, ob, delta, s)
+                      for s in (20, 32, 48)}
+            wins = [(v, -s) for s, v in scores.items() if v >= 0.999]
+            if wins:
+                stride = -max(wins)[1]
+                cls = str(stride)
+                out['fmt' + cls] += 1
+            else:
+                cls = 'other'
+                out['other'] += 1
+        if len(out['examples']) < 6:
             out['examples'].append({
                 'seq': p['in']['seq'], 'tab': [hex(x) for x in tab],
-                'out_base': hex(ob), 'delta': delta, 'fmt36': is36})
+                'out_base': hex(ob), 'delta': delta, 'desc': hex(desc),
+                'class': cls, 'scores': {k: round(v, 3)
+                                         for k, v in scores.items()}})
     return out
 
 
@@ -182,6 +224,8 @@ def main():
                     default=str(repo.parent / 'recomp-work/build-play/ps3recomp_sdk/replay_rsx_engine'))
     ap.add_argument('--work', default='/tmp/opencode/c690_plumbing')
     ap.add_argument('--no-replay', action='store_true')
+    ap.add_argument('--coverage-only', action='store_true',
+                    help='classify the spools and skip the GPU harness')
     args = ap.parse_args()
 
     work = Path(args.work)
@@ -190,16 +234,36 @@ def main():
 
     # 1. Coverage of the captured meter 0x2A jobs.
     if args.spool:
+        agg = {'total': 0, 'fmt36': 0, 'fmt32': 0, 'fmt20': 0, 'fmt48': 0,
+               'other': 0}
         for d in args.spool:
             pairs = []
             for name in sorted(Path(d).glob('tail_*.bin')):
                 pairs.extend(parse_spool(name).values())
             c = classify_2a(pairs)
+            for k in agg:
+                agg[k] += c[k]
+            tot = c['total'] or 1
             print(f'\nspool {d}: 0x2A pairs={c["total"]} '
-                  f'36-byte={c["fmt36"]} other={c["other"]}')
+                  f'36-byte={c["fmt36"]} 32-byte={c["fmt32"]} '
+                  f'20-byte={c["fmt20"]} 48-byte={c["fmt48"]} '
+                  f'other={c["other"]} '
+                  f'(32 {100.0 * c["fmt32"] / tot:.1f} %, '
+                  f'other {100.0 * (c["other"] + c["fmt20"] + c["fmt48"]) / tot:.1f} %)')
             for e in c['examples']:
-                print('  seq=%d tab=%s out_base=%s delta=%d fmt36=%s' %
-                      (e['seq'], ','.join(e['tab']), e['out_base'], e['delta'], e['fmt36']))
+                print('  seq=%d tab=%s out_base=%s delta=%d desc=%s class=%s scores=%s' %
+                      (e['seq'], ','.join(e['tab']), e['out_base'], e['delta'],
+                       e['desc'], e['class'], e['scores']))
+        tot = agg['total'] or 1
+        print(f'\nall spools: 0x2A pairs={agg["total"]} '
+              f'36-byte={agg["fmt36"]} ({100.0 * agg["fmt36"] / tot:.1f} %) '
+              f'32-byte={agg["fmt32"]} ({100.0 * agg["fmt32"] / tot:.1f} %) '
+              f'20-byte={agg["fmt20"]} ({100.0 * agg["fmt20"] / tot:.1f} %) '
+              f'48-byte={agg["fmt48"]} ({100.0 * agg["fmt48"] / tot:.1f} %) '
+              f'other={agg["other"]} ({100.0 * agg["other"] / tot:.1f} %)')
+
+    if args.coverage_only:
+        return 0
 
     # 2. Exactness + ring bytes on the captured 36-byte job.
     exe = build_harness(repo, work)

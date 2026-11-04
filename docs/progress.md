@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 0x2A wiring): the meter is not one 32-byte class, so the fallback gate fails
+
+Offline only (zero game launches). Branch `exp/live-ab` (`ps3recomp-play`);
+no code was wired and `build-play` was not rebuilt. Details and the design in
+[`docs/edge-gpu-2a-wiring.md`](docs/edge-gpu-2a-wiring.md).
+
+- **Premise correction.** The meter's 0x2A output is a family, not one
+  32-byte class. Over the two meter tail spools (128 sampled pairs):
+  **36-byte 0, position-first 32-byte 55 (43.0 %), 20-byte 12 (9.4 %),
+  48-byte 16 (12.5 %), other 45 (35.2 %)**. The descriptor at LS `0x1F690`
+  selects the layout, but even one descriptor value (`0x00C40008`) does not
+  have a single stride, so the stride/prefix classifier is what is reported.
+- **The gate fails.** The 36-byte kernel covers **0/128** meter pairs and a
+  32-byte kernel covers **55/128**. With both, **57.0 %** of sampled 0x2A
+  pairs fall back; at 0x2A's clean 44.3 % share of c690 jobs that is **~25 %
+  of c690 jobs**, five times the 5 % gate. A live A/B would measure the
+  fallback, so the mission stopped at the coverage measurement (its own stop
+  rule for a wrong premise).
+- **The 32-byte layout is decoded.** `[pos.xyz f32][normal 11:11:10]
+  [4x s16][2x f16][two u16 index pair]`; the packed conversion is
+  `clamp(trunc(v*scale)-1)` with scales 1024/512 for the normal and 32768
+  for the tangent, `f16` for the UV. The last 4 bytes come from an index
+  pre-pass the handler builds in LS (`0x2B580`/`0x27350`), not from the four
+  arrays, so the next unit of work is that contract; a whole-pair kernel is
+  the ~1-2 week job `edge-gpu-plumbing.md` §5 predicted.
+- **No walker binding, no live key.** §4 of the doc lists every §2.7 path
+  (CPU vertex fetch, GPU staging copy, index decode, WCB, SPU submit PUT,
+  PPU) and how the binding must handle it; §6 is the exact 5 x 10 s live A/B
+  for the mission that first passes the kernel gates.
+- **Nothing enabled.** No `spu_context` field, no play-script change, no
+  `build-play` rebuild. The only code change is the stride/coverage
+  classifier in `tools/replay/test_c690_2a_plumbing.py`
+  (`--coverage-only`).
+
 ## 2026-11-04 (c690 native dispatch): FAST_RESCHED 64, and a fairness-gated lane hand-off wins 4 ms of p90
 
 Branch `exp/live-ab` (`ps3recomp-play`), build `recomp-work/build-play`. Three
