@@ -3,6 +3,36 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (native DXT step 2): the kernel is an unlifted module; stop at the gate
+
+One launch (`ab_live_dxtcap1_20261103_224034`, start screen, `PIN=1 WCB=2`).
+Details, tables and the corpus numbers in
+[`docs/dxt-native-step2.md`](dxt-native-step2.md).
+
+- **The DXT kernel is the unlifted base-0 module at `0x010A1700`.** Every
+  wid-0 job loads 0x2C10 bytes from that EA to LS `0x4000` on all four lanes;
+  header `42465602431A9282422D77024363A382`, entry `0x30`, image `0x2C30`,
+  load base 0. `spu_overlay_match_sig` is 0: none of the seven lifted jobmods
+  is the DXT code, and the module runs through the interpreter rejoin
+  (`0x4030` has no lift; `spu_smc_microstep` -> `spu_interp_run_until`).
+- **The capture is complete.** New default-off hook
+  `PS3RECOMP_DXT_CAPTURE=<dir>` spools wid-0 GET/PUT plus code/param records:
+  93 MiB, 300 code loads, 327 parameter blocks, 53.8 MB input /
+  841,340 blocks, 6.4 MB DXT1 (801,308 blocks) + 0.6 MB DXT5 (40,032).
+  Each 16 KiB input GET maps to one 2 KiB (DXT1) or 4 KiB (DXT5) PUT; the
+  parameter `+0x20` output EA equals the first PUT EA on all 300 jobs.
+- **Parameter block correction:** it sits at +0x70 of the 0xA0-byte job
+  source; the four swizzle words are host-endian (all `0x03020100`), the rest
+  is big-endian. No DXT3 in this sample.
+- **Stopped per the phase-1 rule.** The required gate is native vs the lifted
+  kernel in isolation, and the kernel is not lifted; `lift_jobmods.py`
+  rejects load base 0. Next step: lift `0x010A1700` (base 0x4000, entry
+  0x4030) and re-run the 841,340-block gate before any encoder work.
+- **Deviations:** one launch of the three allowed; no shadow/live A/B and no
+  encoder because the gate premise is absent. Governor `performance`, no
+  system or test-setup change. Corpus kept under `recomp-work/dxt_cap1`
+  (below the 1 GiB cleanup threshold).
+
 ## 2026-11-03 (native Edge step 3): live wedge fixed, cull family identified, native stage neutral
 
 Three launches (`ab_live_edge3s1_20261103_205745` wedge,
