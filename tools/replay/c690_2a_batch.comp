@@ -1,0 +1,123 @@
+#version 450
+
+// c690 0x2A vertex assembler (SPU LS 0x10F78) -- batched burst kernel.
+//
+// Phase-2b plan: a burst of J assembler jobs in ONE vkCmdDispatch.
+// Each job is one complete 256 KiB Local Store image; every address in the
+// job table is an LS byte offset into that image.  Per vertex the assembler
+// writes one 36-byte interleaved record
+//
+//   [UV0.xy f32][COLOR0 u8x4][POSITION.xyz f32][NORMAL.xyz f32]
+//
+// at out_base.  Semantics (big-endian 32-bit lanes, SPU float->u8 pack) are
+// identical to c690_2a_assembler.comp; only the job/vertex indexing differs.
+//
+// Work mapping: one workgroup per (job, 64-vertex block).
+//   global x = ceil(max_count / 64), global y = J, local_size_x = 64.
+//
+// Bindings:
+//   0  in_words[]   J * ls_words  u32  (J concatenated 256 KiB LS images)
+//   1  out_words[]  J * ls_words  u32  (J concatenated output LS images)
+//   2  jobs[]       J * 8 u32          (job table)
+//
+// Push constants:
+//   job_count  number of valid jobs (<= dispatch y)
+//   ls_words   u32 words per LS image (65536 for 256 KiB)
+//   max_count  longest per-job vertex count (defines dispatch x)
+//
+// All addresses are Local Store byte offsets.  The local store is big-endian
+// per 32-bit lane, so every float word is byte-swapped on read and write.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly buffer InputBuffer  { uint in_words[];  };
+layout(std430, binding = 1) buffer OutputBuffer { uint out_words[]; };
+
+struct Job {
+    uint uv_base;
+    uint col_base;
+    uint pos_base;
+    uint nrm_base;
+    uint out_base;
+    uint count;
+    uint pad0;
+    uint pad1;
+};
+layout(std430, binding = 2) readonly buffer JobTable { Job jobs[]; };
+
+layout(push_constant) uniform PushConstants {
+    uint job_count;
+    uint ls_words;
+    uint max_count;
+    uint pad0;
+} pc;
+
+uint bswap32(uint v)
+{
+    return (v >> 24u) |
+           ((v >> 8u)  & 0x0000FF00u) |
+           ((v << 8u)  & 0x00FF0000u) |
+           (v << 24u);
+}
+
+float load_f32(uint base, uint byte_off)
+{
+    return uintBitsToFloat(bswap32(in_words[base + (byte_off >> 2u)]));
+}
+
+void store_f32(uint base, uint byte_off, float v)
+{
+    out_words[base + (byte_off >> 2u)] = bswap32(floatBitsToUint(v));
+}
+
+// SPU float->u8 colour pack: scale by 2^-22, cfltu 149 (scale back by 2^22 and
+// truncate toward zero), add the +0.5 bias, then saturate.
+uint pack_u8(float c)
+{
+    if (c <= -0.5) return 0u;
+    if (c >= 254.5) return 255u;
+    return uint(c + 0.5);
+}
+
+void main()
+{
+    uint job = gl_GlobalInvocationID.y;
+    if (job >= pc.job_count)
+        return;
+
+    uint vid = gl_GlobalInvocationID.x;
+    if (vid >= jobs[job].count)
+        return;
+
+    uint ib = job * pc.ls_words;
+    uint ob = job * pc.ls_words;
+
+    uint vi = vid * 16u;
+    float uvx = load_f32(ib, jobs[job].uv_base + vi + 0u);
+    float uvy = load_f32(ib, jobs[job].uv_base + vi + 4u);
+
+    uint c0 = pack_u8(load_f32(ib, jobs[job].col_base + vi + 0u));
+    uint c1 = pack_u8(load_f32(ib, jobs[job].col_base + vi + 4u));
+    uint c2 = pack_u8(load_f32(ib, jobs[job].col_base + vi + 8u));
+    uint c3 = pack_u8(load_f32(ib, jobs[job].col_base + vi + 12u));
+
+    float px = load_f32(ib, jobs[job].pos_base + vi + 0u);
+    float py = load_f32(ib, jobs[job].pos_base + vi + 4u);
+    float pz = load_f32(ib, jobs[job].pos_base + vi + 8u);
+
+    float nx = load_f32(ib, jobs[job].nrm_base + vi + 0u);
+    float ny = load_f32(ib, jobs[job].nrm_base + vi + 4u);
+    float nz = load_f32(ib, jobs[job].nrm_base + vi + 8u);
+
+    uint o = jobs[job].out_base + vid * 36u;
+    store_f32(ob, o + 0u,  uvx);
+    store_f32(ob, o + 4u,  uvy);
+    // Four colour bytes in memory order c0,c1,c2,c3 (little-endian word).
+    out_words[ob + ((o + 8u) >> 2u)] = c0 | (c1 << 8u) | (c2 << 16u) | (c3 << 24u);
+    store_f32(ob, o + 12u, px);
+    store_f32(ob, o + 16u, py);
+    store_f32(ob, o + 20u, pz);
+    store_f32(ob, o + 24u, nx);
+    store_f32(ob, o + 28u, ny);
+    store_f32(ob, o + 32u, nz);
+}

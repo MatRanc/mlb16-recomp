@@ -3,6 +3,44 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2b step 1): stage corpus, three real 0x21 classes, burst dispatch is cheap
+
+Two pitch-meter capture attempts (`ab_live.sh`, build-play, governor
+performance; both launches used) plus offline analysis and a headless Vulkan
+batch kernel. Evidence and plan in
+[`docs/edge-gpu-phase2b-step1.md`](edge-gpu-phase2b-step1.md).
+
+- **New stage capture, unit-tested.** `PS3RECOMP_C690_TAIL_CAPTURE=<dir>`
+  records IN/OUT pairs for 0x21/0x25/0x26/0x2A at the command boundary: full
+  256 KiB LS + 128 GPRs + 40 meta words + a 16-byte-line write bitmap, keyed
+  by the 0x21 sub-selector and the A730/BB80 bit. It rides the existing
+  `c690_stats` dispatch hooks, so it also covers the 0xBB80/0xBB98 direct
+  calls without editing the generated module. `tools/test_c690_tail_capture.py`
+  passes (off/key/cap/stride/trigger/bitmap). Nothing default-on; no
+  `spu_context` field added.
+- **Three real 0x21 classes, not one:** sel1 A730 (`0x13140`), sel7 A3E0 and
+  sel7 BB98 (`0x131A0`, r6 bit 4 clear/set). Run-level live split
+  (`PS3RECOMP_C690_OP21`, 405,079 calls): `0x13140` 10.3 % of calls / 45.5 %
+  of 0x21 time (399 us/call), `0x131A0` 89.7 % / 54.2 % (54.5 us/call). The
+  corpus is 96 pairs (16 per key); the last A730 pairs (frame 8682) are at
+  the run's pitch/meter end. No class is >50 % of both jobs and time, so the
+  conditional single-class 0x21 kernel was **not** built.
+- **Meter gating missed.** The second run's trigger was
+  `CAPTURE_PREFIX.trigger`, which the walker capture consumes and deletes
+  (`rsx_draw_engine.c:976-1000`); the tail hook polls and missed it, so the
+  exact meter-window class shares are still unmeasured. This is a capture
+  gap, not a GPU-cost gap; a future run needs an unconsumed trigger.
+- **Burst dispatch is cheap.** The exact 0x2A kernel over 429 jobs in ONE
+  `vkCmdDispatch` is 0.23-0.27 ms device-local (0.54-0.62 us/job; 12.6 ms
+  host-visible, PCIe-bound) with ~2-4 us CPU record/submit. The whole tail is
+  well under the ~5 ms kill threshold; option C is not killed on GPU cost.
+- **Verdict: GO on cost, coverage is the blocker.** At least three 0x21
+  classes with a ~7x per-call spread; any one-class kernel leaves 27-90 % of
+  0x21 jobs on the SPU. The corpus's command-boundary 0x2A pairs are also
+  unreliable when two 0x2A commands run back to back (0x2A returns normally;
+  capture it at function exit next). The validated `fncap21b/0x10F78` capture
+  remains the exact 0x2A reference. No walker binding, no runtime key, no A/B.
+
 ## 2026-11-04 (c690 GPU phase 2a): 0x21-only is dead, the tail must move; 0x2A kernel exact
 
 Two pitch-meter capture runs (`ab_live.sh`, build-play, governor performance;
