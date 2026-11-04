@@ -166,7 +166,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   stage per plan: unpack/pack (23.5 %), or hand-tune the cull to ~5x.
 - Holes: the 0x25/0x26 screen cull. Cull transform {595, 640, -335, 360} for 720p; scaling to the 2x1 sample grid
   keeps some triangles but drops others (a separate fixed bound). Open: find that bound with the exact 400-pair
-  replay gate; accept only changes that never reduce the kept triangles. User check: MLB16_CULL_BYPASS=3 (should fix)
+  replay gate; accept only changes that never reduce the kept triangles. USER CONFIRMED 2026-11-03: MLB16_CULL_BYPASS=3 fixes the holes, =2 does not (0x25/0x26 cull). Was: (should fix)
   vs =2 (control).
 - Review of 8a082ddb (all default off): with CULL_FIX and the spool both on, the spool records the patched
   transform (enter/leave order in c690_cull_fix.c:162 / patch_cull_hooks.py:38) -> fix before measuring the fix;
