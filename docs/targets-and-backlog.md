@@ -73,6 +73,10 @@ checking if any geometry-only regression remains.
    (first live A/B), then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status:
    edge-exactness.md (update it with every stage).
 3. 0x22 tree/cull (largest class, 20.7 %): whole 0x10190 command body native (partial 0xFDA0 port is neutral).
+- DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
+  lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
+  p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test
+  (audio, start screen, cinematics, in-play). Spill/inline codegen FAILED its gate (spu-inline-callees.md).
 Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
 Long frames (40-80+ ms): offline analysis running (docs/long-frames.md); meter + cinematic long frames are c690.
 Parked until the user says otherwise: team logo (user diagnostic run ready), visuals, HLE batch 2, review nits.
