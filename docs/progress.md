@@ -3,6 +3,32 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 0x13/0x0A): the 17.7 us copy was an opcode-map artifact
+
+One pitch-meter A/B (native 0xFDA0 off/on, `PS3RECOMP_C690_OP21=1`), no
+capture spool. Details and the clean 60 s table in
+[`docs/c690-copy-unpack.md`](docs/c690-copy-unpack.md).
+
+- **0x13 is a real 16-byte copy at 0.72 us/call, not 17.73 us.** The step-5
+  map named only 15 handlers; 26 were missing, so the commands after 0x13
+  (0x14/0x0E/0x0F/0x18..0x1E/0x23, ~17-21 us/job) were charged to it. With
+  the complete map (commit `1f1cbd57`) 0x13 is **0.37 % of the c690 wall,
+  ~0.075 ms/frame**; the copy is a ring ticket (`0xE6B8`), a 16-byte header
+  and one 16-byte `0x5680` store, with no DMA/tag/atomic wait.
+- **0x0A is genuine and cheap:** 2.76 us/call, 6.4 % of the clean window
+  (~1.3 ms/frame); the bit-exact native leaves are already at parity
+  (`0x6D68` 1.00x, `0x7C18` 0.99x), so no native win.
+- **Clean 60 s meter map** (907,390 jobs, 177.55 s wall): 0x21 25.6 %,
+  0x22 **20.7 %, 573.6 us/call**, 0x2A 13.5 %, 0x25 7.9 %, 0x0A 6.4 %,
+  0x26 3.7 %, 0x13 0.37 %. The 0x22 map fix is confirmed live.
+- **Native 0xFDA0 is neutral** because it covers only the `0xFDA0` subtree
+  (~25-80 % of the 573.6 us 0x22 class); 1.30x on that is ~0.2-0.7 ms/frame,
+  below the ~1 ms A/B noise. A/B: 35.12 vs 34.42 fps, p50 34.15 both, p90/
+  p99 faintly better in the native arm.
+- **Nothing implemented or enabled.** The only kept change is the
+  measurement-only hot-list extension naming the 0x13 and 0x22 chains; no
+  `spu_context` field was added (ABI check PASS).
+
 ## 2026-11-04 (c690 GPU phase 2b step 5): clean map — 0x22 tree/cull was hiding in 0x21 sel1
 
 Two pitch-meter launches (the second after fixing the command map), no
