@@ -3,6 +3,41 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2b step 5): clean map — 0x22 tree/cull was hiding in 0x21 sel1
+
+Two pitch-meter launches (the second after fixing the command map), no
+capture spool, plus offline parsing of the 2 s reports and the raw module
+handler table. Details and tables in
+[`docs/edge-gpu-phase2b-step5.md`](docs/edge-gpu-phase2b-step5.md).
+
+- **Capture cap fixed.** The per-key pair cap is checked before the 256 KiB
+  snapshot; a command-boundary 0x21 defers its snapshot to the sub-selector
+  entry and checks the cap there. The new `cap` unit case runs six same-key
+  commands at a cap of two: **2 pairs, 2 snapshots**, six histogram calls.
+- **The 0x21 sel1 390 us/call was mostly opcode 0x22.** The raw handler
+  table (LS 0x14770) maps **0x22 -> 0x10190**, the 0xFDA0 tree/cull
+  continuation. The stats map omitted 0x22, so a 0x21 command never closed
+  there and the whole tree/cull command was charged to sel1. The function
+  table (87.8 % at 0x10190) and the raw table agree.
+- **Clean 30.2 s meter window** (403,212 jobs, 74.31 s lane wall): 0x22
+  tree/cull **23.79 %, 618.9 us/call**; sel7 **19.41 %, 57.6 us/call**; sel1
+  **3.31 %, 48.7 us/call**; 0x2A 14.06 %, 0x13 9.62 %, 0x25 8.37 %, 0x0A
+  6.84 %, 0x26 4.04 %. True 0x21 is **22.8 %** of the c690 wall, not
+  43-47 %.
+- **Full-tail GPU C is ~12 ms, not ~17 ms.** On the 24.39 ms critical-lane
+  basis, 0x21 + culls + 0x2A is 49.3 % -> **12.0 ms**. Adding the
+  already-native 0x22 tree/cull returns ~17.8 ms, but that is a CPU-native
+  D target, not a new GPU kernel.
+- **Re-rank.** 0x2A is the cheapest remaining win (bit-exact kernel already
+  exists); 0x22 is the largest slice but already has a native CPU port; the
+  best remaining GPU target is sel7/A3E0 (~4.7 ms / 2,493 lines), then the
+  0xD080 culls (~3.0 ms / 1,551 lines). sel1 is 0.8 ms and no longer worth
+  a port.
+- **Sanity.** Same run, build-play with wrappers stripped: p50 **34.15 ms**
+  (exactly the known value), clean segment 35.88 fps. The added timing
+  instrumentation is estimated at ~0.9 % of one lane on top of the existing
+  stats timer.
+
 ## 2026-11-04 (c690 GPU phase 2b step 4): 0xB830 leaf kernel exact; the 47 % was capture overhead
 
 Offline only, zero game launches. Kernel, gate, burst and wrapper review in
