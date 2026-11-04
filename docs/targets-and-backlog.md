@@ -238,6 +238,9 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - c690 dispatch cuts (docs/c690-dispatch-cuts.md, 84e5dd06, default off): host gap -61 %, burst wall 34.25 ->
   30.99 ms, occupancy +6 pts, but fps -2.0 (other workloads delayed) and p50 still 34.15. Sixth lane: guest
   nSpus=6, MeshJobs maxContention=5; SPURS_LANE6 wedges in ~10 s. Not kept.
+  Review of 84e5dd06 (only matters if a key is ever turned on): FAST_GEN epoch race with cellSpursShutdownWorkload
+  (epoch bumped after shutting_down = 1); FAST_ACTIVE uses `active > maxcont` with a workload-wide active count;
+  ONE_LOCK inlines spurs_pm_fast_consume (may drift).
 - KEY FINDING: p50 is pinned at 34.15 ms (two 16.68 ms periods) no matter how much work we cut. The next lever is
   the flip/present pacing floor, not more work cuts. Running: frame-pacing-floor mission (present mode, tick
   marker-side completion with the presented_seq review bug fixed first).
