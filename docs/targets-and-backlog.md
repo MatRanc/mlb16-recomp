@@ -190,6 +190,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   or an unlifted base-0 module at 0x010A1700. Next (needs the game, queued right after native Edge): one capture run
   (SPURS_PM_TRACE + a one-shot wid==0 hook dumping the job's code EA and input/output blocks), then the bit-exact
   native encoder + harness in worktree ps3recomp-dxt (branch exp/dxt-native).
+- Phase 2 capture (docs/dxt-native-step2.md, b96b2122): the DXT kernel is EBOOT 0x010A1700, UNLIFTED, running
+  through the SPU interpreter rejoin -> likely why boot/replay freezes are so long. 93 MiB corpus in
+  recomp-work/dxt_cap1/ (841,340 blocks; DXT1 + DXT5). Review of b96b2122: inert when off; capture-only nits
+  (first 0x4000 bytes scanned, soft run cap). Running: lift mission (lift 0x010A1700, bit-exact gate, start-screen
+  A/B), then the native encoder.
 - Game queue: DXT phase 2 (running) -> walker-cuts-2 -> team-logo FIFO dump -> Edge holes bound + unpack/pack.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
