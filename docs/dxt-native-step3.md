@@ -14,7 +14,7 @@ source was read. The native encoder is **not** started; its plan is §5.
   module header whose link base is `0` (PIC) as well as `0x4000`, and lifts it
   at the code-buffer base `0x4000`, entry `0x4030`. The MLBeat module is
   `jobmod_647a2bf49000_e0030`, source EA `0x010A1700`, code span
-  `[0x4030, 0x67DC)`, registered as a verified streamed region. The boat
+  `[0x4030, 0x67DC)`, registered as a verified streamed region. The job
   body is called through the job-source function-pointer table, so the lift
   also seeds the PIC call-stub continuations (`0x4050, 0x5318, 0x6010,
   0x603C.., 0x61BC, 0x6734, 0x6748, 0x67D4`); without them the lift stopped
