@@ -244,6 +244,13 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - KEY FINDING: p50 is pinned at 34.15 ms (two 16.68 ms periods) no matter how much work we cut. The next lever is
   the flip/present pacing floor, not more work cuts. Running: frame-pacing-floor mission (present mode, tick
   marker-side completion with the presented_seq review bug fixed first).
+- Frame pacing (docs/frame-pacing-floor.md, d686e621): the 34.15 ms p50 is NOT a present/tick rounding grid. Hard
+  frames = the c690 burst (lane union p50 32.8 ms) + ~3 ms, ending at the game's own flip deadline (~34.1 ms).
+  Present runs on its own thread and never blocks the guest (present mode not a lever). TICK_IN_DRAIN -8.4 fps,
+  FLIP_FENCE_DONE -9.4 fps (guest then waits on the buffer ref). Flip completion now one helper; presented_seq
+  identity fixed. Title has no in-FIFO flip marker. Review: default tick path unchanged; fence-gate nits (marker seq
+  slot order, req_ref 0 when toggled live, baseline mismatch with 2 requests) only matter if FENCE_DONE is used.
+  => To move p50 the c690 burst must drop well below ~30 ms (cut compute), without delaying other workloads.
 - Game queue: frame-pacing floor (running) -> team-logo FIFO dump -> native unpack/pack/skin (if the floor moves) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
