@@ -195,7 +195,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   recomp-work/dxt_cap1/ (841,340 blocks; DXT1 + DXT5). Review of b96b2122: inert when off; capture-only nits
   (first 0x4000 bytes scanned, soft run cap). Running: lift mission (lift 0x010A1700, bit-exact gate, start-screen
   A/B), then the native encoder.
-- Game queue: DXT phase 2 (running) -> walker-cuts-2 -> team-logo FIFO dump -> Edge holes bound + unpack/pack.
+- DXT LIFTED (docs/dxt-native-step3.md, 750cb5e9, default on): start-screen freezes >250 ms 11 / 7.6 s -> 1 / 0.31 s;
+  DXT lane time 11.7 s -> 0.87 s; offline gate 890,688 blocks, 0 mismatches. Native encoder parked (lift covers it).
+  Review (medium): fixed in ddbce4f3 (sig overlays had enabled = 0; a disabled gated region fell through to stale
+  code). Open nits: lift_jobmods.py now accepts every base-0 module (a full regen would double-register DXT ungated
+  and shift image ids: pin it); PIC call-stub seeds hard-coded from capture; g_spu_interp_steps not thread-local;
+  capture hook on the central lookup path (weak call when off).
+  User check: start screen + instant replay.
+- Game queue: holes merge (running) -> walker-cuts-2 -> team-logo FIFO dump -> Edge unpack/pack (+ cinematics).
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
