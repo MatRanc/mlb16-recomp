@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2b step 2): meter-gated histogram, exact 0x2A/cull pairs, A730 kernel blocked
+
+Two pitch-meter launches (`ab_live.sh`, build-play, governor performance;
+the second only to validate the pairing fix) and offline replay. Evidence and
+coverage plan in
+[`docs/edge-gpu-phase2b-step2.md`](edge-gpu-phase2b-step2.md).
+
+- **Capture gate fixed.** The tail hook has a dedicated, non-consumed
+  `PS3RECOMP_C690_TAIL_TRIGGER`; `ab_live.sh` touches it only after the
+  meter is confirmed and refuses to share `CAPTURE_PREFIX.trigger` (the
+  walker capture deletes that file). The run log shows the trigger seen at
+  the meter and the file still present afterwards.
+- **0x2A is one command per pair.** `patch_cull_hooks.py` wraps the `0x10F78`
+  body (and the cull body `0x132E0`) with the corpus hooks. The second run's
+  **64/64 0x2A, 64/64 0x25 and 64/64 0x26 pairs replay byte-exact** through
+  the lifted module; the unit test adds back-to-back 0x2A and
+  trigger-not-deleted cases. Nothing default-on; no `spu_context` field.
+- **Meter-window histogram.** 10.0 s / 395,784 commands / 23.242 s tail:
+  A730 7.532 s (32.4 % time, 4.7 % jobs), 0x2A 5.359 s (23.1 %, 44.3 %),
+  A3E0 4.655 s (20.0 %, 18.6 %), 0x25 3.060 s (13.2 %, 20.7 %), 0x26
+  1.332 s (5.7 %), BB98 1.304 s (5.6 %, 4.5 %). A730 is 55.8 % of 0x21 time.
+- **0x21 replay.** Command-boundary pairs: 21/32 A730, 21/32 A3E0, 18/32
+  BB98 match the output arrays exactly except the parser-owned `+2` byte at
+  `0x1F0F3`; the rest are boundary-contaminated by a following direct
+  dispatch and are excluded.
+- **A730 kernel blocked.** The class writes four 142 x 16-byte planar arrays
+  through a heavily unrolled transform/format chain (matrix palette at
+  `0x27270`, packed streams, jump tables), not a compact formula; a
+  sub-selector wrapper captures only its 58 us prefix because the body is
+  reached through the trampoline. No kernel, no diff, no burst number is
+  claimed; step 4 was not attempted. The exact 0x2A kernel remains
+  0.23-0.27 ms per 429-job burst device-local.
+- **Coverage.** The 5 % job gate needs all classes except BB98 (4.52 % fallback,
+  5.61 % time); the safe set is all six keys plus the culls. Projected lane
+  saving from the meter histogram: A730 ~5.6 ms, A3E0 ~3.5, BB98 ~1.0,
+  0x2A ~4.0, 0x25 ~2.3, 0x26 ~1.0 of the 17.4 ms full tail.
+
 ## 2026-11-04 (c690 GPU phase 2b step 1): stage corpus, three real 0x21 classes, burst dispatch is cheap
 
 Two pitch-meter capture attempts (`ab_live.sh`, build-play, governor
