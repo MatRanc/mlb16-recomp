@@ -135,6 +135,19 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Start press lag: frontend construction (up to 887 ms frames, walker idle) = guest PPU work + ~27 pipeline
   creations. Recheck with the shader disk cache warm; if unchanged, profile the frontend PPU path.
 
+**Play test 2026-11-03 20:26 (user, play_20261103_202606; CULL_BYPASS + AUDIO_DIAG + PARK_GRACE)**
+- Audio: works (SDL/pipewire 48 kHz, ~188 blocks/s). Earlier silence not reproduced.
+- Mesh holes: GONE with MLB16_CULL_BYPASS=1 -> Edge triangle culls confirmed. Fix inside native Edge (step 3).
+- Team logo: still missing with GCM_PARK_GRACE_MS=600000 -> the park/resync theory is wrong or incomplete.
+- Start-screen lag: 14 hitches 0.28-0.95 s at 21-34 s, all spu.run (boot SPU work). Static mission running.
+- Match load 5.55 s (cache was emptied by the review fix; expect ~2 s next time). 2.05 s in-game hitch at 217 s
+  (spu.run). In game p50 35.5 / p90 61 ms with bypass vs 32.9 / 44.5 at 16:37 (different scenes; not clean).
+- Low priority (user): throw-power build-up (hold a face button) fills much slower than on PS3; per-frame or
+  per-poll? Note only.
+- Native Edge: APPROVED by the user (20:30). Step 3 mission running (wedge fix, holes fix, speed).
+- Process: walker-cuts-2 mission hung at OpenCode startup 17:24-20:23 (no log); relaunch after native Edge.
+  Check each launch is alive a few minutes in.
+
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
   EIO. clearerr() before the write.
