@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU plumbing): 0x2A skip/export -> GPU -> ring bytes; the rest of the map
+
+Offline only (no game launch). The data is the clean 60 s meter window of
+`ab_live_copy1_20261104_120526`, the phase-2a/2b captures, and a new
+offline harness. Details and tables in
+[`docs/edge-gpu-plumbing.md`](docs/edge-gpu-plumbing.md).
+
+- **The `0x14/0x0E/0x0F/0x18..0x1D/0x23` chain is 20.75 us/job, 11.21 %**
+  of the c690 wall (907,390 jobs, 167.96 s wall), not ~26 us/13 %. The
+  per-command averages sum to 29.98 us, but 0x14/0x0F/0x23 run only 0.18
+  times/job and 0x18/0x19 only 0.75. **0x1A is the only DMA handler**
+  (6.56 M small MFC GETB copies, 793 ms, 0.4 % of the wall); **0x1E is a DMA
+  tag wait**; every other handler is SPU/LS ring/list/stream control. None
+  is a GPU compute kernel; the GPU-able tail is still 0x21/0x25/0x26/0x2A.
+- **0x2A plumbing proven offline.** For the captured 36-byte pitch job
+  (`fncap21b/0x10F78`, 196 records, 7,056 bytes at LS 0x2F870) the exported
+  arrays are 12,544 bytes; one GPU dispatch gives **0 differing record
+  bytes**, and the real submit PUT mapping
+  (`LS 0x2F000..0x320D0 -> EA 0x11765D00`) gives **0 differing ring bytes**.
+  A captured `meter_frame` replayed through `replay_rsx_engine` gives the
+  **same output hash** for the SPU and GPU record bytes.
+- **Not wired live.** The meter's sampled 0x2A tail is a different format:
+  **0/128** captured pairs are the validated 36-byte class; they are a
+  32-byte record class. The 36-byte-only fallback is far above the 5 % gate,
+  and the walker binding is not small (the CPU vertex fetch and the GPU
+  unpack staging copy read the ring from guest memory; the index list is
+  CPU-decoded). The wiring plan and honest estimate are in the doc.
+- **Nothing enabled.** No live key, no `spu_context` field, no `build-play`
+  change. New research tools: `tools/replay/test_c690_2a_plumbing.c` and
+  `.py`.
+
 ## 2026-11-04 (c690 0x13/0x0A): the 17.7 us copy was an opcode-map artifact
 
 One pitch-meter A/B (native 0xFDA0 off/on, `PS3RECOMP_C690_OP21=1`), no
