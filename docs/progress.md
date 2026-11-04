@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2a): 0x21-only is dead, the tail must move; 0x2A kernel exact
+
+Two pitch-meter capture runs (`ab_live.sh`, build-play, governor performance;
+2/3 launches) plus offline static analysis and a headless Vulkan kernel.
+Evidence and plan in [`docs/edge-gpu-phase2a.md`](edge-gpu-phase2a.md).
+
+- **The phase-2a premise is contradicted.** A GPU 0x21 that leaves its result
+  in VRAM removes **0 ms** of SPU critical-lane time. On the real captured
+  jobs the 0x2A assembler reads **all four** 0x21 output arrays
+  (normal 200/200, position 200/200, colour 200/200, uv0 199/199 lines); the
+  0x25 cull reads only its position array (235/235 lines, zero normals) and
+  0x26 reads the position block plus one `0xB0` normal slice.
+- **What moves.** 0x21 is 42.9 % of the c690 wall (~10.5 ms of the 24.39 ms
+  critical lane), 0x2A 15.7 % (~3.83 ms), cull 12.7 % (~3.10 ms). The full
+  tail removes ~17.4 ms (burst 35.0 -> ~17.6 ms); 0x21+0x2A removes ~14.3 ms.
+  0x21 alone removes nothing. Phase 2a must be the whole tail.
+- **0x2A GPU kernel built and exact.** `tools/replay/c690_2a_assembler.comp`
+  + `test_c690_2a_shader.c`: bit-exact on two real captures and on a synthetic
+  colour stress (0 differing bytes, max float 0, max u8 0). Lifted 0x10F78 is
+  14.5-19.5 us/call; the GPU kernel is 10.7-14.2 us/dispatch at N=64, i.e.
+  overhead-bound. It is a building block, not a win by itself.
+- **0x21 shader not signed off.** The real 0x13140 at the pitch is the A730
+  format-conversion/table path (jump tables at LS 0x143D0..0x14480), not the
+  validated 12/12/11 stream. The BB80 body also runs (0xBED0/C018 captured)
+  but 0xBB80 is a direct call, so its 0x13140 input was not captured. A
+  stage-level corpus is the first 2b task.
+- **Verdict: KILL 2a as scoped.** No walker binding, no A/B, no runtime key,
+  no `spu_context` change (ABI check passes), nothing default-on. 2b: full
+  tail (0x21 + cull + 0x2A) in one per-burst submission, gate burst <= 28 ms
+  and p50 <= 30 ms with fallback <= 5 %.
+
 ## 2026-11-04 (c690 GPU phase 1): no CPU reads the mesh, so a GPU tail can feed the walker directly
 
 Offline only (no game launch). Static analysis of the EBOOT/lifted c690 module,

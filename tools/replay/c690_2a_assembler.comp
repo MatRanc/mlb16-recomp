@@ -1,0 +1,97 @@
+#version 450
+
+// c690 0x2A vertex assembler (SPU LS 0x10F78) as a Vulkan compute kernel.
+//
+// The pitch job's assembler is a gather + format pack: for every kept vertex
+// it reads the four planar arrays produced by the 0x21 transform/pack stages
+// and writes one 36-byte interleaved record
+//
+//   [UV0.xy f32][COLOR0 u8x4][POSITION.xyz f32][NORMAL.xyz f32]
+//
+// at LS 0x2F870.  Verified against the lifted SPU run of the captured
+// 0x10F78 entry (193 records, 0x1B24 bytes): byte-exact.
+//
+// All addresses are Local Store byte offsets.  The local store is big-endian
+// per 32-bit lane, so every float word is byte-swapped on read and write.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly buffer InputBuffer  { uint in_words[];  };
+layout(std430, binding = 1) buffer OutputBuffer { uint out_words[]; };
+
+layout(push_constant) uniform PushConstants {
+    uint uv_base;    // 0x21C30 in the captured job
+    uint col_base;   // 0x20FB0
+    uint pos_base;   // 0x20330
+    uint nrm_base;   // 0x1F6B0
+    uint out_base;   // 0x2F870
+    uint count;      // valid vertices (193)
+    uint pad0;
+    uint pad1;
+} pc;
+
+uint bswap32(uint v)
+{
+    return (v >> 24u) |
+           ((v >> 8u)  & 0x0000FF00u) |
+           ((v << 8u)  & 0x00FF0000u) |
+           (v << 24u);
+}
+
+float load_f32(uint byte_off)
+{
+    return uintBitsToFloat(bswap32(in_words[byte_off >> 2u]));
+}
+
+void store_f32(uint byte_off, float v)
+{
+    out_words[byte_off >> 2u] = bswap32(floatBitsToUint(v));
+}
+
+// SPU float->u8 colour pack: the lifted code scales by 2^-22, converts with
+// cfltu 149 (which scales back by 2^22 and truncates toward zero), then
+// selects the low byte.  cfltu saturates: negative -> 0, >= 2^32 -> 0xFFFFFFFF.
+uint pack_u8(float c)
+{
+    // The lifted pack adds a +0.5 bias before cfltu 149, so the conversion is
+    // round-half-up, then saturates.
+    if (c <= -0.5) return 0u;
+    if (c >= 254.5) return 255u;
+    return uint(c + 0.5);
+}
+
+void main()
+{
+    uint vid = gl_GlobalInvocationID.x;
+    if (vid >= pc.count)
+        return;
+
+    uint vi = vid * 16u;
+    float uvx = load_f32(pc.uv_base + vi + 0u);
+    float uvy = load_f32(pc.uv_base + vi + 4u);
+
+    uint c0 = pack_u8(load_f32(pc.col_base + vi + 0u));
+    uint c1 = pack_u8(load_f32(pc.col_base + vi + 4u));
+    uint c2 = pack_u8(load_f32(pc.col_base + vi + 8u));
+    uint c3 = pack_u8(load_f32(pc.col_base + vi + 12u));
+
+    float px = load_f32(pc.pos_base + vi + 0u);
+    float py = load_f32(pc.pos_base + vi + 4u);
+    float pz = load_f32(pc.pos_base + vi + 8u);
+
+    float nx = load_f32(pc.nrm_base + vi + 0u);
+    float ny = load_f32(pc.nrm_base + vi + 4u);
+    float nz = load_f32(pc.nrm_base + vi + 8u);
+
+    uint o = pc.out_base + vid * 36u;
+    store_f32(o + 0u,  uvx);
+    store_f32(o + 4u,  uvy);
+    // Four colour bytes in memory order c0,c1,c2,c3 (little-endian word).
+    out_words[(o + 8u) >> 2u] = c0 | (c1 << 8u) | (c2 << 16u) | (c3 << 24u);
+    store_f32(o + 12u, px);
+    store_f32(o + 16u, py);
+    store_f32(o + 20u, pz);
+    store_f32(o + 24u, nx);
+    store_f32(o + 28u, ny);
+    store_f32(o + 32u, nz);
+}
