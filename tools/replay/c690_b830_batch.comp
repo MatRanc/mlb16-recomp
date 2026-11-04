@@ -1,0 +1,337 @@
+#version 450
+
+// c690 0xA730 heavy-body leaf (SPU LS 0xB830) -- batched burst kernel.
+//
+// Transliterated from the lifted body
+//   jobmod_c690c2f7b09a_eF5B8_spu_func_0000B830_body()
+// (recomp-work/spu_lifted/jobmod_c690c2f7b09a_eF5B8/spu_recomp.c).  The leaf is
+// a 78-line, four-vertex transform/normalize slice: 5 x 16-byte LS reads,
+// 4 x 16-byte LS writes, 25 shufb, 22 selb, 9 fma, 2 rotqby, 3 addi + 1 add.
+//
+// Encoding: the Local Store is uploaded as its raw little-endian 32-bit words;
+// every SPU word is byte-swapped into the big-endian logical value the lifted
+// code sees.  A uvec4 is one SPU 128-bit register, component 0 = preferred
+// slot.  shufb/rotqby work on SPU byte positions (byte P of word w is
+// w >> (24 - 8*(P&3))).
+//
+// Float semantics: SPU_FAST_FLOAT (build-play) = FTZ operands/results + fused
+// single-precision FMA.  ftz() is the lifted module's rule: exponent == 0
+// (denormal or zero) becomes +0; fma() is GLSL.std.450 Fma (no intermediate
+// rounding).
+//
+// Work mapping: one invocation per leaf call.  Job J reads pair (J % npairs)
+// and writes that same pair's LS image; the exactness run uses npairs == J.
+//
+// Bindings:
+//   0  in_words[]   npairs * 65536 u32   (raw LS images)
+//   1  out_words[]  npairs * 65536 u32   (LS after the leaf writes)
+//   2  gpr_words[]  npairs * 512 u32     (128 registers x 4 words, raw)
+// Push constants: job_count, npairs, ls_words, pad.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly buffer InputBuffer  { uint in_words[];  };
+layout(std430, binding = 1) buffer OutputBuffer { uint out_words[]; };
+layout(std430, binding = 2) readonly buffer GprBuffer { uint gpr_words[]; };
+layout(std430, binding = 3) buffer GprOutBuffer { uint out_gpr_words[]; };
+
+layout(push_constant) uniform PushConstants {
+    uint job_count;
+    uint npairs;
+    uint ls_words;
+    uint pad0;
+} pc;
+
+uint bswap32(uint v)
+{
+    return (v >> 24u) | ((v >> 8u) & 0x0000FF00u) |
+           ((v << 8u) & 0x00FF0000u) | (v << 24u);
+}
+
+uint pair_base;
+uint out_base;
+
+uvec4 load_gpr(uint n)
+{
+    // The captured GPR image is a host u128 array: each 32-bit word is already
+    // the SPU register word value (no Local Store byte order involved).
+    uint b = pair_base * 512u + n * 4u;
+    return uvec4(gpr_words[b + 0u], gpr_words[b + 1u],
+                 gpr_words[b + 2u], gpr_words[b + 3u]);
+}
+
+uvec4 load128(uint lsa)
+{
+    uint a = (lsa & 0x3FFF0u) >> 2u;
+    uint b = pair_base * pc.ls_words + a;
+    return uvec4(bswap32(in_words[b + 0u]), bswap32(in_words[b + 1u]),
+                 bswap32(in_words[b + 2u]), bswap32(in_words[b + 3u]));
+}
+
+// The leaf also leaves nine GPRs live for the caller (0xA660 overwrites
+// gpr[0] and gpr[80..127] from LS, so only these nine survive the tail call).
+void store_gpr(uint n, uvec4 v)
+{
+    uint b = out_base * 512u + n * 4u;
+    out_gpr_words[b + 0u] = v.x;
+    out_gpr_words[b + 1u] = v.y;
+    out_gpr_words[b + 2u] = v.z;
+    out_gpr_words[b + 3u] = v.w;
+}
+
+void store128(uint lsa, uvec4 v)
+{
+    uint a = (lsa & 0x3FFF0u) >> 2u;
+    uint b = out_base * pc.ls_words + a;
+    out_words[b + 0u] = bswap32(v.x);
+    out_words[b + 1u] = bswap32(v.y);
+    out_words[b + 2u] = bswap32(v.z);
+    out_words[b + 3u] = bswap32(v.w);
+}
+
+// SPU byte P of a register (big-endian word layout).
+uint getb(uvec4 r, uint p)
+{
+    uint w = r[p >> 2u];
+    return (w >> (24u - 8u * (p & 3u))) & 0xFFu;
+}
+
+uvec4 setb(uvec4 r, uint p, uint v)
+{
+    uint wi = p >> 2u;
+    uint sh = 24u - 8u * (p & 3u);
+    uint m = 0xFFu << sh;
+    uint w = r[wi];
+    w = (w & ~m) | ((v & 0xFFu) << sh);
+    r[wi] = w;
+    return r;
+}
+
+uvec4 selb4(uvec4 a, uvec4 b, uvec4 c)
+{
+    return (a & ~c) | (b & c);
+}
+
+uvec4 shufb4(uvec4 a, uvec4 b, uvec4 c)
+{
+    uvec4 r = uvec4(0u);
+    for (uint t = 0u; t < 16u; ++t) {
+        uint s = getb(c, t);
+        uint v;
+        if ((s & 0xE0u) == 0xE0u)      v = 0x80u;
+        else if ((s & 0xC0u) == 0xC0u) v = 0xFFu;
+        else if ((s & 0xC0u) == 0x80u) v = 0x00u;
+        else {
+            uint p = s & 0x1Fu;
+            v = (p < 16u) ? getb(a, p) : getb(b, p - 16u);
+        }
+        r = setb(r, t, v);
+    }
+    return r;
+}
+
+float ftz(float v)
+{
+    uint u = floatBitsToUint(v);
+    if ((u & 0x7F800000u) == 0u)
+        return 0.0;
+    return v;
+}
+
+uvec4 fma4(uvec4 a, uvec4 b, uvec4 c)
+{
+    uvec4 r;
+    for (uint i = 0u; i < 4u; ++i) {
+        float x = ftz(uintBitsToFloat(a[i]));
+        float y = ftz(uintBitsToFloat(b[i]));
+        float z = ftz(uintBitsToFloat(c[i]));
+        r[i] = floatBitsToUint(ftz(fma(x, y, z)));
+    }
+    return r;
+}
+
+uvec4 rotqby(uvec4 a, uvec4 b)
+{
+    uint sh = b.x & 0x0Fu;
+    uvec4 r = uvec4(0u);
+    for (uint t = 0u; t < 16u; ++t)
+        r = setb(r, t, getb(a, (t + sh) & 0x0Fu));
+    return r;
+}
+
+void main()
+{
+    uint job = gl_GlobalInvocationID.x;
+    if (job >= pc.job_count)
+        return;
+
+    uint pair = job % pc.npairs;
+    pair_base = pair;
+    out_base = pair;
+
+    uvec4 sr7 = load_gpr(7u);
+    uvec4 sr8 = load_gpr(8u);
+    uvec4 sr12 = load_gpr(12u);
+    uvec4 sr16 = load_gpr(16u);
+    uvec4 sr17 = load_gpr(17u);
+    uvec4 sr18 = load_gpr(18u);
+    uvec4 sr20 = load_gpr(20u);
+    uvec4 sr21 = load_gpr(21u);
+    uvec4 sr22 = load_gpr(22u);
+    uvec4 sr24 = load_gpr(24u);
+    uvec4 sr32 = load_gpr(32u);
+    uvec4 sr34 = load_gpr(34u);
+    uvec4 sr46 = load_gpr(46u);
+    uvec4 sr50 = load_gpr(50u);
+    uvec4 sr51 = load_gpr(51u);
+    uvec4 sr52 = load_gpr(52u);
+    uvec4 sr59 = load_gpr(59u);
+    uvec4 sr60 = load_gpr(60u);
+    uvec4 sr61 = load_gpr(61u);
+    uvec4 sr65 = load_gpr(65u);
+    uvec4 sr66 = load_gpr(66u);
+    uvec4 sr68 = load_gpr(68u);
+    uvec4 sr69 = load_gpr(69u);
+    uvec4 sr70 = load_gpr(70u);
+    uvec4 sr71 = load_gpr(71u);
+    uvec4 sr74 = load_gpr(74u);
+    uvec4 sr76 = load_gpr(76u);
+    uvec4 sr77 = load_gpr(77u);
+    uvec4 sr80 = load_gpr(80u);
+    uvec4 sr81 = load_gpr(81u);
+    uvec4 sr82 = load_gpr(82u);
+    uvec4 sr83 = load_gpr(83u);
+    uvec4 sr84 = load_gpr(84u);
+    uvec4 sr85 = load_gpr(85u);
+    uvec4 sr86 = load_gpr(86u);
+    uvec4 sr87 = load_gpr(87u);
+    uvec4 sr88 = load_gpr(88u);
+    uvec4 sr89 = load_gpr(89u);
+    uvec4 sr90 = load_gpr(90u);
+    uvec4 sr91 = load_gpr(91u);
+    uvec4 sr92 = load_gpr(92u);
+    uvec4 sr93 = load_gpr(93u);
+    uvec4 sr94 = load_gpr(94u);
+    uvec4 sr95 = load_gpr(95u);
+    uvec4 sr96 = load_gpr(96u);
+    uvec4 sr97 = load_gpr(97u);
+    uvec4 sr98 = load_gpr(98u);
+    uvec4 sr99 = load_gpr(99u);
+    uvec4 sr100 = load_gpr(100u);
+    uvec4 sr101 = load_gpr(101u);
+    uvec4 sr102 = load_gpr(102u);
+    uvec4 sr103 = load_gpr(103u);
+    uvec4 sr104 = load_gpr(104u);
+    uvec4 sr113 = load_gpr(113u);
+    uvec4 sr116 = load_gpr(116u);
+    uvec4 sr117 = load_gpr(117u);
+    uvec4 sr120 = load_gpr(120u);
+    sr80 = selb4(sr101, sr120, sr51);
+    sr81 = shufb4(sr116, sr104, sr65);
+    sr82 = selb4(sr120, sr101, sr46);
+    sr91 = shufb4(sr84, sr94, sr71);
+    sr92 = selb4(sr101, sr120, sr46);
+    sr97 = shufb4(sr86, sr96, sr71);
+    sr98 = selb4(sr104, sr116, sr46);
+    sr99 = shufb4(sr88, sr90, sr70);
+    sr80 = selb4(sr80, sr81, sr46);
+    sr81 = shufb4(sr81, sr82, sr76);
+    sr82 = selb4(sr59, sr60, sr51);
+    sr92 = shufb4(sr92, sr98, sr68);
+    sr98 = selb4(sr60, sr59, sr51);
+    sr84 = shufb4(sr84, sr94, sr70);
+    sr24 = sr50 + sr24;
+    sr94 = shufb4(sr82, sr61, sr66);
+    sr100 = selb4(sr80, sr81, sr51);
+    sr101 = shufb4(sr83, sr93, sr113);
+    sr80 = selb4(sr92, sr80, sr51);
+    sr83 = shufb4(sr83, sr93, sr117);
+    sr81 = selb4(sr81, sr92, sr51);
+    sr92 = shufb4(sr87, sr89, sr117);
+    sr18 = uvec4(sr18.x + 64u, sr18.y + 64u, sr18.z + 64u, sr18.w + 64u);
+    sr93 = shufb4(sr85, sr95, sr117);
+    sr102 = selb4(sr94, sr61, sr46);
+    sr88 = shufb4(sr88, sr90, sr71);
+    sr82 = selb4(sr82, sr94, sr46);
+    sr87 = shufb4(sr87, sr89, sr113);
+    sr7 = uvec4(sr7.x + 1u, sr7.y + 1u, sr7.z + 1u, sr7.w + 1u);
+    sr85 = shufb4(sr85, sr95, sr113);
+    sr89 = selb4(sr97, sr93, sr52);
+    sr86 = shufb4(sr86, sr96, sr70);
+    sr90 = selb4(sr88, sr92, sr52);
+    sr94 = shufb4(sr83, sr91, sr16);
+    sr95 = selb4(sr99, sr87, sr52);
+    sr93 = shufb4(sr93, sr97, sr16);
+    sr96 = selb4(sr84, sr101, sr52);
+    sr88 = shufb4(sr92, sr88, sr16);
+    sr92 = selb4(sr86, sr85, sr52);
+    sr97 = shufb4(sr98, sr61, sr69);
+    sr103 = fma4(sr100, sr96, sr94);
+    sr98 = shufb4(sr98, sr61, sr74);
+    sr104 = fma4(sr100, sr92, sr93);
+    sr100 = fma4(sr100, sr95, sr88);
+    sr84 = shufb4(sr101, sr84, sr16);
+    sr12 = selb4(sr82, sr97, sr51);
+    sr85 = shufb4(sr85, sr86, sr16);
+    sr86 = selb4(sr102, sr98, sr51);
+    sr87 = shufb4(sr87, sr99, sr16);
+    sr98 = selb4(sr98, sr102, sr51);
+    sr99 = load128(sr7.x + sr17.x);
+    sr102 = fma4(sr84, sr81, sr103);
+    sr101 = load128(sr8.x + sr18.x);
+    sr103 = fma4(sr85, sr81, sr104);
+    sr116 = load128(sr20.x + sr18.x);
+    sr81 = fma4(sr87, sr81, sr100);
+    sr120 = load128(sr22.x + sr18.x);
+    sr82 = selb4(sr97, sr82, sr51);
+    sr104 = load128(sr21.x + sr18.x);
+    sr83 = selb4(sr91, sr83, sr52);
+    store128(sr21.x + sr24.x, sr86);
+    sr86 = uvec4(sr77.x + 0u, sr77.y + 0u, sr77.z + 0u, sr77.w + 0u);
+    store128(sr22.x + sr24.x, sr82);
+    sr59 = fma4(sr83, sr80, sr102);
+    sr82 = rotqby(sr99, sr7);
+    sr60 = fma4(sr89, sr80, sr103);
+    store128(sr20.x + sr24.x, sr98);
+    sr61 = fma4(sr90, sr80, sr81);
+    sr50 = shufb4(sr50, sr50, sr34);
+    store128(sr8.x + sr24.x, sr12);
+    sr77 = rotqby(sr32, sr82);
+    // GPR write block / indirect return omitted
+    out_gpr_words[out_base * 512u + 28u] = sr7.x;
+    out_gpr_words[out_base * 512u + 29u] = sr7.y;
+    out_gpr_words[out_base * 512u + 30u] = sr7.z;
+    out_gpr_words[out_base * 512u + 31u] = sr7.w;
+    out_gpr_words[out_base * 512u + 48u] = sr12.x;
+    out_gpr_words[out_base * 512u + 49u] = sr12.y;
+    out_gpr_words[out_base * 512u + 50u] = sr12.z;
+    out_gpr_words[out_base * 512u + 51u] = sr12.w;
+    out_gpr_words[out_base * 512u + 72u] = sr18.x;
+    out_gpr_words[out_base * 512u + 73u] = sr18.y;
+    out_gpr_words[out_base * 512u + 74u] = sr18.z;
+    out_gpr_words[out_base * 512u + 75u] = sr18.w;
+    out_gpr_words[out_base * 512u + 96u] = sr24.x;
+    out_gpr_words[out_base * 512u + 97u] = sr24.y;
+    out_gpr_words[out_base * 512u + 98u] = sr24.z;
+    out_gpr_words[out_base * 512u + 99u] = sr24.w;
+    out_gpr_words[out_base * 512u + 200u] = sr50.x;
+    out_gpr_words[out_base * 512u + 201u] = sr50.y;
+    out_gpr_words[out_base * 512u + 202u] = sr50.z;
+    out_gpr_words[out_base * 512u + 203u] = sr50.w;
+    out_gpr_words[out_base * 512u + 236u] = sr59.x;
+    out_gpr_words[out_base * 512u + 237u] = sr59.y;
+    out_gpr_words[out_base * 512u + 238u] = sr59.z;
+    out_gpr_words[out_base * 512u + 239u] = sr59.w;
+    out_gpr_words[out_base * 512u + 240u] = sr60.x;
+    out_gpr_words[out_base * 512u + 241u] = sr60.y;
+    out_gpr_words[out_base * 512u + 242u] = sr60.z;
+    out_gpr_words[out_base * 512u + 243u] = sr60.w;
+    out_gpr_words[out_base * 512u + 244u] = sr61.x;
+    out_gpr_words[out_base * 512u + 245u] = sr61.y;
+    out_gpr_words[out_base * 512u + 246u] = sr61.z;
+    out_gpr_words[out_base * 512u + 247u] = sr61.w;
+    out_gpr_words[out_base * 512u + 308u] = sr77.x;
+    out_gpr_words[out_base * 512u + 309u] = sr77.y;
+    out_gpr_words[out_base * 512u + 310u] = sr77.z;
+    out_gpr_words[out_base * 512u + 311u] = sr77.w;
+}

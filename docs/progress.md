@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2b step 4): 0xB830 leaf kernel exact; the 47 % was capture overhead
+
+Offline only, zero game launches. Kernel, gate, burst and wrapper review in
+[`docs/edge-gpu-phase2b-step4.md`](docs/edge-gpu-phase2b-step4.md).
+
+- **0xB830 leaf kernel is bit-exact on all 64 meter pairs.** 0 differing LS
+  bytes (4,194,304 words, max ULP 0) and the nine GPRs that survive the
+  `0xA660` tail call are exact too. The shader transliterates the 78-line
+  lifted body (25 shufb, 22 selb, 9 fma, 2 rotqby, 5 loads, 4 stores) with
+  SPU byte order, FTZ and fused FMA emulated.
+- **One dispatch per frame burst is 0.101-0.103 ms/frame.** 4,394 calls in
+  one `vkCmdDispatch`, device-local (0.023 us/call); CPU record 1.7 us +
+  submit 2.25 us. The dispatch/fence floor is ~0.08 ms; the extra calls add
+  ~0.02 ms.
+- **The step-3 9.06 us/call / 47.16 % is a capture artifact.** The tail hook
+  snapshots 256 KiB in `c690_tail_open` before the pair cap in `_close`, so
+  1,270,050 calls copied ~312 GB in 10 s (6.75 us per 256 KiB here). The same
+  lifted leaf is **47.8 ns/call offline**: 0.209 ms/frame (4,379 calls) and
+  60.7 ms/10 s, not 11.505 s. The real GPU saving over the lift is ~0.1
+  ms/frame, not ~5.6 ms. The cull/A3E0 histogram times are similarly
+  capture-inflated; a corrected capture (cap check before the snapshot) is
+  the next step.
+- **Option D estimate.** AVX2 native is ~71 vector ops + 9 live outputs,
+  ~80-120 uops, ~6-10 ns/call (0.03-0.04 ms/frame) and would beat the GPU
+  kernel, but still saves only ~0.17 ms/frame.
+- **Wrapper is opt-in now.** With capture off it costs median 0.54 ns/call
+  (1.1 % of the leaf, range 0-3.5 %), ~0.07 ms/s at 127k calls. The
+  0x2A/0x21/0xA730 capture wrappers are now `patch_cull_hooks.py --capture`
+  only; the play module was stripped, build-play rebuilt, and the replay is
+  unchanged (0x2A/0x25/0x26/0xA7 64/64 exact). ABI check still agrees; no
+  `spu_context` field was added.
+
 ## 2026-11-04 (c690 GPU phase 2b step 3): A730 body unblocked, cull/A3E0 kernels blocked
 
 One pitch-meter launch (`ab_live.sh`, build-play, governor performance) and
