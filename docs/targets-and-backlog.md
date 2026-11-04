@@ -148,6 +148,18 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Process: walker-cuts-2 mission hung at OpenCode startup 17:24-20:23 (no log); relaunch after native Edge.
   Check each launch is alive a few minutes in.
 
+**Boot SPU / replay / logo (docs/boot-spu-hitches.md, static)**
+- Start-screen and instant-replay freezes = the game's DXT texture-compression jobs (Wws_Job/DXTJob), pure lifted SPU
+  compute on 4 lanes (title sets maxContention 4; 2 of 6 lanes idle; host CPU 26-36 %). Next: probe
+  PS3RECOMP_SPURS_MAXC=6 (cheap, needs an HLE switch + one start-screen run); bigger: native DXT encoder (pure
+  function, ideal native candidate; check output matches the game's).
+- 2.05 s in-game freeze at 217 s = instant replay / depth-of-field camera: DXT + synth + MP3 + 192 cold shader
+  translations (the cache was cold that session).
+- Team logo: park/resync theory DISPROVED (0 resyncs in either run). Next: FIFO dump of team select +
+  tools/replay_rsx, then state bisect (ENG_TEXMEMO=0, ENG_FSBIND_ALL=1, ENG_DEPTH_VIA_GUEST=1, GCM_SEMA_ACQUIRE=1).
+- Throw/pitch meter fill is per guest frame (no wall-clock pacing): at ~30 fps it fills at about half the 60 fps
+  rate. Fixed by raising fps; no separate fix.
+
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
   EIO. clearerr() before the write.
