@@ -168,6 +168,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   keeps some triangles but drops others (a separate fixed bound). Open: find that bound with the exact 400-pair
   replay gate; accept only changes that never reduce the kept triangles. User check: MLB16_CULL_BYPASS=3 (should fix)
   vs =2 (control).
+- Review of 8a082ddb (all default off): with CULL_FIX and the spool both on, the spool records the patched
+  transform (enter/leave order in c690_cull_fix.c:162 / patch_cull_hooks.py:38) -> fix before measuring the fix;
+  cull_live_get ignores the env fallback when live-ctl is linked but unseeded (c690_cull_fix.c:38); cull pair cap
+  can overshoot by the lane count, cull_f never closed (c690_corpus.c:464).
 - 2.2 GB of stage pairs under recomp-work/ from run 2 (delete once no longer needed).
 
 **Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
