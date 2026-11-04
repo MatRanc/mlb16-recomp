@@ -29,12 +29,12 @@ and the Gantt in [`docs/c690-serialisation.md`](docs/c690-serialisation.md).
   ms before the drain, 4.5 and 17.4 ms inside), and ~44 ms is draw/parse CPU.
   The `[rsx wcb]` log in the same seconds reports 3.2-4.7 copies/frame and
   5.8-11.3 ms/frame copy; the long frames carry the heavy copies.
-- **Same run's `[walker-prof]` cross-check:** ~1,570 draws/frame (meter ~500),
+- **Same run's `[walker-prof]` cross-check:** ~1,570 draws/frame (meter ~500-800),
   walker 45-67 ms, engine 36-41, parse 8-25, wait 10-20. Frame time scales
   with draws: **47.5 us/draw**, r = 0.803; 240 draws -> 20.2 ms, 1,451 -> 74.9,
   2,131 -> 111.7, 3,025 -> 179.6. This is "scales with players on screen":
-  more draws, not more Edge jobs (c690 jobs/s 9.5k here vs 15.5k at the meter,
-  same jobs/frame).
+  more draws, not more Edge jobs (796 c690 jobs/frame here vs ~680 at the
+  meter).
 - **Candidates rejected with evidence:** per-list PPU wait
   (`Mesh_WaitPrevJobList`/`WwsJobList_SpinUntilDone`) is real but hidden under
   the walker; no barrier/serial tail (lanes finish within 1 %, gaps p50 10 us);

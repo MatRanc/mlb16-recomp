@@ -31,12 +31,13 @@ Follows [`long-frames.md`](long-frames.md),
   "c690-dominated" because it compares that summed lane time with the single
   walker thread's drain. On wall time the walker is the chain.
 * **Cross-check in the same run's `[walker-prof]`:** the replay frames carry
-  **~1,570 draws per frame** (the meter has ~500). Walker drain 45-67 ms,
+  **~1,570 draws per frame** (the meter's live runs are ~500-800). Walker drain 45-67 ms,
   engine 36-41 ms, parse 8-25 ms, wait 10-20 ms. Across the session, frame
   time scales linearly with draws: **47.5 us per draw**, correlation
   **0.803**; 240 draws -> 20.2 ms, 547 -> 32.3, 916 -> 47.8, 1451 -> 74.9,
   2131 -> 111.7, 3025 -> 179.6 ms. This is the user's "scales with players on
-  screen": more visible players = more draws, not more Edge jobs.
+  screen": more visible players = more draws, not more Edge jobs (796 c690 jobs/frame
+  here vs ~680 at the meter).
 * **Verdict:** there is no Edge serialisation to fix here. The per-list PPU
   wait (`Mesh_WaitPrevJobList` -> `WwsJobList_Wait` -> `WwsJobList_SpinUntilDone`)
   is real and still runs, but it is hidden under the walker. A per-frame Gantt
@@ -182,7 +183,7 @@ Both statements are in the data:
 * At the pitch meter ([`frame-timeline-2.md`](frame-timeline-2.md)) a long
   frame is a ~36 ms c690 burst plus ~6 ms of walker tail; the walker drain
   (25.8 ms) is *smaller* than the burst, so c690 sets the frame. The meter
-  submits ~500 draws/frame.
+  live draw count is ~500-800/frame.
 * In the replay the same ~700-800 c690 jobs finish in ~30 ms, but the frame
   submits **~1,570 draws** and the walker takes 45-77 ms. The c690 batch is
   smaller than the draw work, so the walker sets the frame.
