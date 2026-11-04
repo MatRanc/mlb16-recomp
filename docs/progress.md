@@ -3,6 +3,30 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (native c690 step 5): the meter stage order is emit/ring, not unpack/pack; per-stage SIMD is at parity
+
+Two 90 s meter measurement launches (`ab_live_stage5meas_20261104_040459`,
+`ab_live_stage5meas2_20261104_041417`), `PIN=0 WCB=2`, standard
+`ab_live.sh` plus `METER=1 SKIP_CINE=1 PITCH_THRESH=35`. Full tables and the
+decision: [`docs/edge-native-step5.md`](edge-native-step5.md). Branch
+`exp/live-ab`, build `recomp-work/build-play`.
+
+- **The old stage shares are not the meter.** Per-command inclusive time on
+  2,038,861 jobs: **0x21 emit/ring 42.9 % (102 us/call)**, 0x2A assembler
+  15.7 %, 0x25+0x26 cull 12.7 %, 0x13 copy 9.7 %, 0x0A bind/convert 7.5 %,
+  entry/parse 5.6 %. The sum-check is exact (-0.0002 % vs the job wall).
+- **The geometry stages are 23.2 % of the wall.** Unpack/pack/skin/normalize
+  live in 0x0A+0x2A; even 3x on them plus the cull and the 0x13 copy leaves the
+  burst at ~27.6 ms, not <= 25. The 0x21 emit/ring path is the largest term
+  and is not a named stage.
+- **Per-function SIMD is at parity.** Existing offline gates: 0x7C18 0.99x
+  (8-wide AVX2, this session), 0x6D68 1.00x and 0xAF98+B238 1.03x (commit
+  `e3386c5`), 0xFDA0 1.30x, 0xD080 1.53x. The compiler already emits the same
+  vpshufb/vpsllvd/vfmadd mix; no stage reaches 3x.
+- **No native stage, no A/B, no default change.** Two of three launches used;
+  the measurement changes (62-entry named list + per-command timer) are kept
+  under `PS3RECOMP_C690_STATS`; no `spu_context` field was added.
+
 ## 2026-11-04 (frame-pacing floor): 34.15 ms p50 is the c690 producer, not the flip/present path
 
 One windowed meter launch (`ab_live_pacingfloor_20261104_033642`), N=4 x 10 s
