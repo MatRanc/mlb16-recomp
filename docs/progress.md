@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 dispatch turnover): the host phase is arbitration, not overhead; cuts lose frames
+
+One launch at the pitch meter (N=6 x 10 s per arm, 2 s dropped,
+`PIN=0 WCB=2`, governor `performance`) plus a 95 s timeline window. Full
+tables, the code and the sixth-lane evidence:
+[`docs/c690-dispatch-cuts.md`](c690-dispatch-cuts.md). Branch `exp/live-ab`,
+build `recomp-work/build-play`, commit `84e5dd06`.
+
+- **Gap anatomy.** Big bursts (arm A): 34.25 ms wall, 70.3 % lane occupancy,
+  29.4 % of lane-wall in gaps = **28.5 % tail / 46.8 % host / 24.7 % head**.
+  The PM is lifted (`wwsjob_pm`, image 6), not interpreted; the 67 KiB job
+  re-DMA is ~0.9 GB/s and cache-resident, which is why `SPU_CODE_DMA_MEMO`
+  was flat. Atomics are 0.3 % of gap time.
+- **Three default-off cuts** (`SPURS_PM_FAST_ACTIVE`, `SPURS_PM_FAST_ONE_LOCK`,
+  `SPURS_PM_FAST_GEN`): a lane already at maxContention may rerun; one
+  lock-line acquisition for check+consume; the dispatch-time workload snapshot
+  is trusted while the registry epoch holds. Unit tests and the `spu_context`
+  ABI check pass.
+- **Live A/B.** Fast-rerun share 34.5 -> 85.5 %; host phase **23.54 -> 9.19 ms
+  per burst (-61 %)**, all-lane gap 29.4 -> 22.6 %, occupancy 70.3 -> 76.6 %,
+  burst wall **34.25 -> 30.99 ms**. But guest fps **35.30 -> 33.29** (paired
+  +2.00 +/- 1.52, 95 % CI [0.48, 3.53]), walker wait 11.32 -> 12.26 ms,
+  p50 unchanged at 34.15 ms (two-vsync floor). c690 jobs/s and job wall are
+  unchanged, so this is not extra work.
+- **Reading.** At maxContention the coordinator round trip is the arbitration
+  point for seven workloads on six lanes. Removing it compresses the c690
+  burst but delays DXT/Crowd/synth/MP3/Kinematics, and the frame loses more
+  than the burst gains. A fairness-aware rerun (yield when another workload
+  is ready) is the next candidate; it is not built.
+- **Sixth lane: no safe version.** `nSpus=6`, `MeshJobs0/1 maxC=5`,
+  `priority[5]=0`; the five-instance protocol is the guest's. The prior
+  `SPURS_LANE6=1` probe wedged in ~10 s, and lane 5 serves DXT/audio. Not
+  re-run.
+- **Default:** nothing enabled. Both `play_windowed.sh` copies and
+  `ab_live.sh` keep `SPURS_PM_FAST_RESCHED=8` only. Timeline (775 MiB)
+  deleted after analysis.
+
 ## 2026-11-04 (native screen cull step 4): exact 0xD080 stage is 1.53x offline, neutral live; the union still costs ~5 fps
 
 Three launches (the hard cap): a shadow/live soak, the A/B at the meter, and
