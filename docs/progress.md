@@ -3,6 +3,52 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 serialisation): the replay long frames are walker-draw-bound; the Edge premise is wrong
+
+Offline only (zero game launches, no build). Data is the user's 40 ms hitch
+recording `longframes_20261104_142459.pstl` (1,930 frames >= 40 ms) plus its
+matching `play_20261104_142459.log`. Details, band tables, candidate verdicts
+and the Gantt in [`docs/c690-serialisation.md`](docs/c690-serialisation.md).
+
+- **The "Edge on one lane of five" is a frame-length average, not
+  serialisation.** Inside the Edge burst the five lanes run **3.82 of 5
+  concurrent** in 80-250 ms frames (4.00 in 40-50, 3.92 in 50-80). The c690
+  lane-sum is nearly constant across the bands: **102 / 111 / 109 ms**
+  (575 / 712 / 796 jobs, ~22 ms per lane). The last job is at
+  **+29 / +29 / +32 ms** in 40-50 / 50-80 / 80-250 ms frames. Edge finishes;
+  the frame does not.
+- **drain + put-wait is 100 % of the frame** (drain 78 / 83 / 83 %). The
+  `hitch_table.py` "92 % c690-dominated" is the summed-lane artefact: five
+  lanes x 22 ms = 110 ms is ranked against the single walker thread. On wall
+  time the walker is the chain in nearly every long frame.
+- **Representative 86.1 ms frame (797 jobs):** c690 union 23.9 ms, last job
+  +24.2 ms; walker put-wait 0-20.1 ms then drain 20.1-86.1 ms (66.0 ms). PPU
+  main is blocked 58.8 ms in the ref lwcond / 22.1 ms spinning `gcm.finish`.
+  The Gantt makes the 62 ms Edge-free tail visible. Inside the walker span,
+  **10 guest-mandated WCB readbacks sum to 35.9 ms** of copy + GPU sync (13.2
+  ms before the drain, 4.5 and 17.4 ms inside), and ~44 ms is draw/parse CPU.
+  The `[rsx wcb]` log in the same seconds reports 3.2-4.7 copies/frame and
+  5.8-11.3 ms/frame copy; the long frames carry the heavy copies.
+- **Same run's `[walker-prof]` cross-check:** ~1,570 draws/frame (meter ~500),
+  walker 45-67 ms, engine 36-41, parse 8-25, wait 10-20. Frame time scales
+  with draws: **47.5 us/draw**, r = 0.803; 240 draws -> 20.2 ms, 1,451 -> 74.9,
+  2,131 -> 111.7, 3,025 -> 179.6. This is "scales with players on screen":
+  more draws, not more Edge jobs (c690 jobs/s 9.5k here vs 15.5k at the meter,
+  same jobs/frame).
+- **Candidates rejected with evidence:** per-list PPU wait
+  (`Mesh_WaitPrevJobList`/`WwsJobList_SpinUntilDone`) is real but hidden under
+  the walker; no barrier/serial tail (lanes finish within 1 %, gaps p50 10 us);
+  walker park/starvation no (put-wait is 17 % at the start, then it drains);
+  PPU main is waiting; native-dispatch fairness and lock-line are not limiting.
+- **No code change, no live key, no A/B.** An Edge key cannot shorten a frame
+  whose Edge batch ends ~60 ms early; the premise stop rule was used instead
+  of a launch. Best lever is the walker span: -25 % of the 44 ms draw/parse
+  CPU is ~-11 ms on an 86 ms replay frame (12.8 -> 13.3 fps), -50 % ~-22 ms
+  (15.6 fps); the 35.9 ms WCB sync is guest-driven and not addressed by
+  RECT/BATCH/SKIP (they target bytes / pending merges, neutral at the meter).
+  `PS3RECOMP_WALKER_FAST` stays off (5 % live hit, +2.4 ms). Meter c690 A/Bs
+  (`native2`, `walk2b`) stand for the meter's own c690-bound frames.
+
 ## 2026-11-04 (c690 0x2A wiring): the meter is not one 32-byte class, so the fallback gate fails
 
 Offline only (zero game launches). Branch `exp/live-ab` (`ps3recomp-play`);
