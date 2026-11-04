@@ -221,7 +221,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   -4.83 fps. Neither kept. Holes fix moves into the native cull (one pass, holes rule built in): Edge step 4 running.
   Note: baseline A ran at 35.35 fps with PIN=0 (ab_live default) vs ~32-33 in PIN=1 A/Bs -> PIN=0 vs 1 A/B is worth
   doing (Speed item 4).
-- Game queue: Edge step 4 native cull + holes (running) -> PIN=0 vs 1 A/B -> Edge unpack/pack native (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- Edge step 4 (docs/edge-native-step4.md, b14617a5, default off): native screen cull 0xD080, exact on 400/400,
+  884k shadow calls 0 mismatches, 1.53x per call; live neutral (B-A -0.04 / +0.21 fps). Union mode still ~-5 fps (the
+  final count is written by the 0x132E0 caller, so a fused pass needs that modelled). c690 lane busy ~0.54 while the
+  burst wall ~36 ms ~ frame: the burst looks latency-bound, so faster stages alone don't move the frame. Running:
+  PIN A/B + burst critical-path analysis before more native stages.
+- Game queue: PIN A/B + burst critical path (running) -> lever chosen from it (scheduling/gaps vs native unpack/pack) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
