@@ -160,13 +160,23 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Throw/pitch meter fill is per guest frame (no wall-clock pacing): at ~30 fps it fills at about half the 60 fps
   rate. Fixed by raising fps; no separate fix.
 
+**Native Edge step 3 (docs/edge-native-step3.md)**
+- Wedge FIXED (native stage didn't publish the return PC): 130,304 live native calls, 0 mismatches, no wedge.
+- Speed: native 0xFDA0 stage NEUTRAL at the meter (-0.32 +/- 1.97 fps; p50 34.15 both). Off by default. Next speed
+  stage per plan: unpack/pack (23.5 %), or hand-tune the cull to ~5x.
+- Holes: the 0x25/0x26 screen cull. Cull transform {595, 640, -335, 360} for 720p; scaling to the 2x1 sample grid
+  keeps some triangles but drops others (a separate fixed bound). Open: find that bound with the exact 400-pair
+  replay gate; accept only changes that never reduce the kept triangles. User check: MLB16_CULL_BYPASS=3 (should fix)
+  vs =2 (control).
+- 2.2 GB of stage pairs under recomp-work/ from run 2 (delete once no longer needed).
+
 **Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
 - Phase 1 (offline) found the PPU side (GpDxtCompressor FUN_00a566e8, 0x30-byte params, DXT1/3/5 formats) but could
   NOT tie the SPU kernel to a module offline: DXT spans load no registered jobmod; candidates are jobmod_96de, c566
   or an unlifted base-0 module at 0x010A1700. Next (needs the game, queued right after native Edge): one capture run
   (SPURS_PM_TRACE + a one-shot wid==0 hook dumping the job's code EA and input/output blocks), then the bit-exact
   native encoder + harness in worktree ps3recomp-dxt (branch exp/dxt-native).
-- Queue for the game after native Edge: DXT capture -> walker-cuts-2 -> team-logo FIFO dump.
+- Game queue: DXT phase 2 (running) -> walker-cuts-2 -> team-logo FIFO dump -> Edge holes bound + unpack/pack.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
