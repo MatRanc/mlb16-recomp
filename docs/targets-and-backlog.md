@@ -160,6 +160,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Throw/pitch meter fill is per guest frame (no wall-clock pacing): at ~30 fps it fills at about half the 60 fps
   rate. Fixed by raising fps; no separate fix.
 
+**Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
+- Phase 1 (offline) found the PPU side (GpDxtCompressor FUN_00a566e8, 0x30-byte params, DXT1/3/5 formats) but could
+  NOT tie the SPU kernel to a module offline: DXT spans load no registered jobmod; candidates are jobmod_96de, c566
+  or an unlifted base-0 module at 0x010A1700. Next (needs the game, queued right after native Edge): one capture run
+  (SPURS_PM_TRACE + a one-shot wid==0 hook dumping the job's code EA and input/output blocks), then the bit-exact
+  native encoder + harness in worktree ps3recomp-dxt (branch exp/dxt-native).
+- Queue for the game after native Edge: DXT capture -> walker-cuts-2 -> team-logo FIFO dump.
+
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
   EIO. clearerr() before the write.
