@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (native Edge step 3): live wedge fixed, cull family identified, native stage neutral
+
+Three launches (`ab_live_edge3s1_20261103_205745` wedge,
+`ab_live_edge3s2_20261103_210626` shadow + corpus,
+`ab_live_edge3s3_20261103_212337` A/B). Details and tables in
+[`docs/edge-native-step3.md`](edge-native-step3.md).
+
+- **Live wedge root cause: the native kernel never published its return PC.**
+  The lifted `0xFDA0` body ends in `SPU_RET` (`pc = gpr[0]`, trampoline at
+  `host_depth == 0`); the flattened kernel only saved LS+GPR, and the shadow
+  gate compared LS+GPR only. Publishing `pc`/trampoline in the live path and
+  adding a pc comparison to shadow fixes it: **130,304 live native calls, 0
+  fallbacks, 0 mismatches, six 20 s segments, no wedge.**
+- **Holes: 0x25/0x26, not 0x2C.** `0x2C` is **0.0 %** of the command
+  histogram in both the user's 20:26 play test and our meter run; `0x25` is
+  3.8 %, `0x26` 1.0-1.2 %. `MLB16_CULL_BYPASS=3` is the family test.
+- **Cull corpus + exact replay.** 400 meter cull pairs captured; the
+  unpatched replay matches the game's LS output on all 400. The screen
+  transform block is `{scale_x, offset_x, scale_y, offset_y}` (720p
+  `{595,640,-335,360}`, four copies). Scaling x into sample space changes
+  35/400 lists but also drops triangles on 77-104 pairs (separate fixed
+  bound), so the experimental switch stays default-off; a safe fix needs the
+  bound or an index-list union.
+- **Speed: native stage neutral.** A/B N=3x20 s, 2 s drop: A 32.36 fps,
+  B 32.68 fps, paired -0.32 +/- 1.97 fps (CI covers 0); per-flip p50 34.15
+  both, p90 41.61 -> 40.95, p99 48.36 -> 46.78, std 10.80 -> 10.63 ms.
+  No clean winner; native stays off in the play defaults.
+- **New switches (default off):** `PS3RECOMP_C690_CULL_FIX[_2C]` (experimental
+  sample-grid scale), `PS3RECOMP_C690_CULL_PAIRS/_STRIDE/_GAP_MS` (cull spool),
+  and the existing native/shadow keys now report progress every 256 calls.
+- **Deviations:** the A/B is N=3 x 20 s (not N=6 x 10 s) because launch 1 was
+  spent on the wedge; the cull capture is 400 pairs (not 20). No system or
+  test-setup change, governor `performance`.
+
 ## 2026-11-03 (hitch census): the 5.1 s load gap is shader translation, boot gaps are SPU jobs
 
 Two launches (`ab_live_hitchcold2_20261103_155504` cold census,
