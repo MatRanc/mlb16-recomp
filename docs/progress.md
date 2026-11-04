@@ -3,6 +3,36 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 2b step 3): A730 body unblocked, cull/A3E0 kernels blocked
+
+One pitch-meter launch (`ab_live.sh`, build-play, governor performance) and
+offline replay. Evidence and port plan in
+[`docs/edge-gpu-phase2b-step3.md`](edge-gpu-phase2b-step3.md).
+
+- **A730 is unblocked at the right body.** The heavy path is
+  `0x13140 -> 0x13250 -> 0xA3C0/0xA3F8 -> 0xA410 -> (bi gpr[82]) 0xA730 ->
+  0xA798 -> (bi gpr[82]) 0xB830`; the sub-selector wrapper sees only a
+  12.9 us prefix. A default-off wrapper at `0xB830` (op key `0xA7`) is in
+  `patch_cull_hooks.py`; the unit test covers its pair, bitmap and histogram
+  entry. No `spu_context` field; ABI unchanged.
+- **One capture, 64/64 A730 body pairs exact.** The meter run
+  (`fncap2b3a730`) saw 1,270,050 `0xB830` calls / **11.505 s (47.16 %)** of
+  the 24.398 s tail; the `0x13140` prefix is 0.201 s (0.83 %). The `0xA7`,
+  0x2A, 0x25 and 0x26 pairs all replay with 0 differing LS bytes.
+- **Cull kernel killed, not built.** The 0x132E0 body is the 24-block /
+  1,551-line `0xD080` skin/transform + index-pack state machine plus the
+  0x49D4/0xE6B8 allocators, not a screen-space formula. The 64/64 exact
+  meter pairs are ready, but a bit-exact GPU port is a multi-day
+  C-to-GPU translation; no kernel/diff/burst number is claimed.
+- **A3E0 kernel blocked.** The clean pairs reach a 19-function /
+  2,493-line chain (`0xA730 -> 0xA798 -> 0xAF98/0xB238` + pack), not a
+  compact formula; no kernel/diff/burst number is claimed.
+- **Running total signed off as GPU-exact is still 0x2A only: 23.1 % of the
+  step-2 meter tail (18.2 % in step 3), 0.23–0.27 ms per 429-job burst.**
+  A730 is measurable and exact but not ported; the culls and A3E0 are not
+  ported. The full tail cannot move with this result; the next lever is the
+  A730 leaf port (~5–8 days), not another capture.
+
 ## 2026-11-04 (c690 GPU phase 2b step 2): meter-gated histogram, exact 0x2A/cull pairs, A730 kernel blocked
 
 Two pitch-meter launches (`ab_live.sh`, build-play, governor performance;

@@ -288,6 +288,7 @@ static uint32_t handler_for_op(uint32_t op)
     case 0x25: return 0x13520;
     case 0x26: return 0x13518;
     case 0x2A: return 0x10F78;
+    case 0xA7: return 0xB830;   /* A730 heavy-body leaf (capture probe) */
     default:   return 0;
     }
 }
@@ -408,6 +409,11 @@ int main(int argc, char** argv)
                 if (drain21 && (g_spu_trampoline_fn ||
                                 (ctx.pc & SPU_LS_MASK) != ret_pc))
                     spu_drain_call(&ctx, ret_pc);
+            } else if (op == 0xA7) {
+                /* 0xB830 returns through gpr[86]; the captured OUT is the
+                 * leaf's exit state, so compare it without draining the
+                 * caller's continuation. */
+                ret_pc = ctx.gpr[86]._u32[0] & SPU_LS_MASK;
             } else if (g_spu_trampoline_fn ||
                        (ctx.pc & SPU_LS_MASK) != ret_pc) {
                 spu_drain_call(&ctx, ret_pc);
