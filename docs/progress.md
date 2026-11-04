@@ -3,6 +3,44 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 GPU phase 1): no CPU reads the mesh, so a GPU tail can feed the walker directly
+
+Offline only (no game launch). Static analysis of the EBOOT/lifted c690 module,
+the corpus and our walker, plus one Vulkan transport microbenchmark; design and
+evidence in [`docs/edge-gpu-phase1.md`](edge-gpu-phase1.md).
+
+- **Consumer map is closed.** The five 2 MB mesh rings (EA
+  `0x11900000`-`0x12300000`), the kept-index list and the 0x90-byte command
+  hole are read **only by the RSX walker**. The guest PPU reads only per-SPU
+  job-list counters (`WwsJobList_SpinUntilDone`); the ICE draw builder
+  (`FUN_000730c8`) copies vertex/index **EAs** into methods and never
+  dereferences them. No CPU read of post-transform vertices or post-cull
+  counts.
+- **The hand-off is the inFAMOUS shape.** The job writes the data first and
+  patches the self-JUMP command hole last; the walker parks until the hole is
+  patched (`cellGcmSys.c:3287-3331`), and the ring labels are unchanged. A GPU
+  producer can keep that contract with no payload readback.
+- **But 0x21 alone is fence-bound.** 0x21 is 42.9 % of the c690 wall
+  (390 us/call sel 1), and the same SPU job's cull/index/assembler consume its
+  LS output. A per-job GPU->LS readback costs one fence; `record+submit+wait`
+  is 32.8 us p50 (10k iters, this host), 429 jobs = 14.1 ms/frame serialised.
+  Option (iii) is no-go.
+- **Recommendation: option (i).** GPU-resident geometric tail
+  (unpack/transform/pack/cull/assemble) into a Vulkan ring buffer; SPU keeps
+  the job ABI, ring allocation, command hole and fallback; the walker binds
+  the GPU buffer. Option (ii) only works with per-frame batching and a
+  GPU-resident payload (then it is (i) plus a small readback).
+- **Prototype:** reconstructed a real 0x13140 invocation from the existing
+  corpus (384 vertices / 96 iterations, output `0x1F750..0x20F4B`) and
+  snapshotted both format paths (A730 and BB80); Vulkan transport cost
+  measured (32.8 us fence, 1.9 us/dispatch batched N=64). The bit-exact BB80
+  shader is not signed off because the offline corpus only witnessed the A730
+  variant. One capture command for the user is in the doc (SPU_FN_CAPTURE of
+  0x13140/0xBB80/BED0/C018/A730/B830 at the meter); nothing was enabled or
+  added to the default build.
+- **Kill criterion for phase 2a:** >1 LSB on >0.1 % of packed values or any
+  cull change, fallback >5 %, or burst wall/p50 not <=30 ms in the A/B.
+
 ## 2026-11-04 (team logo capture): the capture is valid, and the 3-D logo is never submitted
 
 Offline only (no game launch). The user's armed team-select capture was
