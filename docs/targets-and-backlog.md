@@ -67,6 +67,16 @@ checking if any geometry-only regression remains.
 
 ## Priority: speed and frame-time stability first
 
+**FOCUS (user, 2026-11-04): Edge (c690) work only; everything else waits.** Order:
+1. SPU codegen: inline acyclic direct callees (spill cut), mission running -> meter A/B (p50 AND p90/p99).
+2. GPU Edge stages via the plumbing (edge-gpu-plumbing.md): 0x2A 32-byte record class + walker GPU-buffer binding
+   (first live A/B), then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status:
+   edge-exactness.md (update it with every stage).
+3. 0x22 tree/cull (largest class, 20.7 %): whole 0x10190 command body native (partial 0xFDA0 port is neutral).
+Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
+Long frames (40-80+ ms): offline analysis running (docs/long-frames.md); meter + cinematic long frames are c690.
+Parked until the user says otherwise: team logo (user diagnostic run ready), visuals, HLE batch 2, review nits.
+
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
 times until we match RPCS3.
 
