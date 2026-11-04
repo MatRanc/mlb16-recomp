@@ -3,6 +3,49 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (long frames): the 40-80 ms population, and a capture for real play
+
+Offline only (no game launch, no build). Data: 35 `play_*` sessions
+(MangoHud CSV + log), the four non-empty `hitches.pstl` (>250 ms), and the
+per-frame meter timelines `ab_live_timeline2_20261103_065615` and
+`ab_live_pinburst0/1_20261104_*`. Details in
+[`docs/long-frames.md`](docs/long-frames.md).
+
+- **40-80 ms frames are a mesh-scene problem, not a menu/boot one.** 176,821
+  presented frames in 78.6 min: 16,651 are 40-80 ms (9.4 %, 222/min). Mesh
+  phase 14,787 of 66,132 (22.4 %, 495/min); menus 0.38 %, boot 0.3 %. The 1:1
+  present subset is 9,916 of 27,729 mesh frames (35.8 %, 611/min); the current
+  large sessions are 25-39 % of in-game presented frames in that band.
+- **>250 ms is the known other problem.** 53 hitches, 46.3 s: 48 are
+  `spu.run` (boot/start-screen DXT), 4 `rsx.drain` (first-use shader; incl. the
+  5.55 s match load), 1 c690. Not c690.
+- **Where per-frame data exists (meter), the 40-80 frame is the same c690 work
+  running slower, not more work.** pinburst0 40-50: 666 jobs vs 668 in 33-36,
+  per-job lane time +3 %, occupancy 0.698 -> 0.671, host/coordinator gap
+  +1.40 ms/lane (+29 %, 62 % of the extra burst wall). timeline2 40-50:
+  674 jobs vs 584 in 33-36 but 680 in 36-40; occupancy 0.644 -> 0.558.
+  Class shares: SAME WORK SLOWER 80.7 % / 95.1 %, DEADLINE SLIP 2.4 / 1.2 %,
+  OTHER 16.9 / 3.7 %, **MORE WORK 0 %**. Extra frame = +9.47 ms (50 % c690,
+  50 % tail) in timeline2, +7.46 ms (30 % burst, 70 % outside burst) in
+  pinburst0. No vertex-count / content lever for this band.
+- **Real-play 40-80 cannot be attributed frame-by-frame today** (recorder
+  keeps >250 ms; `[flip]` is every 10th flip). It is 89 % mesh-phase and
+  over-represented in seconds with a >=40 ms SDL pump gap (90.4 % vs 78.0 %
+  for 33-36), but that is a coarse flag. Next session: record with
+  `PS3RECOMP_TIMELINE_HITCH_US=40000`, ring 32, flush 2 (hitch mode clamps to
+  2), ~0.5 GiB per 5 mesh minutes; command and analysis in the doc.
+- **Cheap explicit guards:** keep PIN=0 (`play_windowed.sh:107`) and
+  x11/FIFO/PRESENT_NEW_ONLY/PACE (`:173`, `:178`, `:192`); do not enable PIN=1
+  (140 vs 79 long frames, more present stalls). Zero-build probe for the host
+  gap: `SPURS_PM_FAST_RESCHED=16/32` (default 8;
+  `libs/spurs/cellSpurs.c:1807`). Ranked frame removers: host/dispatch gap
+  (~40 %), c690 compute (~30-40 %), present/pump starvation (20-40 %, unproven
+  until the capture), non-burst tail (~15-20 %, high risk), deadline exactness
+  (~2 %).
+- `tools/hitch_table.py` gained `--bins`, `--classify` and `--baseline-jobs`:
+  the six-bin histogram and MORE WORK / SAME WORK SLOWER / DEADLINE SLIP /
+  OTHER labels for the 40 ms capture.
+
 ## 2026-11-04 (c690 GPU plumbing): 0x2A skip/export -> GPU -> ring bytes; the rest of the map
 
 Offline only (no game launch). The data is the clean 60 s meter window of

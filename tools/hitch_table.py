@@ -10,6 +10,21 @@ that dominated it) and a ranking of the causes.
 Usage:
   tools/hitch_table.py recomp-work/play_20261103_163747/hitches.pstl
   tools/hitch_table.py hitches.pstl --min-ms 100 --csv hitches.csv
+  tools/hitch_table.py longframes.pstl --bins --classify
+
+With PS3RECOMP_TIMELINE_HITCH_US=40000, the 40-80 ms frames of a play
+session are captured too.  --bins prints the frame-time histogram used in
+docs/long-frames.md (<36, 36-40, 40-50, 50-80, 80-250, >250 ms) and
+--classify labels each hitch:
+  MORE WORK          c690 job count >= 1.15x the file median and c690 work
+                     covers at least half the frame;
+  DEADLINE SLIP      frame within 1.5 ms of k*16.683 ms and the c690 work
+                     is below (k-0.5)*16.683 ms (an extra tick was burned);
+  SAME WORK SLOWER   c690 work covers at least half the frame but the job
+                     count is not above the median;
+  OTHER:<cause>      the dominant work is not c690 (named).
+The rules are the ones used for the meter timelines in docs/long-frames.md;
+a 40 ms capture has no fast-frame baseline, so inspect the per-hitch rows.
 
 The timestamps are CLOCK_MONOTONIC ns; the PSTL header carries the recording
 base, so "time" is seconds since the process started recording, not since the
@@ -90,6 +105,14 @@ def main():
                     help="ignore hitches shorter than this (default 0: all in the file)")
     ap.add_argument("--top", type=int, default=30, help="rows in the table (default 30)")
     ap.add_argument("--csv", help="also write the per-hitch table here")
+    ap.add_argument("--bins", action="store_true",
+                    help="print the long-frame histogram")
+    ap.add_argument("--classify", action="store_true",
+                    help="label MORE WORK / SAME WORK SLOWER / DEADLINE SLIP / OTHER")
+    ap.add_argument("--baseline-jobs", type=int, default=0,
+                    help="baseline c690 jobs/frame for --classify (default: median "
+                         "of the file; pass the meter median, e.g. 680, when the "
+                         "file only holds long frames)")
     args = ap.parse_args()
 
     base, recs = read_timeline(args.timeline)
@@ -133,6 +156,7 @@ def main():
     rows = []
     total = collections.Counter()
     dominant = collections.Counter()
+    jobs_by_row = []
     for i, (end, dur_us) in enumerate(hitches):
         w0 = windows[i][0]
         ms = dur_us / 1000.0
@@ -149,17 +173,64 @@ def main():
             detail = "%d pipes, %.0f ms" % (counts[i]["pipe.create"],
                                             per[i]["pipe.create"] / 1e6)
         rows.append(((w0 - base) / 1e9, ms, best_name, best_ms, detail))
+        jobs_by_row.append(counts[i]["c690.job"])
+
+    TICK_MS = 16.683
+    def _near_tick(ms):
+        k = min(range(1, 7), key=lambda n: abs(ms - n * TICK_MS))
+        return k, abs(ms - k * TICK_MS)
+    med_jobs = args.baseline_jobs
+    if not med_jobs:
+        present = [j for j in jobs_by_row if j]
+        med_jobs = sorted(present)[len(present) // 2] if present else 0
+
+    def classify(ms, c690_ms, c690_jobs, name):
+        k, dm = _near_tick(ms)
+        if med_jobs and c690_jobs >= 1.15 * med_jobs and c690_ms >= 0.5 * ms:
+            return "MORE WORK"
+        if dm <= 1.5 and c690_ms < (k - 0.5) * TICK_MS:
+            return "DEADLINE SLIP"
+        if c690_ms >= 0.5 * ms:
+            return "SAME WORK SLOWER"
+        return "OTHER:" + name
+
+    classes = [classify(r[1], per[i].get("c690.job", 0.0) / 1e6,
+                        jobs_by_row[i], r[2])
+               for i, r in enumerate(rows)]
 
     print("timeline: %s" % args.timeline)
     print("hitches:  %d (>= %.0f ms), total %.1f s"
           % (len(rows), args.min_ms, sum(r[1] for r in rows) / 1000.0))
     print()
-    print("%10s %10s  %-20s %10s  %s"
-          % ("time(s)", "ms", "dominant", "cause ms", "detail"))
-    for (t, ms, name, cost, detail) in rows[:args.top]:
-        print("%10.2f %10.1f  %-20s %10.1f  %s" % (t, ms, name, cost, detail))
+    hdr = "%10s %10s  %-20s %10s  %s" % ("time(s)", "ms", "dominant",
+                                         "cause ms", "detail")
+    if args.classify:
+        hdr += "  %s" % "class"
+    print(hdr)
+    for i, (t, ms, name, cost, detail) in enumerate(rows[:args.top]):
+        line = "%10.2f %10.1f  %-20s %10.1f  %s" % (t, ms, name, cost, detail)
+        if args.classify:
+            line += "  %s" % classes[i]
+        print(line)
     if len(rows) > args.top:
         print("... %d more rows (--top)" % (len(rows) - args.top))
+
+    if args.bins:
+        edges = [("<36", 0, 36), ("36-40", 36, 40), ("40-50", 40, 50),
+                 ("50-80", 50, 80), ("80-250", 80, 250), (">250", 250, 1e9)]
+        print()
+        print("duration histogram:")
+        print("%-8s %8s %8s" % ("bin", "frames", "share"))
+        n = len(rows)
+        for label, lo, hi in edges:
+            c = sum(1 for r in rows if lo <= r[1] < hi)
+            print("%-8s %8d %7.1f%%" % (label, c, 100.0 * c / n if n else 0.0))
+    if args.classify:
+        print()
+        print("classification (c690 median %d jobs/hitch):" % med_jobs)
+        cc = collections.Counter(classes)
+        for name, c in cc.most_common():
+            print("%-24s %8d %7.1f%%" % (name, c, 100.0 * c / len(rows)))
 
     print()
     print("cause ranking (clipped work inside the hitches, spu.run / 6):")
@@ -170,9 +241,15 @@ def main():
     if args.csv:
         with open(args.csv, "w", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["time_s", "ms", "dominant", "cause_ms", "detail"])
-            for (t, ms, name, cost, detail) in rows:
-                w.writerow(["%.3f" % t, "%.1f" % ms, name, "%.1f" % cost, detail])
+            head = ["time_s", "ms", "dominant", "cause_ms", "detail"]
+            if args.classify:
+                head.append("class")
+            w.writerow(head)
+            for i, (t, ms, name, cost, detail) in enumerate(rows):
+                row = ["%.3f" % t, "%.1f" % ms, name, "%.1f" % cost, detail]
+                if args.classify:
+                    row.append(classes[i])
+                w.writerow(row)
         print("\ncsv: %s" % args.csv)
     return 0
 
