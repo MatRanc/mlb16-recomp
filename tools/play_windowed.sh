@@ -89,6 +89,12 @@ export PS3RECOMP_C690_STATS=1
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
+# Thread affinity: default off. PS3RECOMP_PIN=1 pins the walker to cpu 0, ppu
+# main to cpu 1 and the five c690 lanes to the remaining cores; the two-launch
+# A/B on 2026-11-04 measured 35.31 fps at PIN=0 vs 30.98 at PIN=1 at the pitch
+# meter (docs/pin-and-burst-path.md). Keep the default explicit while still
+# allowing an override.
+export PS3RECOMP_PIN="${PS3RECOMP_PIN:-0}"
 # On-disk cache of translated guest shaders (docs/shader-disk-cache.md): a warm
 # run rebuilds first-use pipelines without glslang. Keyed by the guest program
 # identity plus the translator version; recomp-work/shader_cache/.
