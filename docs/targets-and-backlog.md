@@ -68,17 +68,26 @@ checking if any geometry-only regression remains.
 ## Priority: speed and frame-time stability first
 
 **FOCUS (user, 2026-11-04): Edge (c690) work only; everything else waits.** Order:
-1. SPU codegen: inline acyclic direct callees (spill cut), mission running -> meter A/B (p50 AND p90/p99).
-2. GPU Edge stages via the plumbing (edge-gpu-plumbing.md): 0x2A 32-byte record class + walker GPU-buffer binding
-   (first live A/B), then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status:
-   edge-exactness.md (update it with every stage).
-3. 0x22 tree/cull (largest class, 20.7 %): whole 0x10190 command body native (partial 0xFDA0 port is neutral).
+1. SPU codegen: inline acyclic direct callees (spill cut) FAILED its gate (spu-inline-callees.md).
+2. GPU Edge stages via the plumbing (edge-gpu-plumbing.md): 0x2A 32-byte record class + walker GPU-buffer binding,
+   then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status: edge-exactness.md.
+3. 0x22 whole-body native (0x10190 command body, 21.2 % of c690 inclusive time; partial 0xFDA0 port is neutral).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test
-  (audio, start screen, cinematics, in-play). Spill/inline codegen FAILED its gate (spu-inline-callees.md).
+  (audio, start screen, cinematics, in-play).
+- MEASURED 2026-11-04 (docs/meter-p50-pin.md): the 34.15 ms p50 is the **c690 producer, not flip/vblank**. With
+  native on, a 25 s meter timeline gives frame p50 34.15, c690 union p50 32.01, last c690 job p50 32.97; the extra
+  ~1.2 ms is the walker drain / ref-publication tail. Capping the flip-done wait to the guest's exact 2 x 16683 =
+  33.366 ms (new live key PS3RECOMP_FLIP_DEADLINE_US, default 0) is **neutral**: A/B p50 34.15 vs 34.15, p90
+  37.93 vs 38.45 (B hit three 0.7-0.9 s present stalls). Fast frames (<20 ms) are 31 % of the meter, so there is no
+  fixed 30 fps cap. Native dispatch bought the 40-50 tail, not the median; Edge compute is still the p50 lever.
+- DECISION: if the meter p50 is the target, continue Edge compute (0x22 21.2 %, 0x21 emit 25.0 %, 0x2A 13.5 %; a 2x
+  cut of those is ~5-7 ms of burst, p50 ~28-29 ms). If the real-play 40-80 ms frames are the target, the renderer/
+  walker is the lever and the meter median stays 34 ms. The remaining Edge GPU/native items are parked below.
 Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
-Long frames (40-80+ ms): offline analysis running (docs/long-frames.md); meter + cinematic long frames are c690.
+Long frames (40-80+ ms): the replay/real-play long frames are walker-bound (docs/c690-serialisation.md); meter
+long frames are c690 (docs/long-frames.md).
 Parked until the user says otherwise: team logo (user diagnostic run ready), visuals, HLE batch 2, review nits.
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame

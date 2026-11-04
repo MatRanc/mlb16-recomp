@@ -33,3 +33,23 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 
 Rows marked "not wired" do not run in the game yet. When a stage is wired into the walker, add its live key and change
 "Verified on" to include the A/B run.
+
+## Live vs parked (2026-11-04)
+
+**Live (play defaults):** the lifted Edge path plus the fairness-gated native
+c690 dispatch (`SPURS_PM_NATIVE_DISPATCH=6`) and `SPURS_PM_FAST_RESCHED=64`.
+These change *when* a lane re-enters the PM, not the job output; the exactness
+policy above is unchanged. Meter effect: p90 43.2 -> 39.2 ms, p99 46.7 -> 42.7,
+40-50 ms share 24.3 -> 7.1 %, p50 34.15 unchanged
+([`c690-native-dispatch.md`](c690-native-dispatch.md)).
+
+**Parked:** GPU 0x2A record classes (36-byte exact offline; the 32-byte
+position-first class is 55/128 meter pairs and the rest of the family is not
+decoded), GPU 0x21 sel7 / 0x25/0x26 cull, the 0x22 whole-body native body, and
+the extra host lanes (`wip/c690-extra-lanes`, unfinished; `SPURS_LANE6` wedges
+in ~10 s). They are parked because each is a large mission, not because they
+are finished. The meter p50 measurement now says these are the remaining p50
+levers: the median frame is the c690 producer (c690 union p50 32.01 ms, last
+job 32.97 ms in a 34.15 ms frame), and the flip deadline / 17 ms wait is not
+the limiter ([`meter-p50-pin.md`](meter-p50-pin.md)). A ~2x cut of 0x22 + 0x21
++ 0x2A is ~5-7 ms of burst, i.e. p50 ~28-29 ms.

@@ -3,6 +3,46 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (meter p50 pin): 34.15 ms is the c690 producer, not the flip/vblank model
+
+Two meter launches, branch `exp/live-ab` in `ps3recomp-play`, build
+`recomp-work/build-play`, native dispatch on. Details and reproduce commands in
+[`docs/meter-p50-pin.md`](docs/meter-p50-pin.md).
+
+- **Diagnostic timeline (`ab_live_p50pin_20261104_152125`, 25 s, 853 frames):**
+  frame p50 **34.15 ms**, c690 lane union p50 **32.01 ms**, first c690 job
+  p50 +0.10 ms, last c690 job p50 **+32.97 ms** (p90 +34.81), walker drain p50
+  22.39 ms, put-wait p50 11.36 ms. The hard 32-34 ms class (285 frames) has
+  union 32.78 and last job 33.08 in a 34.15 ms frame; the remaining ~1.1 ms is
+  the walker/ref tail. 54.5 % of hard frames finish c690 before the guest's
+  true 33.366 ms deadline and still end at 34.15.
+- **The flip deadline is 2 x 16683 us, not a 30 fps setting.**
+  `Gfx_DisplayFlip` (`0x000692dc`) gives up at `DAT_011203f8 << 1`;
+  `FUN_00064b68` sets it to 0x412b (16683) at 720p. Two host
+  `Cond_Wait(17000)` rounds are 34.0 ms + overhead = 34.13-34.15. There is no
+  `cellGcmSetFlipMode` call; 31 % of meter frames are <20 ms, so the title is
+  not capped at 30 fps.
+- **Capping the wait to 33.366 ms is neutral (A/B
+  `ab_live_p50fix_20261104_153029`, 4 x 8 s per arm, 2 s dropped):** p50
+  **34.15 vs 34.15**, p90 37.93 vs 38.45, p99 41.19 vs 43.04; per-segment p50
+  A 34.15/34.25/34.14/34.15, B 34.15/34.17/34.14/34.15. B hit three unrelated
+  0.7-0.9 s present/pump stalls, so its pooled fps (29.88 vs 35.16) is not the
+  comparison. The cap moved the wait exit but not the frame boundary: the
+  display thread then waits for the next buffer ref, published by the same
+  c690 + walker producer at ~34.1 ms.
+- **Code:** new live numeric key `PS3RECOMP_FLIP_DEADLINE_US` (default **0**),
+  `runtime/ppu/flip_deadline.h` state machine, hook in
+  `runtime/ppu/ppu_sysprx.cpp`; unit test `tests/sync_stress/test_flip_deadline`
+  passes, no `spu_context` fields, shared-field ABI check passes. It is an
+  experiment only and stays off; the A/B shows it is not the fix.
+- **Conclusion:** native dispatch bought the 40-50 ms tail (p90 43.2 -> 39.2,
+  40-50 share 24.3 -> 7.1 %, p50 unchanged), not the median. The median is
+  still Edge compute: 0x21 emit 25.0 %, 0x22 whole-body 21.2 %, 0x2A 13.5 %,
+  0x25/0x26 cull 11.1 %, 0x0A 6.5 %. If the meter p50 is the target, unpark
+  those; the renderer/walker is the lever for the real-play 40-80 ms frames
+  (walker-bound, c690-serialisation.md). The parked Edge items are the
+  remaining p50 levers, not finished work.
+
 ## 2026-11-04 (c690 serialisation): the replay long frames are walker-draw-bound; the Edge premise is wrong
 
 Offline only (zero game launches, no build). Data is the user's 40 ms hitch
