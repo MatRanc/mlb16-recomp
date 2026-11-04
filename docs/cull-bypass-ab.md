@@ -212,9 +212,11 @@ CSV.
 ## 6. Caveats and deviations
 
 * **Deadline frames were not captured.** `PS3_LWCOND_STATS` was left off, so
-  the `[lwcond-stats]` counter never printed. The Vulkan present window shows
-  **0 dropped no-slot and 0 not-ready** in every segment of every arm. The run
-  was not repeated: it reached the meter and the hard cap is two launches.
+  the `[lwcond-stats]` counter never printed. The Vulkan present path reports
+  **0 not-ready drops** in every window; there are three isolated no-slot
+  drops (2 at boot, 1 just before the A/B, 1 in an A segment), no frozen
+  segment. The run was not repeated: it reached the meter and the hard cap is
+  two launches.
 * `PIN=0` (the `ab_live.sh` default) rather than the `PIN=1` used in some
   earlier A/Bs. Both arms share it, so the paired comparison is unaffected;
   the absolute A fps (35.35) is higher than the PIN=1 runs.
