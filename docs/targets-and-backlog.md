@@ -172,6 +172,13 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   transform (enter/leave order in c690_cull_fix.c:162 / patch_cull_hooks.py:38) -> fix before measuring the fix;
   cull_live_get ignores the env fallback when live-ctl is linked but unseeded (c690_cull_fix.c:38); cull pair cap
   can overshoot by the lane count, cull_f never closed (c690_corpus.c:464).
+- Holes fix (docs/edge-holes-fix.md, branch exp/edge-holes 1d3633aa, offline): the 0x25/0x26 cull tests in 1280x720
+  logical space with a fixed w/720p edge, the target is 2560x720 2x1 AA. Fix = UNION (original list untouched + the
+  triangles a 2x run keeps). 400-pair gate: 0 removed, 7 added (meter corpus has no eye close-up). NOT in build-play
+  yet: needs merge into exp/live-ab + re-patching the generated module wrapper + rebuild, after the DXT mission.
+  Until then PS3RECOMP_C690_CULL_FIX=1 runs the OLD unsafe single-grid fix: do not use. Fallback if the union
+  doesn't remove the holes: full candidate superset (= BYPASS=3 without editing the original list).
+  Review fixes from 8a082ddb: done in 1d3633aa.
 - 2.2 GB of stage pairs under recomp-work/ from run 2 (delete once no longer needed).
 
 **Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
