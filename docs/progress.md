@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (native screen cull step 4): exact 0xD080 stage is 1.53x offline, neutral live; the union still costs ~5 fps
+
+Three launches (the hard cap): a shadow/live soak, the A/B at the meter, and
+a timeline mapping run. Details, tables and the gate in
+[`docs/edge-native-step4.md`](edge-native-step4.md). Branch `exp/live-ab`,
+build `recomp-work/build-play`, `METER=1 SKIP_CINE=1`, `PITCH_THRESH=35`,
+`PIN=0 WCB=2`, governor `performance`.
+
+- **Native stage.** The 24-block 0xD080 tail-call subtree is flattened to one
+  function (`c690_native_screen_stage.inc`): `sr0..sr97` stay live, per-block
+  loads disappear, stores stay so the terminal writeback is exact. It replaces
+  the two `spu_link(0x13400) ... 0xD080` brackets in the 0x25/0x26 paths
+  (`patch_native_screen.py`); the shared WWS ring helpers stay lifted. No
+  `spu_context` field was added (ABI check PASS).
+- **Exactness.** 400 captured pairs: native mode 0 matches the **full LS, all
+  128 GPRs and the PC** (0 differences). Live shadow: **884,058 calls, 0
+  mismatches**; the A/B run then made **1,690,624 live calls with 0
+  fallbacks** and no wedge.
+- **Speed.** Offline whole-command body **22.9 -> 15.0 us/call (1.53x)**;
+  native-assisted union **122.9 -> 107.9 us (1.14x)**. Live c690 burst wall
+  **36.65 -> 35.70 ms** (-2.6 %), job wall 2.74 -> 2.68 lane-s/s, lane busy
+  0.548 -> 0.537.
+- **A/B (N=6 x 10 s).** A 34.98 fps; B (native 0xFDA0 + cull mode 0) 34.94
+  (paired -0.04 +/- 0.60); C (union) 30.31 (paired **-4.67 +/- 0.65**, p90
+  40.67 -> 50.19 ms). Mapping run: B +0.21 +/- 0.08, C -5.17 +/- 0.47.
+- **Not a fused union.** The kept-index count is finalised by the 0x132E0
+  caller *after* 0xD080 returns, so the 0xD080 hook cannot know the final
+  list; mode 1 reuses the proven union driver (two rule evaluations, native
+  stage in both) and reproduces the lifted union exactly (7 added, 0 removed
+  on 400 pairs). A true one-pass union needs the caller-side count writeback
+  modelled.
+- **Default:** nothing enabled. B does not win cleanly and C fails the
+  < 1 fps gate, so `PS3RECOMP_C690_NATIVE_SCREEN` stays 0 in both
+  `play_windowed.sh` copies and `ab_live.sh`. Play-test command for the holes
+  and cinematics is in §6 of the doc.
+- **Deviations:** cinematics were left to the user's windowed run; the first
+  A/B timeline was accidentally in hitch mode, so a third launch measured the
+  burst wall.
+
 ## 2026-11-03 (native DXT step 3): the kernel is lifted, bit-exact, and the boot hitches are gone
 
 Two launches (the hard cap), both start screen, `PIN=1 WCB=2`, capture on:
