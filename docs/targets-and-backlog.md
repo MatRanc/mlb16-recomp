@@ -230,7 +230,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   bracket (c690_native_screen.c:219); shadow PC check compares r0 with ctx->pc after spu_drain_call (false
   mismatches possible) and never compares the published pc (:286); non-atomic env/dump/progress statics (:84);
   native mode 2 enables the union for 0x25/0x26 but not 0x2C (c690_cull_fix.c:106).
-- Game queue: PIN A/B + burst critical path (running) -> lever chosen from it (scheduling/gaps vs native unpack/pack) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- PIN + burst path (docs/pin-and-burst-path.md): PIN=0 35.31 vs PIN=1 30.98 fps (+14 %); play_windowed was already
+  effectively PIN=0, now explicit (Speed item 4 DONE). c690 burst (35 ms): ~70 % job compute, ~30 % per-job
+  dispatch turnover (host 5.0, head 2.6, tail 3.0 ms), 5 lanes balanced, no serial chain. Levers: gaps -5..-10.6 ms,
+  sixth lane -5.8 ms, native unpack/pack+skin+normalize at 1.4x -3.2 ms, native cull alone -0.3 ms. Running:
+  dispatch cuts + sixth lane.
+- Game queue: c690 dispatch cuts + sixth lane (running) -> native unpack/pack/skin (if still worth it) -> team-logo FIFO dump -> tick marker-side A/B (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
