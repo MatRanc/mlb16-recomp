@@ -1,9 +1,11 @@
 # Edge holes: the 0x25/0x26 fixed screen bound and the safe cull union
 
-Date: 2026-11-03. Offline only: no game launch. Worktree
-`ps3recomp-holes` (branch `exp/edge-holes`, base `8a082ddb`); the 400
-captured cull pairs and the generated c690 module are read-only inputs.
-See `docs/edge-native-step3.md` for the stage-1/2 context and the 400-pair
+Date: 2026-11-03. The first half is offline (400 captured cull pairs); the
+merged build was then measured in one live A/B (§6, `ab_live_holesab_
+20261103_233122`). Worktree `ps3recomp-holes` (branch `exp/edge-holes`,
+base `8a082ddb`, merged into `exp/live-ab` as `283c2d86`); the captured cull
+pairs and the generated c690 module are read-only inputs. See
+`docs/edge-native-step3.md` for the stage-1/2 context and the 400-pair
 replay gate.
 
 ## TL;DR
@@ -220,7 +222,49 @@ The switch is implemented behind `PS3RECOMP_C690_CULL_FIX` (family 1,
 `0x25/0x26`) and `PS3RECOMP_C690_CULL_FIX_2C` (family 2, `0x2C`, old
 single-grid patch). Both are off by default.
 
-## 6. Clean room
+## 6. Post-merge live A/B
+
+Merged into `exp/live-ab`, the generated module wrapper re-patched with
+`tools/c690_ref/patch_cull_hooks.py` (the script now migrates the old
+single-grid wrapper in place), `build-play` rebuilt, `spu_context` ABI check
+PASS. One launch (`ab_live_holesab_20261103_233122`), meter, `METER=1
+SKIP_CINE=1 PIN=1 WCB=2`, live key `PS3RECOMP_C690_CULL_FIX`, N=4 x 20 s per
+arm, 2 s dropped, alternating A/B. A = off, B = on (boot A).
+
+| metric | A (off) | B (on) |
+|---|---:|---:|
+| fps (MangoHud segment mean) | **32.83 +/- 0.20** | **29.13 +/- 1.02** |
+| walker own / wait | 18.11 / 12.28 ms | 18.63 / 15.67 ms |
+| per-flip `fin` p50 | **34.16 ms** | **34.16 ms** |
+| p90 / p99 | 41.20 / 47.65 ms | 50.73 / 56.89 ms |
+| max | 79 ms | 488 ms |
+
+Paired A-B difference: **3.70 +/- 0.86 fps** (95 % CI [2.84, 4.56]); the A/A
+self-check cannot pass by construction. The **p50 is identical**; the mean
+fps loss is entirely a heavier tail (and one 488 ms c690 job hitch at 238.9 s,
+inside a B segment). Live union counters were **not captured**: the harness
+SIGKILLs the game after the last segment, so the `atexit` report never ran.
+The offline gate remains the counter evidence (7 added, 0 cap/range/realloc
+skips on 400 pairs).
+
+So enabling the union at the meter is *not* free: it costs about 11 % of the
+mean fps through a heavier tail, even though the median frame is unchanged.
+This is expected from the design (the cull body runs twice per list and each
+lane snapshots/restores 256 KiB of LS); it is another reason the switch stays
+off by default and is used only to check the eye close-up.
+
+Sanity checks on the same run (dispatch fix `ddbce4f3` + DXT lift on):
+
+* audio: `[cellAudio] diag` steady at **187.3-187.7 blocks/s** (real time
+  187.5), no underruns in the measured windows;
+* `spu.interp` recorded **65,273 spans / 18.9 ms** over the 325 s run (DXT
+  region 0.38 ms); no signature-overlay interpretation spike;
+* boot/start screen **0** frames >= 250 ms. The three timeline hitches are at
+  130.3 s (3,749 ms, `rsx.drain`/shader compile on first pitch), 154.7 s
+  (311 ms, `spu.run`) and 238.9 s (488 ms, `c690.job`, B segment);
+* no wedge: all 8 segments flipped, meter self-check PASS.
+
+## 7. Clean room
 
 This work is our own reverse engineering of the game's SPU job module
 (EBOOT EA `0x01161300`, LS base `0x4000`) and the captured LS/GPR pairs. The
