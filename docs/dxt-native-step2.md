@@ -20,8 +20,8 @@ native encoder) still does not start.
   `0x4030`; image 1's lift has no function there, so the runtime takes the
   no-lift path (`spu_smc_microstep` -> `spu_interp_run_until`). That is the
   33.5 s of wid-0 lane time in `boot-spu-hitches.md`, not lifted code.
-* **The corpus is complete and usable.** 93 MiB, four lane spools: 300 code
-  loads, 327 parameter blocks, 53.8 MB of input texture (841,340 4x4 blocks)
+* **The corpus is complete and usable.** 93 MiB, four lane spools: 304 code
+  records (300 clean jobs), 327 parameter blocks, 53.8 MB of input texture (841,340 4x4 blocks)
   and 6.4 MB of DXT1 + 0.6 MB of DXT5 output (the same 841,340 blocks). Each
   16 KiB input GET has one matching output PUT (2 KiB DXT1 / 4 KiB DXT5), and
   the parameter block's output EA equals the first PUT EA on all 300 jobs.
@@ -144,7 +144,7 @@ raw job-source GETs, so the params are recoverable offline (327 found here).
 | spool size | 93 MiB (4 files) |
 | wid-0 policy runs captured | 310 (306 with a clean RUN_END; 4 tails torn by SIGKILL) |
 | runs with the code load | 300 |
-| CODE records (all `0x010A1700`) | 300 |
+| CODE records (all `0x010A1700`) | 304 |
 | parameter blocks | 327 |
 | GET records / bytes | 6,841 / 57,753,696 |
 | PUT records / bytes | 4,878 / 7,087,840 |
@@ -155,7 +155,7 @@ raw job-source GETs, so the params are recoverable offline (327 found here).
 
 The parameter sets seen at the start screen:
 
-* output code 1 (DXT1) 304 blocks, 5 (DXT5) 23; no DXT3.
+* output code 1 (DXT1) 304 parameter blocks, 5 (DXT5) 23; no DXT3.
 * widths 16..2048, heights 4..256, all powers of two and all
   `height <= width`.
 * swizzle `0x03020100` (LE bytes `00 01 .. 0f`) for all 327; mip 1; scratch 0.

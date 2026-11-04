@@ -17,7 +17,7 @@ Details, tables and the corpus numbers in
   (`0x4030` has no lift; `spu_smc_microstep` -> `spu_interp_run_until`).
 - **The capture is complete.** New default-off hook
   `PS3RECOMP_DXT_CAPTURE=<dir>` spools wid-0 GET/PUT plus code/param records:
-  93 MiB, 300 code loads, 327 parameter blocks, 53.8 MB input /
+  93 MiB, 304 code records (300 clean jobs), 327 parameter blocks, 53.8 MB input /
   841,340 blocks, 6.4 MB DXT1 (801,308 blocks) + 0.6 MB DXT5 (40,032).
   Each 16 KiB input GET maps to one 2 KiB (DXT1) or 4 KiB (DXT5) PUT; the
   parameter `+0x20` output EA equals the first PUT EA on all 300 jobs.
