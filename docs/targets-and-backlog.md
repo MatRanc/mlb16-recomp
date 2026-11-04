@@ -207,7 +207,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   PS3RECOMP_C690_CULL_FIX=1. If it fixes them, the cheaper version belongs in native Edge (cull once at 2x-aware
   rules) rather than running the lifted cull twice. Dispatch fix ddbce4f3 verified live (audio 187.5 blocks/s, no
   sig-overlay interpretation, start screen 0 frames >= 250 ms). SPU unit tests 11/11 again (stubs for DXT hooks).
-- Game queue: walker-cuts-2 -> team-logo FIFO dump -> Edge unpack/pack (+ cinematics).
+- walker-cuts-2 (docs/walker-cuts-2.md, ec4c75cf): REMAP_FAST memo on by default (offline -0.51 ms, live walker
+  -0.27 ms) but the frame does NOT move (p50 34.16 both, deadline frames 456 vs 455). The walker is not the p50 lever:
+  frames end on the c690 producer burst (frame-timeline-2.md). Tick-in-drain checkpoint built, default off; the
+  marker-side design (complete at the next frame's flip marker) needs one A/B. ab_live.sh PITCH_THRESH 25 misses the
+  meter (use 35). => Speed priority is now c690 / native Edge.
+- Game queue: cull BYPASS=3 cost A/B (running) -> Edge unpack/pack native (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
