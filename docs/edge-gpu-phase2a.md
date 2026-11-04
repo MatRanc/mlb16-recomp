@@ -73,7 +73,7 @@ own array table.
 | job | array table at `cmd+0x2B0` | cull read lines | conclusion |
 |---|---|---|---|
 | 0x25 (`0x13520`) | `0x204C0` (position: `-153.8, 0, -30.3`), `0x1F6C0` (normal: `0,1,0,0.33`) | **235/235** in `0x204C0..0x21370`; **0** in `0x1F6C0..0x204C0` | position array only |
-| 0x26 (`0x13518`) | `0x1F790` (position), `0x21ED0` (normal: `0.144,0.013,-0.989,-1`), `0x24610` | 640 contiguous lines `0x1F790..0x21F80`; includes the first `0xB0` at `0x21ED0`; **0** of `0x24610` | position block + at most one 4-vertex normal slice |
+| 0x26 (`0x13518`) | `0x1F790` (position), `0x21ED0` (normal: `0.144,0.013,-0.989,-1`), `0x24610` | 640 contiguous lines `0x1F790..0x21F80`; includes the first `0xB0` at `0x21ED0`; **0** of `0x24610` | position block + an 11-record (0xB0) normal slice |
 
 So a "cheap position-only transform for cull" split is technically possible
 for 0x25, but 0x26 already touches a normal slice, and neither split removes
@@ -142,8 +142,8 @@ TAG=fncap21b N=1 SEG=2 DROP=0 SETTLE=8 METER=1 SKIP_CINE=1 WCB=2 PIN=0 \
   ./ab-tools/ab_live.sh
 ```
 
-The first run (`fncap21`, log `ab_live_fncap21_20261104_085124.log`) used the
-phase-1 list `0x13140,0xBB80,0xBED0,0xC018,0xA730,0xB830`; the second
+The first run (`fncap21`, log `ab_live_fncap21_20261104_085124.log`) used
+`0x13140,0xBB80,0xBED0,0xC018,0xA730,0xB830,0x132E0,0xD080,0x10F78,0x131A0,0xBB98,0xA3E0` (the two direct-call entries were not captured); the second
 (`fncap21b`, log `ab_live_fncap21b_20261104_085643.log`) added the cull and
 assembler entries. Both confirmed the pitch meter (`meter_*.png`) and the
 capture fired at `08:53:33-35` / `08:58:50-51`, before the meter press.
