@@ -157,6 +157,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   translations (the cache was cold that session).
 - Team logo: park/resync theory DISPROVED (0 resyncs in either run). Next: FIFO dump of team select +
   tools/replay_rsx, then state bisect (ENG_TEXMEMO=0, ENG_FSBIND_ALL=1, ENG_DEPTH_VIA_GUEST=1, GCM_SEMA_ACQUIRE=1).
+- Team logo capture (2026-11-04, docs/team-logo.md §5): the logo is NEVER SUBMITTED to the RSX (657 draws, all quads, 0
+  triangles, no offscreen RT). Cause is guest-side: FUN_009d7b30 target-texture lookup FUN_009d4c68 returning 0, or
+  the script never creating the ScriptUIElem. Next: USER diagnostic run (BOOT/CONFIG_MAIN.TXT with StressTestUIElem,
+  grep 'Did not find target texture'; else PPU_WWATCH=0x013560d8). Reviewed 2b16133a (tool fixes): ok.
 - Throw/pitch meter fill is per guest frame (no wall-clock pacing): at ~30 fps it fills at about half the 60 fps
   rate. Fixed by raising fps; no separate fix.
 
