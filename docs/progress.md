@@ -3,6 +3,54 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker multithread): design for 2-3x crowded-replay walker time
+
+Design-only mission: **zero code changes in `ps3recomp-play`, zero builds,
+zero game launches**. Full dependency map, design comparison, Vulkan rules,
+missions and kill criteria in
+[`docs/walker-multithread-design.md`](walker-multithread-design.md). Data is
+the user's two crowded-replay logs (`play_20261104_165634.log`,
+`_165829.log`) plus the existing walker/WCB/c690 docs.
+
+- **Premise confirmed, with a qualification.** The guest orders the *method
+  stream* and the *render-target contents at sync points*, not which host
+  thread computes a vertex or records a `vkCmdDraw`. With an immutable
+  per-draw packet and an ordered commit, fetch/remap/convert, plain texture
+  revalidation, pipeline fingerprint and Vulkan recording are independent.
+  What must stay serial: FIFO parse/state, surface/RT creation + serials,
+  clears, WCB arm/service, `SET_REFERENCE`/labels/semaphores, inline
+  `NV3062`/`NV3089`, `GET_REPORT`, flip/present and ref publication.
+- **Crowded medians** (`draws >= 1500`, first log, n=185): walker **59.5 ms**,
+  parse 4.0, fetch 8.3, tex 10.9, pipe 6.1, bind 0.6, draw 14.2, other 8.1;
+  p90 walker 105. The second log (n=138) is 76.7 ms with parse 18.1/tex 2.0,
+  so the phases are bimodal; the per-draw cost is unchanged. Meter
+  (`walker-profile.md`) is the same split at 552 draws.
+- **Designs compared.** (a) ordered packets -> N workers -> ordered commit:
+  **20-28 ms (2.1-3.0x)**. (b) frame segments: 1.15-1.25x for record-only,
+  1.4-1.8x best with engine split, high cross-segment/cache risk. (c) narrower
+  helpers + one record thread (the inFAMOUS 2 `BE_THREAD` shape): 1.3-1.7x
+  realistic, best ~2x, because creates/snapshots/readbacks drain the queue.
+- **Recommended: (a)**, delivered through (c): M1 packet ABI serial (hashes
+  unchanged), M2 one record thread, M3 N workers with contiguous chunks and
+  per-worker command pools/rings/descriptors, M4 texture/pipeline resolvers +
+  `WCB_PREFETCH`, M5 hardening + meter A/B + the user's zoomed-out replay.
+  Each has a numeric gate and kill criterion; defaults stay off until the
+  crowded test passes, and a live key falls back to the single thread.
+- **Key constraint found:** deferred workers must not re-read guest bytes the
+  SPU/PPU may have reused. Packet-owned snapshots for the five c690 mesh rings,
+  fence-only for static data, is the rule; it is the same lesson as NHL #82
+  (fragment program copied at record time) and #179 (movie textures snapshotted
+  at record time), and inFAMOUS 2's copied borrow payloads.
+- **Prerequisite:** there is no `walker_replay` capture yet (only
+  `meter_frame` 502 draws and `walker_frame` 668 draws). M0 is one
+  `PS3RECOMP_WALKER_CAPTURE` frame from the zoomed-out replay, in the next
+  game-running mission; the design's offline gates use the two existing
+  captures until then.
+- **Running remap mission:** `PS3RECOMP_REMAP_DIRECT` inside
+  `rsx_vertex_remap_build` is inherited per worker; its sampled
+  `WALKER_PROF` means MT worker time must be counted separately. No wait for
+  it: the packet ABI is independent.
+
 ## 2026-11-04 (WCB async): readbacks are two fences; prefetch removes the copy, meter p50 unchanged
 
 Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
