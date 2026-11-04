@@ -217,7 +217,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   TICK_IN_DRAIN use: presented_seq is stamped at take time, not with the queued image's seq (cellGcmSys.c:204,
   :1789) -> can complete a flip that was never presented; completion logic copied 3x (share a helper); test misses
   the marker path. Minor: memo hash collides on swapped base/id; 16 KB memo in every remap struct.
-- Game queue: cull BYPASS=3 cost A/B (running) -> Edge unpack/pack native (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- Cull bypass A/B (docs/cull-bypass-ab.md): BYPASS=3 -7.56 fps (2.07x vertices, walker drain +6.1 ms), union
+  -4.83 fps. Neither kept. Holes fix moves into the native cull (one pass, holes rule built in): Edge step 4 running.
+  Note: baseline A ran at 35.35 fps with PIN=0 (ab_live default) vs ~32-33 in PIN=1 A/Bs -> PIN=0 vs 1 A/B is worth
+  doing (Speed item 4).
+- Game queue: Edge step 4 native cull + holes (running) -> PIN=0 vs 1 A/B -> Edge unpack/pack native (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
