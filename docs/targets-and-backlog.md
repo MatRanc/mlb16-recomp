@@ -251,7 +251,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   identity fixed. Title has no in-FIFO flip marker. Review: default tick path unchanged; fence-gate nits (marker seq
   slot order, req_ref 0 when toggled live, baseline mismatch with 2 requests) only matter if FENCE_DONE is used.
   => To move p50 the c690 burst must drop well below ~30 ms (cut compute), without delaying other workloads.
-- Game queue: frame-pacing floor (running) -> team-logo FIFO dump -> native unpack/pack/skin (if the floor moves) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- Edge step 5 (docs/edge-native-step5.md, 2638108b measurement only): at the meter the c690 wall is 42.9 % command
+  0x21 (handler 0x13080 "emit/ring", 102 us/call), 0x2A assembler 15.7 %, 0x13 copy 9.7 %, cull 12.7 %, 0x0A 7.5 %.
+  The old stage shares were from another scene. Per-stage native SIMD tops out ~1.0-1.5x (compiler already emits the
+  same AVX2). Running: is 0x21 compute or a WAIT (ring space / label / reservation / DMA)?
+- Game queue: c690 0x21 emit/ring (running). Team logo: static analysis + a capture command for the user to drive (no automated menu runs). (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
