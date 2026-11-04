@@ -212,6 +212,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   frames end on the c690 producer burst (frame-timeline-2.md). Tick-in-drain checkpoint built, default off; the
   marker-side design (complete at the next frame's flip marker) needs one A/B. ab_live.sh PITCH_THRESH 25 misses the
   meter (use 35). => Speed priority is now c690 / native Edge.
+  Review of ec4c75cf (medium): REMAP_FAST memo stays correct (key + generation checked on every hit); play scripts
+  do set it (the "not in commit" note is because the scripts live outside that repo). Must fix before any
+  TICK_IN_DRAIN use: presented_seq is stamped at take time, not with the queued image's seq (cellGcmSys.c:204,
+  :1789) -> can complete a flip that was never presented; completion logic copied 3x (share a helper); test misses
+  the marker path. Minor: memo hash collides on swapped base/id; 16 KB memo in every remap struct.
 - Game queue: cull BYPASS=3 cost A/B (running) -> Edge unpack/pack native (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
