@@ -615,6 +615,12 @@ later timing numbers cannot be trusted; stop and re-capture. This mission
 needs a game launch, so it belongs to the next game-running mission, not to a
 design-only one.
 
+**Status (2026-11-04, M1/M2 mission): capture exists but FAILS the gate.**
+`recomp-work/walker_replay.*` replayed 5 frames with **1,278 draws/frame and
+23,535 read misses** (gate: >= 1,300 draws, 0 misses). Its MT hashes are
+self-consistent but the timing is not crowded-case evidence; M3 timing must
+wait for a clean recapture.
+
 ### M1: packet ABI, serial packet path (no threads)
 
 * Add `eng_draw_packet` + `eng_prepare_draw` / `eng_commit_draw` (or a

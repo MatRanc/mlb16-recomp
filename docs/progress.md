@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker MT M1/M2): packet path + one record worker, meter p50 flat
+
+Full analysis in [`docs/walker-mt-m1m2.md`](walker-mt-m1m2.md). Branch
+`exp/live-ab`, builds `build-play` (live) and `build-mt` (offline). M1 and M2
+of [`docs/walker-multithread-design.md`](walker-multithread-design.md), both
+default off (`PS3RECOMP_WALKER_MT=0`, live key `PS3_LIVE_WALKER_MT`).
+
+- **M1: packet ABI, serial path.** `sink_end_work` now builds an immutable
+  `eng_draw_pkt` and commits it in the old backend-call order. `WORKERS=0`
+  commits inline. Hashes unchanged on `meter_frame`
+  (`a6fcc849341eba9b` / `ff2a220c28750bc3`) and `walker_frame`
+  (`416abee2c5bff47d` / `0bdb6c112e64e643`; the design doc's
+  `3e6f6ad4ebb23ed6` is stale). Fixtures 30/30. Interleaved 9-run
+  `walker_frame` median 14.479 -> 14.643 ms (**+0.16 ms**, gate +0.5).
+- **M2: one SPSC record worker** (`rsx_draw_queue.c`), inFAMOUS 2 shape:
+  packet-owned payload copies, ordered replay, every state-thread backend
+  call drains first. New `test_draw_queue` covers order/wrap/full/sync. MT
+  digests equal serial on `meter_frame`, `walker_frame` and `walker_replay`.
+  New opt-in `REPLAY_NULL_VSRANGE=1` exercises the ranged VS-constant call:
+  it caught the first A/B's black infield (worker rows lacked the `first`
+  leading rows).
+- **Live meter A/B (run 2, after the fix):** p50 **34.16 -> 34.26 ms
+  (+0.10, gate +/-0.5)**, walker **10.88 -> 9.65 ms**, draw **3.05 -> 2.26
+  ms**, fps 34.48 -> 33.19 (one noisy B segment; p90/p99 flat), 0 validation
+  errors, scene diffs at A/A noise (2.32 vs 1.96). The first run
+  (`walkermt_20261104_180852`) is a visual FAIL, fixed here.
+- **M0 capture gate FAILS:** `walker_replay` is **1,278 draws and 23,535
+  read misses** (needs >= 1,300 and 0), so crowded-replay timing stays
+  untrusted; a recapture is the next prerequisite for M3.
+- Offline M2 timing (replay has no Vulkan recording): `walker_frame` -0.18 ms,
+  `meter_frame` +0.82 ms (replay-only texture drains). Default stays off.
+
 ## 2026-11-04 (walker profiler + remap): profiler sampling is a free win, direct remap is neutral
 
 Full analysis in [`docs/walker-remap.md`](walker-remap.md). Branch
