@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (frame-pacing floor): 34.15 ms p50 is the c690 producer, not the flip/present path
+
+One windowed meter launch (`ab_live_pacingfloor_20261104_033642`), N=4 x 10 s
+per arm, 2 s dropped, `PIN=0 WCB=2`, fifo, plus a 90 s PSTL timeline (774 MiB,
+deleted). Full tables, the frame timeline and the code:
+[`docs/frame-pacing-floor.md`](frame-pacing-floor.md). Branch `exp/live-ab`,
+build `recomp-work/build-play`.
+
+- **Hard frames are producer-bound.** A hard meter frame is `c690 lane union
+  32.81 ms` in a `34.28 ms` frame; the next frame's `SET_REFERENCE` fence is
+  published **0.26 ms** before the frame ends. `dur - c690 union` is 3.2 ms.
+- **No 20-32 ms population.** Arm A: 22.7 % of flips 8-16 ms, 7.5 % 16-20,
+  **0.5 % 20-32**, 40.3 % 34-36. Frames either include the c690 burst (~34) or
+  not (~14-18); there is no early-done work rounded up to 34.15.
+- **34.15 is the guest's 2 x 17 ms deadline, not the cause.** The host lwcond
+  rounds 17000 us up to 17 ms, so the two deadline timeouts are 34.13 ms; the
+  branch fires because the next buffer's fence lands at ~34.4 ms (timeline
+  sample: request 0, present 4.36, drain 10.18-33.74, fence 33.738, deadline
+  34.128, tick completion ~36.7, handler ~40.1).
+- **Completing earlier loses.** Fixed `TICK_IN_DRAIN` (B) and the marker-side
+  fence completion (C) both reproduce `FLIP_ON_DONE`: fps **33.91 -> 25.47 /
+  24.56**, p50 **34.15 -> 38.05 / 38.12**, deadline frames 431 -> 16 / 749 per
+  32 s; the fast mode disappears and the ref-wait sum rises 28.2 -> 48.9 ms.
+  Neither key is enabled.
+- **Present is not on the guest path.** Dedicated present thread;
+  `vkQueuePresentKHR` 0-2 ms (one 10 ms), and a 1,139 ms driver stall dropped
+  7 presents while the guest kept flipping at 34 ms. Present mode is fixed at
+  swapchain creation and only affects the window thread.
+- **Review fixes from `ec4c75cf`:** `presented_seq` now carries the queued
+  image's sequence (direct and FIFO-marker path), the three completion copies
+  share one helper, and `test_gcm_tick_in_drain` covers the marker identity,
+  tick-in-drain and fence gates. 30/30 video fixtures pass; `spu_context` ABI
+  check passes.
+- **Next lever unchanged:** c690 / walker. RPCS3's ~20 ms is a faster
+  producer, not a different flip edge; the completion path can recover at most
+  0.26 ms of measured slack.
+
 ## 2026-11-04 (c690 dispatch turnover): the host phase is arbitration, not overhead; cuts lose frames
 
 One launch at the pitch meter (N=6 x 10 s per arm, 2 s dropped,

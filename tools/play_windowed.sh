@@ -148,6 +148,12 @@ export PS3RECOMP_REMAP_FAST="${PS3RECOMP_REMAP_FAST:-1}"
 # unit-tested, but DEFAULT OFF: completing before the next buffer's ref is
 # ready reproduces the FLIP_ON_DONE buffer-ref block (docs/walker-cuts-2.md).
 export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-0}"
+# Complete a presented flip when the next frame's fence is published (the
+# marker-side design for this title: no in-FIFO flip word exists). DEFAULT OFF:
+# the next frame's fence lands after the guest's 2x17 ms deadline, so completing
+# there is late, and completing earlier just moves the wait into the buffer ref
+# (docs/frame-pacing-floor.md).
+export PS3RECOMP_FLIP_FENCE_DONE="${PS3RECOMP_FLIP_FENCE_DONE:-0}"
 # Present the window only when the title produced a new frame. Without it the
 # frame clock's outer pass re-presents on a flip request, so MangoHud's row
 # rate (one per vkQueuePresentKHR) reads above the guest [flip] fps. The
