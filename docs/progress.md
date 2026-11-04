@@ -3,6 +3,30 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (SPU inlining): implemented behind a flag, static gate fails, no meter run
+
+Branch `exp/live-ab` (`ps3recomp-play`), flag `--inline-direct` (default off).
+Offline only: no game launch, `build-play` untouched. Details in
+[`docs/spu-inline-callees.md`](docs/spu-inline-callees.md).
+
+- **Implemented** the audit's §8(2) option: acyclic `SPU_DIRECT` tail targets
+  inlined in tail position, `brsl` callees inlined when they return cleanly
+  through the link, recursion/indirect edges left on the trampoline,
+  `--local-regs` run once over the combined body.
+- **Gate (a) fails.** x86 per SPU on the probes: `0xAF98` 2163 -> 2516,
+  `0xA410` 1243 -> 1243, `0xFDA0_body` 5090 -> 5090, `0x10F78` 1190 -> 1479.
+  Only the `0x10F78 -> 0x10C70` path improves (2471 -> 1479 x86).
+- **Executed instructions do not move.** On the four `0xFDA0` corpus pairs:
+  **810.89 M vs 811.06 M** host instructions (+0.02 %, `perf stat`, 3
+  alternating runs), same cycles, neutral wall time. The inline object is
+  5.0 MB of text vs 1.35 MB.
+- **Why:** the 26-37 % GPR/stack share is intra-function register pressure,
+  not call-boundary traffic. A tail transfer still must publish the dirty GPRs
+  at the chain's final exit; merging bodies enlarges the live-register union
+  and adds spills. A `brsl` boundary is ~2 % of a body, not 15-25 %.
+- **Stopped at gate (a)**: no exactness run, no meter A/B, and the `0xC0F4`
+  back-edge item was not attempted (it was conditional on a gain).
+
 ## 2026-11-04 (long frames): the 40-80 ms population, and a capture for real play
 
 Offline only (no game launch, no build). Data: 35 `play_*` sessions
