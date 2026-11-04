@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker profiler + remap): profiler sampling is a free win, direct remap is neutral
+
+Full analysis in [`docs/walker-remap.md`](walker-remap.md). Branch
+`exp/live-ab`, build `build-play`; offline replay plus two meter A/Bs (the
+second after fixing a profiler-report bug the first exposed).
+
+- **The play default had `PS3RECOMP_WALKER_PROF=1`** (`play_windowed.sh:101`,
+  `ab_live.sh:255`). On the meter replay it costs **8.12 -> 8.92 ms/frame
+  (0.80 ms, ~1.6 us/draw at 502 draws)**; most is the FIFO loop's per-method
+  `clock_gettime` pair, so sampling draws did nothing. New
+  `PS3RECOMP_WALKER_PROF_SAMPLE` (default 8) samples **whole frames** and
+  keeps the `[walker-prof]` line, exact `draws=` and the per-frame
+  `walker=`/`wait=` averages: **8.33 ms/frame**, ~0.2 ms left over the
+  profiler-off 8.12. `SAMPLE=1` restores exact every-frame profiling. This is
+  the only default-on change (pure instrumentation, measured cheaper).
+- **`rsx_vertex_remap_build` is unique-vertex dedup for the GPU indexed
+  draw** (NHL #62). The existing ascending/one-base run already skips it and
+  `REMAP_FAST` answers nearby repeats; dynamic index streams still hash every
+  reference. `PS3RECOMP_REMAP_DIRECT` (live key `PS3_LIVE_REMAP_DIRECT`, off)
+  dedups dense single-base lists through a direct slot
+  `(vertex_id - min) & mask`, exact and unit-tested; the replay gate is
+  unchanged on/off (`a6fcc849341eba9b` / `ff2a220c28750bc3`).
+- **Live A/B: neutral.** Run 2: p50 34.20 vs 34.16, segment-mean fps
+  32.27 vs 33.13, paired -0.86 fps CI [-2.16, +0.45]; the draw-normalised
+  walker medians say the opposite (39.6 vs 45.3 us/draw) because the arms
+  sampled 600 vs 553 draws. Run 1 had B 0.72 fps *slower*. Both CIs cover 0;
+  the key stays off.
+- **memmove 6.5 %** is the GPU staging: raw vertex span
+  (`rsx_vulkan_backend.c:5142`, `span*stride`), remap array (`:5144`) and
+  rebuilt index buffer (`:5151`). No safe trivial cut in this build; trimming
+  the raw copy to the referenced min/max range is the follow-up.
+
 ## 2026-11-04 (walker multithread): design for 2-3x crowded-replay walker time
 
 Design-only mission: **zero code changes in `ps3recomp-play`, zero builds,
