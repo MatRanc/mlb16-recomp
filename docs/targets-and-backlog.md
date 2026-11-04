@@ -259,7 +259,16 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   transform/pack kernels (sel 1: 390 us/call, sel 7: 52 us/call). Native at 1.3-2x would save ~3-5 ms of burst.
   8043db5e NOT pushed: GitHub returned HTTP 500 on `git push fork exp/live-ab` (3 tries 04:4x); retry later.
   Running: static SPU codegen audit (is lifted code slower than a real SPU, and why?).
-- Game queue: c690 0x21 emit/ring (running). Team logo: static analysis + a capture command for the user to drive (no automated menu runs). (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- SPU codegen audit (docs/spu-codegen-audit.md, static): lifted c690 runs ~1.03 ns per SPU instruction vs a real
+  SPU's 0.31 ns (~3.3x slower); 8.4-12.7 x86 per SPU instruction, 26-37 % of it GPR/stack spills. Realistic codegen
+  gain 1.2-1.4x (spills 15-25 %, call dispatch 5-10 %, byteperm/masks 3-6 %). port-local-regs, port-spu-int-simd,
+  port-spu-runtime-cuts are already merged; port-lockline-stripes is neutral.
+- SPEED DECISION FOR THE USER (2026-11-04 morning): the meter frame = the c690 burst (~33 ms), pure compute, on the
+  5 lanes the game allows. Neither per-stage native (<= 1.5x) nor codegen (1.2-1.4x) alone gets near 2x. Options:
+  (a) codegen work (spills) for all SPU code, 1.2-1.4x; (b) native emit kernels 0x21 sel 1/7 (~3-5 ms);
+  (c) GPU offload of Edge geometry (c690-offload-decision.md); (d) run more c690 jobs in parallel than the guest's
+  5 lanes without the guest knowing (SPURS_LANE6 wedged; needs a different design); (e) combine a+b.
+- Game queue: speed paused for the user decision above; offline review-fix batch running. Team logo: static analysis + a capture command for the user to drive (no automated menu runs). (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
