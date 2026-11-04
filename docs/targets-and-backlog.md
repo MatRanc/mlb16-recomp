@@ -202,7 +202,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   and shift image ids: pin it); PIC call-stub seeds hard-coded from capture; g_spu_interp_steps not thread-local;
   capture hook on the central lookup path (weak call when off).
   User check: start screen + instant replay.
-- Game queue: holes merge (running) -> walker-cuts-2 -> team-logo FIFO dump -> Edge unpack/pack (+ cinematics).
+- Holes union MERGED (283c2d86, default off): cap proven (+0x114 = candidate count, buffer end at +0x1E0); gate 0
+  removed. Live meter: p50 same, but -3.7 fps (heavier tail; double cull + LS snapshot). User check of the eyes:
+  PS3RECOMP_C690_CULL_FIX=1. If it fixes them, the cheaper version belongs in native Edge (cull once at 2x-aware
+  rules) rather than running the lifted cull twice. Dispatch fix ddbce4f3 verified live (audio 187.5 blocks/s, no
+  sig-overlay interpretation, start screen 0 frames >= 250 ms). SPU unit tests 11/11 again (stubs for DXT hooks).
+- Game queue: walker-cuts-2 -> team-logo FIFO dump -> Edge unpack/pack (+ cinematics).
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
