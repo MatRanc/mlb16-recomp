@@ -133,6 +133,15 @@ export PS3RECOMP_FS_WRITE_CHECK="${PS3RECOMP_FS_WRITE_CHECK:-1}"
 export PS3RECOMP_SPURS_TEARDOWN="${PS3RECOMP_SPURS_TEARDOWN:-1}"
 export PS3RECOMP_GCM_OFFSET_SYNC="${PS3RECOMP_GCM_OFFSET_SYNC:-1}"
 export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
+# Remap-build recent-reference memo (docs/walker-cuts-2.md): answer a nearby
+# duplicate from a 1024-entry direct-mapped memo instead of probing the open
+# addressing table. -0.57 ms/frame offline, replay gates unchanged. Default on.
+export PS3RECOMP_REMAP_FAST="${PS3RECOMP_REMAP_FAST:-1}"
+# Complete a flip whose commands the drain has already executed and whose image
+# the present path has queued, from the top of the drain pass. Implemented and
+# unit-tested, but DEFAULT OFF: completing before the next buffer's ref is
+# ready reproduces the FLIP_ON_DONE buffer-ref block (docs/walker-cuts-2.md).
+export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-0}"
 # Present the window only when the title produced a new frame. Without it the
 # frame clock's outer pass re-presents on a flip request, so MangoHud's row
 # rate (one per vkQueuePresentKHR) reads above the guest [flip] fps. The
