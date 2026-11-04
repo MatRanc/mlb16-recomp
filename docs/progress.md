@@ -3,6 +3,46 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (WCB async): readbacks are two fences; prefetch removes the copy, meter p50 unchanged
+
+Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
+evidence, code paths and the user's replay command in
+[`docs/wcb-async.md`](wcb-async.md).
+
+- **Attribution (code + live trace):** an ondemand readback is **two**
+  `vkQueueSubmit`+`vkWaitForFences` round trips -- flush the open draw batch
+  and wait, then submit the image->host copy and wait (`rsx_vulkan_backend.c:3088`,
+  `:3247`, `:841`); no queue-idle wait. At the meter the guest reads a
+  six-level 32x32 RGBA8 exposure mip chain by page fault, 0.34-0.35 reads/frame
+  per level. In the user's 40 ms crowded recording: **p50 10 copies/frame**,
+  96 % <= 4 KiB, **13.5 ms/frame** copy+sync; the 4 KiB 32x32 level dominates
+  (mean 6.12 ms, p50 3.23 ms) -- waiting for the draws, not bandwidth.
+- **`PS3RECOMP_RSX_WCB_STREAM` (new, live, default off): neutral.** One
+  submission for the copy plus the open batch: walker **32.62 -> 32.50
+  us/draw**, 32x32 copy 0.985 -> 1.030 ms/f, p50 34.16 -> 34.19. The saved
+  submission was not the cost; the in-batch barriers cost about as much.
+- **`PS3RECOMP_RSX_WCB_PREFETCH` (new, live, default off): the win.**
+  Queue the hot target's copy at the sync point and submit the batch without
+  waiting; the later read collects the in-flight ticket. Meter A/B (one
+  launch, N=6 x 10 s, 2 s dropped): readback copy **1.18 -> 0.17 ms/frame
+  (-86 %)**, guest wait **2.50 -> 0.93 ms/copy (-63 %)**, 32x32 copy
+  **0.955 -> 0.117 ms/frame**, walker **32.39 -> 31.04 us/draw (-4.2 %)**;
+  fps 32.85 vs 32.19 (paired +0.52, CI -0.88..+1.91) and p50 34.16 vs 34.17
+  are unchanged because the meter frame is the c690 producer.
+- **Live per-draw profile** (`perf record` on the `rsx walker` thread, 13,033
+  samples, 25 s): `rsx_vertex_remap_build` 16.3 % (5.3 us/draw), `memmove`
+  6.5 %, `WALKER_PROF` timestamps ~6.7 %, `sink_end_work` 5.1 %,
+  `eng_pipeline_get` 5.0 %, FIFO loop 4.9 %; Vulkan recording+descriptors
+  ~2 %. Lock/futex samples < 0.05 % -- no SPU-lane contention on the walker.
+- **Tests:** `test_color_readback_guest` 85 checks (new stream and prefetch
+  cases, including "drawn again before the read => sync-point bytes"),
+  30/30 video fixtures, replay gate unchanged (`a6fcc849341eba9b` /
+  `ff2a220c28750bc3`). No `spu_context` fields. Nothing default-on.
+- **Next:** the user's zoomed-out replay A/B (`play_windowed.sh` with
+  `PS3RECOMP_RSX_WCB_PREFETCH=0/1` and the 40 ms hitch recorder, command in
+  the doc). The crowded frames are where the 13.5 ms/frame copy+sync can
+  overlap; the meter cannot show it.
+
 ## 2026-11-04 (walker per-draw): offline -14 %, live neutral, nothing default-on
 
 Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
