@@ -3,6 +3,55 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (c690 native dispatch): FAST_RESCHED 64, and a fairness-gated lane hand-off wins 4 ms of p90
+
+Branch `exp/live-ab` (`ps3recomp-play`), build `recomp-work/build-play`. Three
+meter launches: `fastresched1`, `native1` (staged-only first attempt),
+`native2` (native key with the fairness fallback). Details, tables and the
+reproduce commands in
+[`docs/c690-native-dispatch.md`](docs/c690-native-dispatch.md).
+
+- **`SPURS_PM_FAST_RESCHED=64` wins the 8/16/32/64 probe.** 3 x 10 s per arm,
+  2 s dropped: fps 33.04 -> **33.54**, p90 **44.63 -> 43.53 ms**, p99
+  **48.03 -> 46.84 ms**, p50 34.15 ms in every arm, 40-50 share 26.4 ->
+  26.6 %. D=64 wins all three paired segments (+0.62/+0.50/+0.38 fps, p90 and
+  p99 on all three); 16 is neutral, 32 slightly worse. **64 is now the play
+  default** in both `play_windowed.sh` copies and `ab_live.sh`.
+- **Why the earlier dispatch-cuts bundle lost ~2 fps.** `FAST_ACTIVE` is the
+  only cut that changes when the fast path fires: it reran at
+  `active == maxContention`, where the coordinator round trip is the
+  cross-workload arbitration point. The bundle cut the host phase 23.54 ->
+  9.19 ms and the burst wall 34.25 -> 30.99 ms, but the frame got slower:
+  walker wait +0.94 ms, engine +0.91 ms, fps 35.30 -> 33.29, fewer sub-16 ms
+  frames. `ONE_LOCK`/`GEN` only shave the fast path's own overhead.
+- **Where a gap goes today** (existing timelines): critical-lane 10.61 ms of a
+  35.00 ms burst = **tail 2.95 / host 5.03 / head 2.56 ms**; mailbox/tag/event
+  waits are 0 records, `LOCKLINE_RETRY` 0.3 %. The new live 2 s window: A
+  (FAST_RESCHED=64) gap p50 70.3, p90 104.2, p99 1216 us, lane busy 0.589.
+- **Native dispatch implemented behind `SPURS_PM_NATIVE_DISPATCH` (wid
+  bitmask, default 0).** It re-enters the lifted wwsjob PM in the same worker
+  when it has a staged job, or when the guest still has ready/signal work and
+  **no other enabled workload wants this lane**. The PM still owns the WWS job
+  list protocol, so order/dependencies, `maxContention`, priorities,
+  `WwsJobList_SpinUntilDone` counters, labels/signals and workload state are
+  unchanged; everything unrecognised falls back to the coordinator. Unit test
+  in `test_spurs_scheduler` (pure predicate + end-to-end staged rerun with
+  coordinator delta 1 and native delta 1); ABI check and all SPURS fixtures
+  pass.
+- **The A/B is a large win** (`native2`, 5 x 10 s per arm, A = FAST_RESCHED=64,
+  B = same + `SPURS_PM_NATIVE_DISPATCH=6`): fps **34.00 -> 35.33**, p90
+  **43.20 -> 39.21 ms**, p99 **46.67 -> 42.66 ms**, p50 34.15 ms both,
+  40-50 ms share **24.3 % -> 7.1 %**, gap p50 **70.3 -> 53.8 us**, gap p90
+  **104.2 -> 69.8 us**, gap p99 **1216 -> 397 us**, lane busy 0.589 -> 0.613.
+  B segment 9 has a present stall (31.62 fps); excluding it B is ~36.3 fps.
+  Native fired 746,839 times; fairness yielded 26,904, no-ready 5,599.
+- **The staged trigger did not fire** (`nstage=0`): the wwsjob PM stores the
+  job before exiting, so its `loadJobNum`/`runJobNum`/`storeJobNum` are
+  `0xFFFFFFFF` at exit. The effective mode is the fairness-gated ready/signal
+  rerun; the staged path is implemented and unit-tested for a PM that
+  preloads. The native key stays **off** by default per the mission; enabling
+  it is `SPURS_PM_NATIVE_DISPATCH=6`.
+
 ## 2026-11-04 (SPU inlining): implemented behind a flag, static gate fails, no meter run
 
 Branch `exp/live-ab` (`ps3recomp-play`), flag `--inline-direct` (default off).
