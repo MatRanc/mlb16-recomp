@@ -3,6 +3,46 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-03 (native DXT step 3): the kernel is lifted, bit-exact, and the boot hitches are gone
+
+Two launches (the hard cap), both start screen, `PIN=1 WCB=2`, capture on:
+A `ab_live_dxtliftA_20261103_225911` off, B `ab_live_dxtliftB_20261103_230713`
+on. Details, tables and the gate in
+[`docs/dxt-native-step3.md`](dxt-native-step3.md).
+
+- **Lifted.** `lift_jobmods.py --engine-elf` accepts a header link base of 0
+  (PIC) and lifts the module at `0x4000`, entry `0x4030`, source EA
+  `0x010A1700`, image 207, verified span `[0x4030,0x67DC)`. Thirteen PIC
+  call-stub/function-table entries are seeded (`0x4050, 0x5318, 0x6010,
+  0x603C.., 0x61BC, 0x6734, 0x6748, 0x67D4`); without them the lift stopped at
+  `0x600C` and the encode/DMA body stayed interpreted. 300 functions, 0
+  unsupported. Generated as `jobmods_register_dxt.c`, gated by
+  `PS3RECOMP_DXT_LIFT` (default on).
+- **Instrumentation gap closed.** The in-context rejoin
+  (`spu_smc_microstep -> spu_interp_run_until`) now emits `spu.interp` with the
+  instruction count in `b`. A reports 35,426 spans / 18.51 s; 18.50 s and
+  240,988,752 instructions are the DXT range. The earlier "zero spu.interp"
+  attribution was the missing hook, not lifted compute.
+- **Gate: 100 %.** Offline replay of the lifted kernel (plus the WWS policy
+  module's lifted helpers) on the B entry states and DMA: **346/346 complete
+  entries, 5,101 PUTs, 890,688 block pairs, 0 mismatched, 0 missing input
+  GETs** (one torn tail skipped). Lifted **136 ns/block** (0.121 s total);
+  interpreter **~20.8 us/block** lane time (18.50 s / 890,688).
+- **A/B at the start screen.** A: 14 hitches / 5,389 ms on the timeline (flip
+  gaps >250 ms: 11 / 7,623 ms). B: no timeline record >=250 ms, one 308 ms
+  flip gap, 621 flips vs 600, no wedge. Wid-0 policy lane time from the
+  capture: **11,722 ms -> 867 ms**, on a larger B workload (344 vs 273
+  captured policy runs).
+- **Default:** the lift stays on; `PS3RECOMP_DXT_LIFT=0` is the off arm.
+  Play test: `cd recomp-work && ./play_windowed.sh`, start screen, then a game
+  and an instant replay. The encoder is not started; its plan is in §5 of the
+  doc.
+- **Deviations:** A's raw `frame.ppm` was overwritten by B before copying, so
+  no direct A/B pixel diff (B's frame is saved as
+  `recomp-work/dxtlift_B_frame.png`); B's timeline is empty by design (no
+  hitch >=250 ms) and its lane time comes from the capture timestamps. Both
+  arms ran the entry capture (~230 MiB each), so the A/B is conservative.
+
 ## 2026-11-03 (native DXT step 2): the kernel is an unlifted module; stop at the gate
 
 One launch (`ab_live_dxtcap1_20261103_224034`, start screen, `PIN=1 WCB=2`).
