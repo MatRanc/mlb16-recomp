@@ -268,6 +268,13 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   (a) codegen work (spills) for all SPU code, 1.2-1.4x; (b) native emit kernels 0x21 sel 1/7 (~3-5 ms);
   (c) GPU offload of Edge geometry (c690-offload-decision.md); (d) run more c690 jobs in parallel than the guest's
   5 lanes without the guest knowing (SPURS_LANE6 wedged; needs a different design); (e) combine a+b.
+- Review-fix batch 1 (docs/review-fixes-batch1.md, 16fc2d28): sticky ferror, live fs switch, lwcond tombstone,
+  shader cache tmp sweep / trailing bytes / I/O outside the lock. Medium review: tmp sweep deleted ANY old *.tmp in a
+  possibly user-supplied dir -> fixed (own names only, test added). Open nits: clearerr hides an earlier failed
+  write's lost bytes (game sees CELL_OK on the next write); lwcond tombstone still ambiguous on Windows (32-bit long);
+  fs_write_check_on per-TU cache and live key now overrides env in cellFsUtilWriteFile; shader cache: duplicate
+  translation on concurrent misses, rejected load leaves junk in the caller buffer, lock taken 2-3x per load,
+  Windows remove+rename vs unlocked readers.
 - Game queue: speed paused for the user decision above; offline review-fix batch running. Team logo: static analysis + a capture command for the user to drive (no automated menu runs). (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
