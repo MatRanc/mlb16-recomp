@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker per-draw): offline -14 %, live neutral, nothing default-on
+
+Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
+rank, exactness and commands in [`docs/walker-per-draw.md`](walker-per-draw.md).
+
+- **Offline replay, 7 interleaved runs x 240 frames:** from the play defaults
+  (`PIPE_MEMO=1 REMAP_FAST=1`) the reference-list remap memo plus an
+  incremental reference hash and an indexed memo lookup cut
+  `meter_frame` **8.986 -> 7.742 ms (17.90 -> 15.42 us/draw)** and
+  `walker_frame` **13.146 -> 11.294 ms (19.68 -> 16.91 us/draw)**. All replay
+  hashes/gates identical (`a6fcc849341eba9b` / `ff2a220c28750bc3`,
+  `416abee2c5bff47d` / `3e6f6ad4ebb23ed6`). 30/30 video fixtures pass,
+  including a new fold-vs-full reference-hash check.
+- **Perf rank (meter, play defaults):** `rsx_vertex_remap_build` 18.3 %,
+  texture sparse/full hashing 16.8 % (replay-only; live uses `TEX_DIRTY`),
+  `eng_pipeline_get` 5.2 %, vertex conversion 5.1 % + 3.3 % fetch blocks,
+  FIFO loop 4.1 %. The whole offline win is `fetch_plan` (meter 1.90 -> 0.47
+  ms; walker 2.87 -> 0.69 ms).
+- **Live meter A/B (one launch, N=6 x 10 s, 2 s dropped):** p50 **34.15 vs
+  34.17 ms** (c690-bound, unchanged), walker **17.72 vs 19.49 ms**. The arms
+  did not sample the same scene (A ~519 draws/flip, B ~555, +7 %); normalised
+  the walker is **31.5 vs 32.0 us/draw (+~2 %)**, i.e. neutral to slightly
+  worse. The static capture's remap memo hits 497/502 with 0 misses; live the
+  index streams change, the memo misses, and the save copy is pure overhead.
+- **Keys:** `PS3RECOMP_REMAP_CACHE` (existing, still off in the play scripts),
+  new `PS3RECOMP_REFS_HASH_FAST` / `PS3_LIVE_REFS_HASH_FAST` and
+  `PS3RECOMP_MEMO_INDEX` / `PS3_LIVE_MEMO_INDEX`, all default **off**. No
+  `spu_context` fields changed. Recommendation: do not default them; a future
+  retry needs a two-strike save and a live A/B, and the live-only Vulkan
+  recording / phase-2 WCB waits are the real per-draw levers.
+- **Also:** the team-select capture is a single 4-vertex draw (the logo is
+  never submitted), so it cannot rank per-draw work. A crowded-replay capture
+  command is in the doc (section 7.2) for the next renderer mission.
+
 ## 2026-11-04 (meter p50 pin): 34.15 ms is the c690 producer, not the flip/vblank model
 
 Two meter launches, branch `exp/live-ab` in `ps3recomp-play`, build
