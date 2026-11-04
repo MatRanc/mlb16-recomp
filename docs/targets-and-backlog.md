@@ -235,7 +235,13 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   dispatch turnover (host 5.0, head 2.6, tail 3.0 ms), 5 lanes balanced, no serial chain. Levers: gaps -5..-10.6 ms,
   sixth lane -5.8 ms, native unpack/pack+skin+normalize at 1.4x -3.2 ms, native cull alone -0.3 ms. Running:
   dispatch cuts + sixth lane.
-- Game queue: c690 dispatch cuts + sixth lane (running) -> native unpack/pack/skin (if still worth it) -> team-logo FIFO dump -> tick marker-side A/B (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
+- c690 dispatch cuts (docs/c690-dispatch-cuts.md, 84e5dd06, default off): host gap -61 %, burst wall 34.25 ->
+  30.99 ms, occupancy +6 pts, but fps -2.0 (other workloads delayed) and p50 still 34.15. Sixth lane: guest
+  nSpus=6, MeshJobs maxContention=5; SPURS_LANE6 wedges in ~10 s. Not kept.
+- KEY FINDING: p50 is pinned at 34.15 ms (two 16.68 ms periods) no matter how much work we cut. The next lever is
+  the flip/present pacing floor, not more work cuts. Running: frame-pacing-floor mission (present mode, tick
+  marker-side completion with the presented_seq review bug fixed first).
+- Game queue: frame-pacing floor (running) -> team-logo FIFO dump -> native unpack/pack/skin (if the floor moves) (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
 - ppu_fs.cpp:572 / cellFs.c:586: ferror() is sticky; after one failed write every later write on that fd returns
