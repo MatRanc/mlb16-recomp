@@ -255,6 +255,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   0x21 (handler 0x13080 "emit/ring", 102 us/call), 0x2A assembler 15.7 %, 0x13 copy 9.7 %, cull 12.7 %, 0x0A 7.5 %.
   The old stage shares were from another scene. Per-stage native SIMD tops out ~1.0-1.5x (compiler already emits the
   same AVX2). Running: is 0x21 compute or a WAIT (ring space / label / reservation / DMA)?
+- 0x21 emit/ring (docs/c690-emit-ring.md, 8043db5e): pure COMPUTE (0 DMA, 0 reservations, 0 waits). Two float
+  transform/pack kernels (sel 1: 390 us/call, sel 7: 52 us/call). Native at 1.3-2x would save ~3-5 ms of burst.
+  8043db5e NOT pushed: GitHub returned HTTP 500 on `git push fork exp/live-ab` (3 tries 04:4x); retry later.
+  Running: static SPU codegen audit (is lifted code slower than a real SPU, and why?).
 - Game queue: c690 0x21 emit/ring (running). Team logo: static analysis + a capture command for the user to drive (no automated menu runs). (meter + cinematics) -> team-logo FIFO dump -> tick marker-side A/B.
 
 **Review follow-ups (low code review of 7a3b38e4, batch 1; none urgent)**
