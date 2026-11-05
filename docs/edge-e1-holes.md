@@ -36,15 +36,16 @@ cost **-4.8 fps**; both are diagnostics only.
   the lifted union, and the fused kept count `+0x114` equals the dumped list
   length, a multiple of 3, and the union's count on every pair. Buffer
   pointer/end never move.
-* **Cost, gcc `-O2` offline gate per 0x132E0 call:** lifted 24.0 us, native
-  exact 19.5 us, **fused holes 35.6 us**, lifted union driver 115.7-126.5 us.
-  The fused pass is **~3.2-3.5x cheaper than the union** and ~1.5x the lifted
-  cull. Three repeats: 24.9 / 18.9 / 39.7 / 116.3 us (medians).
+* **Cost, gcc `-O2` offline gate per 0x132E0 call:** lifted 22.2-24.9 us,
+  native exact 18.9-19.9 us, **fused holes 39.7-41.9 us**, lifted union driver
+  116.2-119.9 us.
+  The fused pass is **~2.7-3.5x cheaper than the union** and ~1.5-1.9x the
+  lifted cull. Three repeats: 24.9 / 18.9 / 39.7 / 116.3 us (medians).
 * **Meter estimate: near-neutral, not yet measured.** 0x25 (8.6 % of the
   meter c690 wall) runs the native stage and is *faster* than the lifted
   cull; 0x26 (4.1 %) pays the extra sample evaluation. The union was -4.8 fps
-  while costing ~3.3x the lifted cull; the fused pass is at ~1.5x, so the
-  expected meter delta is about **-0.5 to 0 fps**, i.e. inside the A/B noise.
+  while costing ~4.7-5.4x the lifted cull; the fused pass is at ~1.6-1.9x, so
+  the expected meter delta is about **-0.5 to 0 fps**, i.e. inside the A/B noise.
   The live A/B is the next mission's job (§5).
 * **Nothing is enabled by default.** `PS3RECOMP_C690_HOLES_NATIVE` is a new
   live key, 0 in every script. `PS3RECOMP_C690_CULL_FIX`,
@@ -162,18 +163,19 @@ never caches a negative; only the fused probe may skip a rescan, and only for
 
 ## 4. Cost and meter estimate
 
-Whole 0x132E0 call, 128 pairs, gcc `-O2 -march=native`, one gate run; a
-second mission's `replay_rsx_engine` was running, so absolute values varied
-between repeats. The ordering and the ratios were stable (3 pinned repeats in
-parentheses).
+Whole 0x132E0 call, 128 pairs, gcc `-O2 -march=native`. A second mission's
+`replay_rsx_engine` ran for part of this session, so absolute values varied
+between runs; the ordering was stable. Final gate run (log
+`recomp-work/build-e1/e1_gate_final.log`), with the three-repeat medians in
+parentheses:
 
 | mode | mean us/call | ratio to lift |
 |---|---:|---:|
-| lifted body | 24.0 (24.9) | 1.00 |
-| native 0xD080, exact (mode 0) | 19.5 (18.9) | 0.81 (0.76) |
-| **fused holes (0x25/0x26)** | **35.6 (39.7)** | **1.48 (1.59)** |
-| native union (mode 1) | 115.7 (116.3) | 4.82 (4.67) |
-| lifted union driver | 126.5 (116.2) | 5.27 (4.67) |
+| lifted body | 22.2 (24.9) | 1.00 |
+| native 0xD080, exact (mode 0) | 19.9 (18.9) | 0.90 (0.76) |
+| **fused holes (0x25/0x26)** | **41.9 (39.7)** | **1.89 (1.59)** |
+| native union (mode 1) | 112.8 (116.3) | 5.08 (4.67) |
+| lifted union driver | 119.9 (116.2) | 5.40 (4.67) |
 
 Split by family (quiet 3-repeat medians): 0x25 lifted 19.1 / native 19.2 /
 holes **17.6 us**; 0x26 lifted 22.0 / native 18.3 / holes **63.6 us**. 0x25

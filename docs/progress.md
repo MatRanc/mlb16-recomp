@@ -31,9 +31,9 @@ under `ps3recomp-play`, `build-play` or `build-mt` was touched.
   for 256 calls, so the 0x26 pairs after 64 0x25 pairs scored inert. Negatives
   are never cached now; only the fused probe may skip a rescan, and only for
   0x25 (every captured 0x25 job has no transform, every 0x26 job has one).
-- **Cost (gcc -O2, one 0x132E0 call):** lifted 24.0 us, native exact 19.5,
-  **fused holes 35.6**, native union 115.7, lifted union 126.5. ~3.2-3.5x
-  cheaper than the union and ~1.5x the lifted cull; 0x25 is at native cost
+- **Cost (gcc -O2, one 0x132E0 call):** lifted 22.2-24.9 us, native exact
+  18.9-19.9, **fused holes 39.7-41.9**, native union 112.8-116.3, lifted union
+  116.2-119.9. ~2.7-3.5x cheaper than the union and ~1.6-1.9x the lifted cull; 0x25 is at native cost
   (faster than lifted) and only 0x26 pays the sample evaluation. Estimate:
   ~-0.5 to 0 fps at the meter, inside the A/B noise. Not measured live.
 - **Next:** merge, re-patch the module and rebuild `build-play`, then run the
