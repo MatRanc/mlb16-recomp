@@ -159,6 +159,11 @@ The pack rules were re-derived from the corpus: `trunc` toward zero, then
 value; it is bit-exact for ~75 % of normals and ~61 % of tangents/UVs, and
 1 LSB for the rest. Positions are exact.
 
+The burst cost was not re-measured. The kernel does the same gather/pack as
+the already-measured 36-byte assembler, whose one-dispatch 429-job burst is
+**0.23-0.27 ms device-local** (phase 2b step 1); the 32-byte kernel is the
+same shape with four fewer bytes per record, so GPU cost is not the blocker.
+
 ## 5. Exactness gate
 
 `python3 tools/replay/test_c690_2a_32b.py --spool …/fncap2b2w3`:
