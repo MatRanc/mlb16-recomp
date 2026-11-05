@@ -93,6 +93,8 @@ export PS3RECOMP_FP_TXD="${PS3RECOMP_FP_TXD:-1}"
 export PS3RECOMP_DOF_PATCH="${PS3RECOMP_DOF_PATCH:-1}"
 # write the frame dump off the walker thread (0.5-0.7 s hitches otherwise; docs/present-stalls.md)
 export PS3RECOMP_VK_DUMP_ASYNC="${PS3RECOMP_VK_DUMP_ASYNC:-1}"
+# shader disk cache survives rebuilds (was 0 hits after every rebuild; docs/boot-gaps.md)
+export PS3RECOMP_SHADER_CACHE_STABLE_KEY="${PS3RECOMP_SHADER_CACHE_STABLE_KEY:-1}"
 export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 export PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W"
 export PS3RECOMP_C690_STATS=1

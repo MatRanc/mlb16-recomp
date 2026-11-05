@@ -301,3 +301,10 @@ the `[fliplog]`/`[shader-cache]`/`[pipe-timing]` lines in the two logs.
 * Pre-lift evidence: `docs/boot-spu-hitches.md`,
   `docs/hitch-census.md`, `docs/dxt-native-step3.md`,
   `docs/shader-disk-cache.md`, `docs/present-stalls.md`.
+
+## Default on (2026-11-05, Claude)
+
+Reviewed d503ee61: the stable key still compares translator version, glslang version, stage, guest key, HLSL length and
+the full HLSL text hash; only the build stamp is dropped. Risk: a change to the HLSL->SPIR-V step itself without a
+`RSX_SHADER_TRANSLATOR_VERSION` bump would serve stale SPIR-V; bump the version when touching that step.
+`PS3RECOMP_SHADER_CACHE_STABLE_KEY=1` is now the default in `tools/play_windowed.sh` and the recomp-work scripts.
