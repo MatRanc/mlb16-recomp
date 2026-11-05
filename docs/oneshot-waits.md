@@ -61,3 +61,38 @@ Vulkan backend; the replay md5 equality is the test.
 
 Readbacks (4) are untouched; the live `[oneshot-by]` decides whether they are next (a depth stream ticket like colour's).
 Steady-state replay shows 0 one-shots with or without the key, so the live win is unmeasured.
+
+## Live result and correction (user run 17:11, key flipped 17:13:44)
+
+The create ranking was wrong. Heavy reports, per frame, key off: oneshot 22.4 ms (13.8 one-shots): `flush:engine` 16.1,
+`flush:begin` 5.5, `vk_eng_readback` 0.6, `vk_cube_rt_copy` 0.13, all creates 0.0. Key on: unchanged. The create key
+stays (harmless, default 0) but is not the lever.
+
+## flush:engine by call site (branch `exp/oneshot2`)
+
+`flush:engine` is now split by name (a pointer in `g_rsx_ww_ctx` set at each site, consumed by the flush):
+`eng:guest_read` (NV3089 source read, `rsx_draw_engine.c` ~2540), `eng:zdepth_store` (~3809, depth to guest),
+`eng:wcb_copy_surface` (~4044, WCB demand copy, non-stream), `eng:pd_write_surface` / `eng:pd_write_depth` (dump
+tools), `eng:flush`, `eng:shutdown`, plus the backend's own `be:readback_fetch` (stream/prefetch ticket collect) and
+`be:submit_batch` (no frame pipeline). Replay md5 unchanged, fixtures 34/34 (one run had a flake, rerun clean).
+
+## What forces each wait
+
+* `eng:guest_read`: the walker itself consumes the bytes next (the NV3089 transfer is a CPU copy from guest memory), so
+  it cannot be deferred without moving the transfer to the GPU.
+* `eng:wcb_copy_surface`, `be:readback_fetch`: a guest CPU thread has faulted on a protected render-target page and is
+  blocked until the bytes exist. The game's own fences (`SET_REFERENCE`, `Gfx_WaitPrevFrameRef`, see
+  [rsx-sync.md](rsx-sync.md)) do not apply: the read is not "after a fence", it is a demand read now. The time is not
+  the copy (4 KiB) but the accumulated draw batch completing on the GPU (wcb-async.md: p50 10 copies/frame in the
+  crowd, 13.5 ms/frame). Fits 13.8 one-shots/frame at 16 ms.
+* `eng:zdepth_store`: same, for a depth target the guest or a texture bind needs in guest memory; absent from the live
+  `[oneshot-by]` (no `vk_eng_depth_readback` entry), so not a factor.
+* `flush:begin`: the `vk_begin()` of the sync `vk_eng_readback` flushing the batch it is about to follow.
+
+## Result: no new key
+
+The safe deferred form already exists and was measured at the meter: `PS3RECOMP_RSX_WCB_PREFETCH` (queue the copy at
+the sync point, submit without waiting, collect the in-flight ticket at the fault; -86% readback engine cost, wcb-async.md)
+with `PS3RECOMP_RSX_WCB_STREAM` (one wait instead of two). Both are live keys, off by default, and have not been tried on the
+crowded zoomed-out scene. Writing another form would duplicate them. Prefetch changes the read to "the target as of the
+sync point it just passed" (same contract as WCB=3); that is the correctness question the next run tests visually.
