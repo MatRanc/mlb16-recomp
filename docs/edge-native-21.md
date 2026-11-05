@@ -174,7 +174,7 @@ Run `ab_live_native21ab_20261105_060006`, `BUILD=build-n21`,
 
 | phase | result |
 |---|---|
-| capture | 96 requested, 78 written during the 20 s settle; 96/96 `[c690-cap21] DONE` lines from the lanes |
+| capture | 96 requested, 78 distinct files written during the 20 s settle (four `[c690-cap21] DONE 96 pairs` lane lines; the per-lane capture counter is racy, so indices can collide) |
 | A segment | clean 10 s (flips continuing) |
 | B segment 1 | **wedged**: `STOP: no flips during segment 1 (B)` ~0.2 s after the switch |
 | performance numbers | none (the run exits on the hang guard) |
