@@ -89,6 +89,8 @@ export SPURS_PM_NATIVE_DISPATCH="${SPURS_PM_NATIVE_DISPATCH:-6}"
 export PS3RECOMP_FLIP_TICK_OWN_STATE="${PS3RECOMP_FLIP_TICK_OWN_STATE:-1}"
 # character shaders: translate TXD/DDX/DDY so jersey torsos draw (docs/jersey-transparent.md)
 export PS3RECOMP_FP_TXD="${PS3RECOMP_FP_TXD:-1}"
+# the user's Better depth of field blur, applied at ELF load (docs/dof-patch.md)
+export PS3RECOMP_DOF_PATCH="${PS3RECOMP_DOF_PATCH:-1}"
 export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 export PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W"
 export PS3RECOMP_C690_STATS=1

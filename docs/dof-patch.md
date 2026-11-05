@@ -120,3 +120,9 @@ background crowd and walls, and at the edge of a sharp player or the ball:
   on (a `[dof] refused ...` line means stop and report the EBOOT mismatch).
 
 The pitch meter has no DOF pass, so its fps is only a regression guard.
+
+## Default on (2026-11-05)
+
+The user checked a replay/close-up: the blur looks better with the patch. Claude reviewed a3b84aca, merged exp/dof-patch into
+exp/live-ab, rebuilt build-play (test_dof_patch passes) and made `PS3RECOMP_DOF_PATCH=1` the default in
+`tools/play_windowed.sh` and the recomp-work play/ab scripts. The uniform moire is unchanged by it (user).
