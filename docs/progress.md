@@ -3,6 +3,50 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker MT repair): build fixed, C hang fixed, black field gone, timing/visual gates still fail
+
+Full analysis in [`docs/walker-mt-repair.md`](walker-mt-repair.md). Branch
+`exp/live-ab`, `build-play` live and `build-mt` offline. Four launches (the
+cap): two pre-fix A/B/C reproductions, one validation-layer A/B/C, one timing
+A/B. Nothing default-on.
+
+- **build-mt fixed for the mission targets.** Its `Release` flags lacked
+  `-march=native`, so `c690_native_cull.c` hit the `-mfma` `#error`. Reconfigured
+  to build-play's `-O2 -DNDEBUG -march=native`; `replay_rsx_engine`, the queue /
+  readback tests and the new `test_mt_turns` build. A full build still stops on
+  three pre-existing, unrelated target source-list gaps (`replay_rsx`,
+  `fiber_switch`, `test_vdec_stub`).
+- **Black field: the worker's depth clear and scratch-depth setup used the
+  walker's shared `s_vk.cmd` and submitted outside the chunk's turn.** They now
+  record into the worker's chunk at the packet position, state-thread
+  clears/uploads are submitted before the chunk that uses them, and texture
+  handles are immutable/deferred under MT. The field is no longer black (dark
+  fraction 0.137 vs A 0.143), but A/B thumbnails still differ by mean abs
+  **38.8/255 vs an A/A baseline of 3.4**, so the visual gate fails.
+- **C hang reproduced twice and fixed by removing the third thread.** The
+  `rsx-tex` resolver ran texture create/upload on its own thread with
+  `vk_t_user == NULL`, sharing the walker's one-shot command buffer, fence and
+  staging buffer; the walker wedged (no `[walker-prof]`, guest `[flip]` still
+  advancing, frame frozen). Plain textures now resolve on the state thread
+  before the packet is queued; C runs its whole window. `test_mt_turns` (five
+  turn/epoch scenarios, 10 s watchdog) passes. No gdb stack dump: both
+  watchdog scripts failed before attaching (non-executable, then a `pgrep`
+  process-name mismatch), and the last launches were kept for validation/timing.
+- **Texture drain mostly removed, gate still fails.** Plain and surface-view
+  bind drains are gone for a recording backend; texture releases are deferred.
+  Live `tex` 14.5 (M4) / ~50 (first repair build) -> **7.85 ms/frame** (MT off
+  0.34). Timing A/B (N=6 x 10 s, 2 s dropped, `ab_live_walkermt8timing`):
+  fps **35.10 -> 33.03**, walker **9.50 -> 12.77 ms**, wait 16.51 -> 17.84,
+  state `draw` 2.62 -> 1.04 and `bind` to 0. The remaining ~17 us/texture slot
+  is the target/depth/reinterpreted readbacks and the forced create-and-swap;
+  the next step is ordered upload records in the worker buffer.
+- **Validation** (`ab_live_walkermt7valfinal`): no VUID and no error in A/B/C;
+  only 10 pre-existing swapchain threading errors during boot/menus, also
+  present with MT off. No hang, no fallback. The final binary (last deferred
+  release) was built after this run, so it was not re-validated (launch cap).
+- **No user zoomed-out command.** B is slower, visually different and has no
+  timing win.
+
 ## 2026-11-04 (menus, revision 2): user confirms ~60 fps; FIFO fall-through and 17 ms bound kept
 
 Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Branch
