@@ -3,6 +3,35 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (menus): flip tick fix implemented behind a live key, meter A/B neutral
+
+Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Implements the
+[`menu-34ms.md`](menu-34ms.md) proposal on branch `exp/live-ab`,
+`build-play`. `PS3RECOMP_FLIP_TICK_OWN_STATE` (**default off**,
+`PS3RECOMP_CTL` switchable): `cellGcmTickFlip` judges a direct flip by our own
+`s_flip_direct_pending` + request timestamp instead of the guest's
+`s_flip_status`, and only while the request is younger than the guest's first
+17 ms wait (the age bound KEEP_STATUS lacked). Key off keeps the old gate
+exactly.
+
+- **Unit-tested** (`test_gcm_tick_in_drain`, 30/30 video fixtures): request ->
+  `SetPrepareFlip` clobbers status to DONE -> tick completes once; a request
+  older than 17 ms is not completed and stays outstanding; no double
+  completion; no completion without a request. No `spu_context` change.
+- **Pitch-meter A/B** (`ab_live_menufix_20261104_201037`, one launch,
+  N=6 x 10 s, 2 s dropped, arms alternated): p50 **34.15 ms both**, p90
+  38.01 -> 37.27, p99 41.00 -> 40.89, fps 34.75 -> 36.71 (mixed per-segment
+  sign; one A segment has a host stall), 0 dropped presents, no hang. Two
+  consecutive-timeout frames 0.327 -> 0.374 per frame (sampled every 2 s;
+  reported, not a frame-time regression).
+- **Scene thumbnails**: A/B mean abs diff 2.97/255 vs A/A 3.44 and B/B 2.89
+  (inside the A/A control). No visual change.
+- **Menu number is the user's**: start screen + main menu + team select, key
+  off vs on, 17 ms hitch recording to `recomp-work/captures/` (command in the
+  doc, plus a `PS3RECOMP_CTL` fallback). Expect ~55-60 fps, no stutter,
+  animations/audio normal, no hang on screen change or match load. Nothing is
+  default-on; user decides, then a medium review before default.
+
 ## 2026-11-04 (menus): the 34 ms frames are the display tick skipping a status the title rewrites
 
 Full analysis in [`docs/menu-34ms.md`](menu-34ms.md). Diagnosis only: no code
