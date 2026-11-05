@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (jerseys): the torso was two dropped character draws, not a texture
+
+Full analysis in [`docs/jersey-transparent.md`](jersey-transparent.md).
+Offline replay of the existing `meter_frame` capture plus one pitch-meter A/B
+(`ab_live.sh`, N=4 x 10 s per arm). No RPCS3 or other GPL source read or cited;
+the NHL Legacy and inFAMOUS 2 MIT notes were checked for the alpha /
+render-to-texture classes and did not match.
+
+- **Cause.** Two character fragment programs use `DDX`/`DDY` then `TXD` on a
+  gamma-flagged unit. The decompiler had no `TXD`/`DDX`/`DDY`, and a gamma
+  `TXD` returned `-1`, failing the whole fragment program; the engine dropped
+  every draw through it (`FAILED (draw dropped)`). The jersey torso is those
+  draws: **23 per frame** at the meter (replay 502 off vs 525 on).
+- **Fix.** `TXD` -> `SampleGrad(coord, ddx, ddy)`, `DDX`/`DDY`, and the
+  existing gamma / `EXP_TEX` wrappers on `TXD`, all behind the live key
+  `PS3RECOMP_FP_TXD` (default off). The key is part of the pipeline identity,
+  so a live flip rebuilds the programs. Key-off replay digest is unchanged
+  (`meter_frame` 64 frames: `461ff3a834c62331` / `089e7b1082b4bcc3`); key on is
+  `3c3b3b85532a2ff5` / `0a9220f49d76e843`, 525 draws/frame. New checks in
+  `test_fp_decompiler` (92 pass); `test_video_fixtures` 30/30 serial (the
+  pre-existing parallel `test_gcm_tick_in_drain` flake).
+- **Meter A/B.** fps **37.88 -> 36.38**, p50 **34.14 -> 34.15 ms**, p90
+  **36.72 -> 38.62**, p99 **39.79 -> 41.78**, walker **7.55 -> 9.60 ms**
+  (paired -1.50 fps, 95 % CI -3.68..+0.68, N=4). The cost is the 23 restored
+  character draws; the bug had been hiding ~4 % of the meter's character work.
+  The per-arm crops show the torso transparent off and the white jersey with
+  name/number on (`recomp-work/visuals/jersey_txd/`).
+- **Next:** the user's 5-minute check in `jersey-transparent.md` §6 (pitch
+  meter + batter walk-up, live flip); decide whether to make it a play
+  default. The key stays off until then.
+
 ## 2026-11-05 (auto-exposure): the 1x1 chain, a high-gain dead band, and a timing-dependent read
 
 Full analysis in [`docs/exposure-flicker.md`](exposure-flicker.md).

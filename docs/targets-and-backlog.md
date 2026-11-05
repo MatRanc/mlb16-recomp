@@ -377,7 +377,17 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 
 ## Visual backlog (parked)
 
-- Jerseys missing (not the cube probes; cause unknown).
+- **Jerseys FIXED 2026-11-05 (key off by default).** The torso was not a
+  texture: two character fragment programs were dropped because they use
+  `DDX`/`DDY` + gamma `TXD`, which the decompiler did not translate. Implemented
+  `TXD`/`DDX`/`DDY` behind the live key `PS3RECOMP_FP_TXD` (default off);
+  key-off replay digest unchanged, key-on restores **23 draws/frame** and the
+  jersey. Meter A/B: fps 37.88 -> 36.38, p50 34.15 both, walker +2 ms -- the
+  cost of the draws that were missing. Details and the user command:
+  [`jersey-transparent.md`](jersey-transparent.md). Next: user visual check,
+  then decide on a play default.
+- Jerseys: previous note (not the cube probes; cause was unknown) superseded by
+  the entry above.
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/
   scene_1793665113991.png).
 - Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it). **NEXT after the jersey + exposure missions (user, 2026-11-05).** Start from team-logo.md: the capture shows the logo is never submitted (upstream of RSX); the StressTestUIElem diagnostic run is ready.
