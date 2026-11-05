@@ -4383,3 +4383,11 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   RequestIdleSpu; #650 PS3RECOMP_TRACE.
 - **Clean-room rule:** ps3recomp/mlb16-recomp are MIT; RPCS3 is GPLv2. Never copy or port RPCS3 (or other GPLv2) code;
   write original code against ps3recomp's own structures. This keeps the project MIT-compliant and upstreamable.
+
+## 2026-11-05: walker waits attribution (exp/walker-waits)
+
+- Roundtable item 1: `PS3RECOMP_WALKER_WAITS=1` (default 0) times 14 blocking sites on the walker thread
+  (queue submit, one-shot/readback fences, pipelined-set fences, present fences/locks, acquire, async shader wait,
+  pipeline create, WCB lock, MT spins) and prints one `[walker-waits]` line per `[walker-prof]` report.
+  Offline crowded replay: steady frame blocks ~0.9 of 42.6 ms, so the live parse gap needs one live run
+  ([walker-waits.md](walker-waits.md)). Fixtures 34/34. Branch pushed to `fork` only.
