@@ -82,6 +82,10 @@ checking if any geometry-only regression remains.
 ## Priority: speed and frame-time stability first
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
+**Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) Claude review of M2-M4 + crowded-capture
+fix (full mesh-ring spans) + walker-prof sampling fix; (3) user recapture + crowded replay test; (4) M5 hardening ->
+default if it wins (renderer track done); (5) then Edge E1, E2. E1 only jumps ahead if the renderer is blocked waiting
+on the user.
 **Edge queue when it resumes, in order:**
 - E1. EYE HOLES FIX (user: "aren't we gonna get to that?" -- yes, Edge work, not parked): fuse the holes rule into the
   native 0x25/0x26 screen cull (one pass, conservative: never drop a triangle the 2x1 AA grid keeps). Blocker from
