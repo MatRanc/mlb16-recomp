@@ -1,5 +1,12 @@
 # Progress log
 
+## 2026-11-05 (walker diet): keeping the render pass open and hoisting the vertex unpack cuts the draw phase ~4 ms
+
+Branch `exp/walker-diet` (docs/walker-diet.md). Four default-0 live keys; offline Vulkan crowded replay walker
+43-46 -> 38.3 ms, `draw` 13-14 -> 8.9, byte-identical frame, validation layers clean. The shadow constant texture is
+correct but gains nothing after the depth-GPU fix. Existing REMAP_DIRECT+FAST add another ~1.8 ms of `fetch`.
+Live perf shows the walker on-CPU only ~52% of the time, so CPU-side gains are bounded. USER owes one live flip test.
+
 ## 2026-11-05 (RSX sync): the guest's GPU-done wait, and the write-vs-pending-draw window
 
 Branch `exp/rsx-sync` (off `exp/live-ab`) in `ps3recomp-sync`, build
