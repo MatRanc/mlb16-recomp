@@ -4416,3 +4416,15 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
 - Offline: `check_spu_context_abi.sh` PASS (no `spu_context` change); `build-sync` builds; video fixtures 34/34 after
   a test-only weak `g_spu_put_hook`/`ps3_ms_now` stub (the `exp/live-ab` Bink DMA log path broke the fixtures on the
   base commit). Code to `fork` only.
+
+## 2026-11-05: WWS head/tail sub-step ledger; kill criterion reached (exp/wws-native)
+
+- New `PS3RECOMP_C690_STEPS=1` (default 0, measurement only) splits the c690 inter-job turnover into
+  tail-submit / PM-exit+host / claim+alloc / staging+dispatch, with the synchronous DMA copies and GETLLAR/PUTLLC
+  timed inside each step. One automated pitch-meter run on `build-sync` (37.9 fps, 81.8 jobs/lane/frame,
+  429,533 short gaps over 28 s): total turnover 50.1 us/gap (p50 41) = 4.10 lane-ms per lane per burst.
+  Tail submit 7.7 us (0.63 lane-ms), PM exit+host 22.3 (1.83), claim+alloc 2.2 (0.18), staging+dispatch 17.9 (1.46).
+- All copy work together is ~0.8 lane-ms: code re-DMA 0.23, other GET 0.27, output PUT 0.27, atomics 0.30. The
+  dominant time is lifted PM/job instruction execution (pm_exit 20.1 us, head_stage 11.7 us), so no safe local
+  sub-step saves 1 ms of the burst; the only >1 ms item needs the native PM exit translation. No fix implemented,
+  key stays 0. Details: [`wws-native-pm.md`](wws-native-pm.md) §9.

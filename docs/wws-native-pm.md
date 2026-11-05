@@ -281,3 +281,84 @@ module, our own EBOOT (Ghidra), our own lifted SPU code and our own trace
 stream. The stage/corpus and differential-harness method follows NHL Legacy
 Native (MIT, (c) 2026 HeckYouMan) with attribution; no NHL code was copied. No
 RPCS3 or other GPL emulator source was read or cited.
+
+## 9. Follow-up 2026-11-05: where the head/tail microseconds actually go
+
+The Stage A claim measurement above answered only ~160 ns of the 4.59 lane-ms
+head+tail. This section measures the rest. One automated pitch-meter launch,
+build `recomp-work/build-sync` (this branch + the standard play configuration:
+`SPURS_PM_FAST_RESCHED=64`, `SPURS_PM_NATIVE_DISPATCH=6`), new opt-in
+`PS3RECOMP_C690_STEPS=1` (default **0**; measurement only):
+
+* run `ab_live_wwssteps_20261105_181358`; meter confirmed 184 s after launch;
+  window 18:17:13-18:17:41 (28 s, 1,060 flips, **37.9 fps**), 5 lanes,
+  433,361 jobs (86,757 per lane -> **81.8 jobs/lane/frame**), 429,533 short
+  (in-burst, <2 ms) gaps.
+* `PS3RECOMP_C690_STEPS` is implemented in `runtime/spu/c690_stats.c` and uses
+  the same two entry hooks as `C690_GAP` (`spu_lifted_lookup` and `SPU_DIRECT`)
+  plus the DMA and atomic call sites. Each gap is split into
+  `tail_submit`, `pm_exit+host`, `head_alloc+claim` and `head_stage`; the
+  synchronous DMA copies are timed by category (code GET / data GET / PUT) and
+  the GETLLAR/PUTLLC operations are timed while the step is active. Only gaps
+  under 2 ms are merged, so the inter-burst idle does not skew the means.
+
+| step (LS boundary) | us/gap mean | p50 | p90 | share | lane-ms per lane/burst |
+|---|---:|---:|---:|---:|---:|
+| tail submit (job end 0x12AB8 -> first PM entry) | 7.72 | 7 | 10 | 15.4 % | **0.63** |
+| PM exit + host (0x2D10/0x2D20 -> head start) | 22.34 | 17 | 28 | 44.6 % | **1.83** |
+| head alloc + claim (0x23BC/0x2498/0x3020) | 2.18 | 1 | 2 | 4.4 % | **0.18** |
+| head stage + dispatch (0x3080 -> job entry; 0x31B0 is a host call, so it lands here) | 17.90 | 16 | 21 | 35.8 % | **1.46** |
+| **total turnover** | **50.06** | **41** | | | **4.10** |
+
+Components measured inside those steps (mean us/gap):
+
+| component | tail_submit | pm_exit+host | head_alloc+claim | head_stage |
+|---|---:|---:|---:|---:|
+| code re-DMA (GET, 67,846 B / 5.17 GETs) | 0 | 0 | 0 | **2.79** |
+| other GET (12,402 B / 21.9 GETs) | 0.09 | 0.01 | 0.10 | **3.34** |
+| PUT output (13,125 B / 4.0 PUTs) | **3.24** | 0.05 | 0 | 0 |
+| GETLLAR + PUTLLC | 0.24 | **2.15** | 1.31 | 0 |
+| lifted instruction execution (remainder) | 4.2 | **20.1** | 0.8 | 11.7 |
+
+Reading the table:
+
+* **The head is 19.8 us/gap and the tail is 30.1 us**, i.e. the same 4.1
+  lane-ms/frame shape as `c690-lane-gaps.md`; the new split resolves it.
+  `pm_exit+host` is the single largest step (1.83 lane-ms), and inside it the
+  host dispatch portion is only ~0.6 lane-ms (the measured host class in
+  `c690-lane-gaps.md`); the rest is the lifted PM exit/re-entry path plus the
+  SPURS workload-line atomics.
+* **All removable copy work is small.** Every synchronous DMA copy in the whole
+  turnover is ~0.50 lane-ms (code 0.23, data 0.27) plus 0.27 lane-ms of output
+  PUTs; all lock-line atomics are ~0.30 lane-ms. Even deleting the 67 KiB
+  job-code re-DMA outright saves **0.23 lane-ms per lane per burst**, which is
+  far below the 1 ms kill criterion, and `SPU_CODE_DMA_MEMO` already skips that
+  copy when the source is unchanged (and was measured flat on frame time).
+  Tag waits are zero because this runtime's MFC is synchronous; what the code
+  calls a tag wait is the copy timed above.
+* **The dominant time is lifted instruction execution**, not a removable
+  sub-step: pm_exit 20.1 us, head_stage 11.7 us, tail_submit 4.2 us. That is
+  the `spu-codegen-audit.md` lever (8-13 x86 instructions per SPU instruction,
+  1.03 ns/instr) or a native translation of the remaining PM exit/staging
+  chain (the Stage A proper, multi-day work), not a memo, a memcpy or a tag
+  batch.
+
+**Kill criterion reached.** No sub-step with a safe local fix can save 1 ms of
+the meter burst; the only step above 1 lane-ms (`pm_exit+host`) needs the
+native PM exit translation, not a copy/atomic cut. Nothing was implemented in
+this follow-up beyond the opt-in measurement key; `PS3RECOMP_C690_STEPS`
+defaults to 0 and changes no guest behaviour.
+
+Reproduce:
+
+```sh
+cd recomp-work/ab-tools
+TAG=wwssteps BUILD=build-sync N=3 SEG=10 DROP=2 METER=1 SKIP_CINE=1 WCB=2 PIN=0 \
+  VIDEODRIVER=x11 REPORT=0 LIMIT=500 SETTLE=10 PITCH_THRESH=35 ARMS='A=' \
+  BOOT_ARM='' SCENE_SHOTS=0 PS3RECOMP_C690_STEPS=1 ./ab_live.sh
+# [c690-step] lines in the log at the 2 s cadence; the exit report has the
+# cumulative table and the per-step p50/p90 histograms.
+```
+
+Clean room unchanged: our own trace/counters, our own lifted code and our own
+EBOOT analysis; no RPCS3 or other GPL emulator source was read or cited.

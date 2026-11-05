@@ -615,3 +615,8 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - 1080p output + 300% resolution scale (downscale on the GPU before readback).
 - Walker waits (docs/walker-waits.md, exp/walker-waits): `PS3RECOMP_WALKER_WAITS=1` splits the live walker's in-drain blocking by site; user's crowded run decides which wait (readback, GPU fences, WCB lock, shader compile) to cut.
 - One-shot waits (docs/oneshot-waits.md, exp/oneshot): `[oneshot-by]` names the caller of each live one-shot; `PS3RECOMP_VK_BATCH_CREATES=1` (live) batches creates/snapshots. User's crowded run decides if the CPU-read callers (readback, depth_readback) are next.
+- Item 2 follow-up (2026-11-05, exp/wws-native): `PS3RECOMP_C690_STEPS=1` measured the head/tail split on
+  `build-sync` at the meter (81.8 jobs/lane/frame): tail-submit 0.63, PM-exit+host 1.83, claim+alloc 0.18,
+  staging+dispatch 1.46 lane-ms/lane/burst. All copies+atomics are ~0.8 lane-ms; the rest is lifted instruction
+  execution, so no safe local cut reaches 1 ms. The only >1 ms piece is the PM exit/re-entry chain -> native
+  translation (Stage B), not a memo/memcpy/tag fix. [`wws-native-pm.md`](wws-native-pm.md) §9.
