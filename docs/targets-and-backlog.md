@@ -380,7 +380,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Jerseys missing (not the cube probes; cause unknown).
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/
   scene_1793665113991.png).
-- Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it).
+- Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it). **NEXT after the jersey + exposure missions (user, 2026-11-05).** Start from team-logo.md: the capture shows the logo is never submitted (upstream of RSX); the StressTestUIElem diagnostic run is ready.
 - Live-play lighting changes after plays, normal after replays (lighting-drift-notes.md).
 - Crowd placement: port the RPCS3 crowd-fix patch.
 - Loading hangs (~3 s) and start-menu hitches (these also hurt playability; may move up).
