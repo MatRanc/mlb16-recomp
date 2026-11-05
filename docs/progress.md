@@ -1,5 +1,38 @@
 # Progress log
 
+## 2026-11-05 (crowded walker profile): the live texture cost is the Vulkan depth guest fallback
+
+Full details in [`docs/crowded-walker-profile.md`](crowded-walker-profile.md).
+Branch `exp/crowd-prof` (off `exp/live-ab`) in `ps3recomp-prof`, build
+`recomp-work/build-prof`; **zero game launches** (offline capture + the user's
+11:06-11:11 log). Code pushed to `fork` only; measurement switches only, all
+default off.
+
+- **The replay tool can drive the real Vulkan backend.**
+  `PS3RECOMP_REPLAY_VK=1` replays `captures/walker_replay_fixed` headless on
+  the RTX 3060 Ti with the shipping guest-program path, `VK_DRAW_BATCH=1`,
+  `VK_FRAME_PIPELINE=1`. The null path and its digest are unchanged
+  (`0e8f7c71ca8be27c` / `a9a80aa0392953cd`).
+- **Null vs Vulkan, 1,694 draws, 0 misses:** walker **34.0 -> 62.2 ms**,
+  `tex` **5.0 -> 23.8**, `draw` **6.0 -> 13.8**. The premise's 2.4-3.0 ms
+  `tex` came from the null backend + the old 1,261-draw capture; the Vulkan
+  `tex` matches live (28.1 ms in the 11:06-11:11 crowded window).
+- **Top lever: the depth-target guest fallback.** Live binds a depth target
+  as a texture **228 times/frame** (`dguest`); offline Vulkan does 222, same
+  path. Skipping the guest copy (`PS3RECOMP_ENG_DEPTH_NOGUEST=1`, measurement
+  only) drops `tex` 24.2 -> 5.5 ms and walker 64.9 -> 43.7. Live pays the
+  readback but not the induced re-upload, so **~13 ms/frame** conservatively
+  (19 ms upper bound).
+- **Next levers:** per-draw Vulkan recording **4-8 ms** (13.4 % of perf
+  samples in `libnvidia-glcore` under `vk_eng_draw_from`; batching already
+  removed the 100 ms per-draw submit), then live `parse` **up to ~14 ms**
+  (16.9 live vs 2.8 offline; a 2-5 burner load sweep leaves `parse` at
+  3.0-9.6 ms, so it is an in-drain stall / producer wait, not CPU contention).
+- **Offline test that cannot be run:** TEX_DIRTY is deliberately disabled in
+  replay (`s_guest_reader` guard, rsx_draw_engine.c:3182); its live A/B
+  (`tex` 10.34 -> 5.89 ms) still stands. WCB=2 is not armed; its texture-bind
+  cousin is the depth guest path measured above.
+
 ## 2026-11-05 (team-logo green flash): the Bink planes are drawn before the first decode
 
 Full details in [`docs/bink-video.md`](bink-video.md) §7. Branch `exp/bink-green`

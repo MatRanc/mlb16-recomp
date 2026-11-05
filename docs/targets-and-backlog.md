@@ -82,6 +82,15 @@ checking if any geometry-only regression remains.
   draws (1,702 sink groups, the live count) / 0 misses. Live meter capture (one launch) replays 0 misses. New fixture
   test_walker_capture. USER still owes one crowded recapture with build-tools (command in the doc §5); gate
   draws/frame >= 1300, 0 misses, digest on. Nothing new is default-on.
+- PROFILED 2026-11-05 (exp/crowd-prof, docs/crowded-walker-profile.md): the crowded capture replayed through the REAL
+  Vulkan backend (`PS3RECOMP_REPLAY_VK=1`, headless RTX 3060 Ti, guest programs + batching) gives walker 62.2 ms and
+  `tex` 23.8 ms on the 1,694-draw frame, against 34.0 / 5.0 ms with the null backend; the null-replay "2.4-3.0 ms tex"
+  is not a crowded Vulkan frame. Live `tex` 28.1 and `draw` 14.5 match the offline Vulkan 23.8 / 13.8; the live-only
+  remainder is `parse` (16.9 vs 2.8) and `other`. Largest measured lever: the depth-target guest fallback
+  (`dguest` 228/frame live, 222 offline) — skipping it takes offline `tex` 24.2 -> 5.5 and walker 64.9 -> 43.7 ms
+  (~13 ms live, ~19 upper bound). Next: per-draw Vulkan recording (4-8 ms; 13.4 % of samples in libnvidia-glcore
+  under `vk_eng_draw_from`) and the live `parse`/in-drain stall (up to ~14 ms; CPU contention ruled out by a load
+  sweep). Measurement switches only, nothing default-on; code to `fork` only.
 - Not yet reviewed (all default OFF): WCB prefetch 097e6c46, flip deadline 2dbca8a2, remap direct 73deaefd, walker MT
   M1/M2 cbcd3289 and M3 749fd6c8 (review with M4 before any user test).
 
