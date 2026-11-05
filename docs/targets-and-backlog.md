@@ -67,15 +67,21 @@ checking if any geometry-only regression remains.
 
 
 **Review findings (2026-11-04, Claude):**
-- 73deaefd frame-sampled walker profiler (DEFAULT ON, reviewed late): ~10 % of meter [walker-prof] lines with real
-  draws report engine=0.000 (87/871 in ab_live_walkermt2_20261104_181555.log) -> phase sums ~10 % low. walker=/wait=
-  unaffected; A/B comparisons hold, absolute phase numbers do not. Fix after M4 lands (same file); filter engine=0
-  lines in analysis until then. Diagnostic only, no gameplay effect.
-- Crowded capture (walker_replay): replay sees all ~1,702 draws but drops ~440 (26 %) because the capture images only
-  the first page of each ~2 MB c690 mesh-ring vertex read (4,547 misses/frame, location=1, offsets 0x900000-0x15xxxxx).
-  M3's capture fix (memo/texture noting) does not cover it. Fix next (after M4, same file): image full mesh-ring spans
-  at capture begin; verify with the digest ON (REPLAY_NULL_HASH=0 disables it -> constant 14650fb0739d0383).
-  Details: scratchpad fingerprint_findings.md (subagent, 2026-11-04). Then ask the user for one recapture.
+- FIXED 2026-11-05 (exp/capture-tools, docs/capture-tools-fix.md): 73deaefd frame-sampled walker profiler
+  (DEFAULT ON) reported engine=0.000 on ~19 % of lines with real draws because it sampled whole frames from the flip
+  counter while the timed work lives in a drain; an empty sampled drain could be paired with draws handled by
+  unsampled ones. Sampling is now per drain, scaled by drains_total/drains_prof, and a report is deferred until a
+  sampled drain carries draws (or the window is idle). Old log 322/1,698 bad lines; new live log 0/2,709.
+  walker=/wait= semantics unchanged. New fixture test_walker_prof.
+- FIXED 2026-11-05 (exp/capture-tools, docs/capture-tools-fix.md): crowded capture dropped ~440 of 1,702 draws
+  (1,261 backend, 4,547 misses/frame). Three faults: M3's cold-start notes ran before the capture was armed and were
+  cleared; the `.mem` writer extrapolated one EA across a range although the IO table maps main memory per MB; and
+  the live frame can name a narrower span than a cold replay resolves. The capture now arms before noting, images
+  every mapped main-memory IO page at begin, expands every main read to its whole 1 MB IO page, and resolves each
+  page's EA on its own. Old capture: 1,261 draws / 4,547 misses. Same frame with the new page set: 1,694 backend
+  draws (1,702 sink groups, the live count) / 0 misses. Live meter capture (one launch) replays 0 misses. New fixture
+  test_walker_capture. USER still owes one crowded recapture with build-tools (command in the doc §5); gate
+  draws/frame >= 1300, 0 misses, digest on. Nothing new is default-on.
 - Not yet reviewed (all default OFF): WCB prefetch 097e6c46, flip deadline 2dbca8a2, remap direct 73deaefd, walker MT
   M1/M2 cbcd3289 and M3 749fd6c8 (review with M4 before any user test).
 
@@ -95,8 +101,9 @@ checking if any geometry-only regression remains.
 no hang, black field fixed, but walker 9.5 -> 12.8 ms and thumbnails differ 38.8 vs A/A 3.4; code kept on exp/live-ab
 230acd9f). Now: single-thread texture cost (walker-tex-cost.md). IF IT FAILS: park the renderer track and move straight
 to Edge E1 (eye holes), then E2 — no further renderer rounds without the user.
-**Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) Claude review of M2-M4 + crowded-capture
-fix (full mesh-ring spans) + walker-prof sampling fix; (3) user recapture + crowded replay test; (4) M5 hardening ->
+**Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) DONE 2026-11-05: Claude review of
+M2-M4 + crowded-capture fix (full guest imaging) + walker-prof sampling fix (docs/capture-tools-fix.md);
+(3) user recapture + crowded replay test (next); (4) M5 hardening ->
 default if it wins (renderer track done); (5) then Edge E1, E2. E1 only jumps ahead if the renderer is blocked waiting
 on the user.
 **Edge queue when it resumes, in order:**

@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (capture tools): walker-prof sampling and full guest imaging fixed
+
+Full details, tests and the user command are in
+[`docs/capture-tools-fix.md`](capture-tools-fix.md). Branch `exp/capture-tools`
+in a new `ps3recomp-tools` worktree, build `recomp-work/build-tools`. One
+automated pitch-meter launch (the cap), X once; no RPCS3 source read or cited.
+
+- **Profiler fix.** The sampler chose a whole frame from the flip counter, but
+  the timed work is in a drain: a sampled drain could be empty while the
+  window's draws sat in unsampled drains, printing `engine=0.000` with
+  `draws>0`. Sampling is now per drain, scaling is `drains_total /
+  drains_prof`, and a report waits until a sampled drain has produced draws
+  (or the window is genuinely idle). Old log 322/1,698 bad lines (19.0 %);
+  the new live log 0/2,709. New synthetic fixture `test_walker_prof`.
+- **Capture fix.** The live capture could miss the tail of a 2 MB mesh-ring
+  vertex read. Three causes: M3's cold-start notes ran before the capture was
+  armed and were then cleared; the `.mem` writer extrapolated one EA across a
+  range although the IO table maps main memory per MB; and the live frame can
+  name a narrower span than a cold replay resolves. The capture now arms
+  before noting, images every mapped main-memory IO page at begin, expands
+  every main read to its whole 1 MB IO page, and resolves each page's EA on
+  its own. New fixture `test_walker_capture`.
+- **Numbers.** Old crowded `walker_replay`: 1,261 backend draws/frame,
+  4,547 read misses. The same frame with the new page set: **1,694 backend
+  draws (1,702 sink groups, the live count), 0 misses**. A live meter capture
+  with the new code (45,279 pages, 176.9 MB) replays with **0 misses**.
+  `meter_frame`/`walker_frame` hashes unchanged
+  (`a6fcc849341eba9b` / `416abee2c5bff47d`); fixtures 32/32 (the pre-existing
+  timing-sensitive `test_gcm_tick_in_drain` flaked under load, passes alone).
+- **Next.** User runs the crowded-replay recapture in §5 of the doc; gate is
+  `draws/frame >= 1300` and 0 misses. Nothing new is default-on.
+
 ## 2026-11-05 (c690 GPU Edge): 32-byte 0x2A index contract and exact kernel; live A/B blocked
 
 Full details in [`docs/edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md). Two pitch-meter
