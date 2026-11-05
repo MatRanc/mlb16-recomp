@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (depth of field): the RPCS3 blur patch runs in the recomp
+
+Full details and the user command are in [`docs/dof-patch.md`](dof-patch.md).
+New code on ps3recomp `exp/dof-patch` (fork only), build
+`recomp-work/build-dof`; `PS3RECOMP_DOF_PATCH` default 0. One game launch.
+
+- **The patch bytes apply at ELF load.** `ppu_load_elf` writes the user's
+  "Better depth of field" program (0xA90 bytes, 168 slots through END) to the
+  unused ELF gap at 0x10A4400 and repoints both EBOOT program headers
+  (0x1121cc0, 0x1122080). FNV-1a 64 fingerprints of the original headers and
+  0x340-byte programs are checked first; a mismatched EBOOT, a nonzero target
+  or a header that does not follow is refused and the original program runs.
+  The backend keys pipelines on fragment-code bytes, so nothing caches the old
+  program before the patch.
+- **Offline proof.** The generated 0xA90 program decodes as 148 instructions
+  with no unhandled opcode and its HLSL translates to SPIR-V for fp16/fp32
+  export control and with gamma/sign-expand state on the three sampled units
+  (`test_dof_patch`, 25/25 checks). Given the EBOOT, the same test applies the
+  patch, checks both headers follow to 0x10A4400 and the bytes match, and
+  checks the refusal paths.
+- **No capture has the DOF pass.** The `.fifo` and `.mem` captures were
+  scanned: the original program appears at guest 0x280 in `walker_replay` /
+  `logo_cap`, but no draw references it and no captured local-memory page
+  holds the game's run-time copy. The decompile/compile + EBOOT-apply test is
+  the offline proof; there is no replay A/B of this program.
+- **Key-on meter launch.** `[dof] applied ...` at boot; meter reached, X once.
+  First four A/A segments 33.4/36.2/34.3/36.7 fps, in line with the A/A
+  baseline (~33-36). Later segments fell to 27/19/16/16 fps while another
+  mission relinked `build-play/MyGameRecomp` at 01:16:12 during the
+  measurement; those are contaminated, not a patch result. No crash, no
+  thumbnail corruption. User visual check (two short launches, key off/on) is
+  in `docs/dof-patch.md`.
+
+
 ## 2026-11-05 (team logo): the 0x900 lookup is a world model, and the debug line goes to BADJUMBOS_PS3.TXT
 
 Full analysis in [`docs/team-logo.md`](team-logo.md) §8. **Zero game

@@ -378,6 +378,16 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 
 ## Visual backlog (parked)
 
+- **Depth of field (close-up/replay blur) PATCH IMPLEMENTED 2026-11-05
+  (key off by default).** `PS3RECOMP_DOF_PATCH=1` applies the user's RPCS3
+  `MLB16_dof_fix.yml` bytes at ELF load: the 0xA90-byte 17-tap depth-aware
+  program to the unused gap at 0x10A4400, both program headers repointed.
+  EBOOT fingerprints are checked and a mismatch refuses. Offline: 148
+  instructions, no unhandled opcode, SPIR-V compiles; no capture contains the
+  DOF pass. Key-on meter launch applied cleanly (first A/A segments
+  33.4/36.2/34.3/36.7 fps; later segments contaminated by another mission's
+  build). Next: user visual check in a replay/close-up, then decide on a play
+  default. Details: [`dof-patch.md`](dof-patch.md).
 - **Jerseys FIXED 2026-11-05 (key off by default).** The torso was not a
   texture: character fragment programs were dropped because they use
   `DDX`/`DDY` + gamma `TXD`, which the decompiler did not translate. Implemented
