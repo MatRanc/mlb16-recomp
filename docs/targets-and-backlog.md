@@ -65,6 +65,15 @@ backward frames per 1000 moving frames. See
 [`backward-frames.md`](backward-frames.md). The class-(b) leads are still worth
 checking if any geometry-only regression remains.
 
+
+**Review findings (2026-11-04, Claude):**
+- 73deaefd frame-sampled walker profiler (DEFAULT ON, reviewed late): ~10 % of meter [walker-prof] lines with real
+  draws report engine=0.000 (87/871 in ab_live_walkermt2_20261104_181555.log) -> phase sums ~10 % low. walker=/wait=
+  unaffected; A/B comparisons hold, absolute phase numbers do not. Fix after M4 lands (same file); filter engine=0
+  lines in analysis until then. Diagnostic only, no gameplay effect.
+- Not yet reviewed (all default OFF): WCB prefetch 097e6c46, flip deadline 2dbca8a2, remap direct 73deaefd, walker MT
+  M1/M2 cbcd3289 and M3 749fd6c8 (review with M4 before any user test).
+
 ## Priority: speed and frame-time stability first
 
 **FOCUS (user, 2026-11-04): Edge (c690) work only; everything else waits.** Order:
