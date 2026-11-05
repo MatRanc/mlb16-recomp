@@ -607,7 +607,189 @@ TAG=c690gpu2e BUILD=build-gpu N=5 SEG=10 DROP=2 METER=1 SKIP_CINE=1 WCB=2 \
   BOOT_ARM='PS3RECOMP_C690_GPU_2A=0' ./ab_live.sh
 ```
 
-## 9. Clean room
+## 9. Diagnosis: where the key-on frame actually goes (2026-11-05, later)
+
+Branch `exp/edge-gpu` in `ps3recomp-gpu` (commit `ff29ad46`), build
+`recomp-work/build-gpu`. **Two pitch-meter launches (the cap).** Run 1
+(`ab_live_gpudiag1_20251105_050229`) is not used for the numbers: another
+mission was compiling on the same machine (four `clang++` at ~98 % CPU), and
+turning the key off did not clear the previous drain's resolver ranges, so the
+later A segments were contaminated. Run 2 (`ab_live_gpudiag2_20261105_052030`,
+clean machine) is the measurement. The previous mission's §8 attribution
+("queue-family switch ~1.9 ms per submit") was a guess; this section replaces
+it with four arms and offline microbenchmarks.
+
+### 9.1 What changed
+
+* **The resolver probe is page-filtered.** `eng_gpu_range_probe` used to scan
+  every installed range on every guest read. With one range per c690 job
+  (~51 per drain) and ~5.6 k reads/frame, that scan was the largest new walker
+  symbol (6.0 % of walker cycles in the resolve-only arm, run-1 perf). Two
+  4 KiB page bitmaps (EA and RSX-offset) now reject the scan in O(1); the
+  bitmaps are written under the existing range write lock and cleared with the
+  map. A torn read can only lose the shortcut (the guest copy is the exact SPU
+  output), never serve a wrong byte.
+* **`PS3RECOMP_C690_GPU_2A_DBG` is a live control-file key**, so one run can
+  rotate the arms: A key off, B `DBG=1` (export on, GPU off), C `DBG=2`
+  (resolve only, exact SPU seed, no Vulkan), D `DBG=0` (full).
+* **Turning the key off retires the ranges and queued jobs.** `vk_c690_kick`
+  and `vk_c690_prepare` clear on the on->off transition; without this the off
+  arm kept serving the previous on-drain's GPU/seed bytes.
+* **Diagnostics, default off:** `PS3RECOMP_GPU_STATS` counts probe calls,
+  scanned entries, full/partial/miss, pending and merges in
+  `replay_rsx_engine`; `PS3RECOMP_GPU_RING_FILL` / `_FILL_EA` install
+  synthetic one-byte ranges at a live range count.
+
+### 9.2 Offline microbenchmarks (corpus `fncap2b2w3`, `meter_frame`)
+
+The meter frame has 5,589 guest reads/frame; only ~5/frame overlap the
+12.8 KiB 32-byte range.
+
+| probe, 30-frame replay median | before page filter | after |
+|---|---:|---:|
+| no range (fast path off) | 11.55 ms | 11.55 ms |
+| 50 EA ranges (live batch size) | **+0.57 ms** | scan rejected |
+| 50 offset + 50 EA ranges | **+0.98 ms** | scan rejected |
+| entries/probe, 1 real range | 1.0 | 0.017 |
+| entries/probe, 50 offset fillers | ~50 | 0.86 |
+| entries/probe, 50+50 fillers | ~100 | 1.7 |
+| entries/probe, 127+127 fillers | ~254 | 2.2 |
+
+The scanned-entry count falls 98-99.8 %; the replay perf share of
+`eng_gpu_range_probe` at 100 fillers is 0.92 %. The fillers sit on the page a
+read resolves to, so this is the conservative case where the filter cannot
+skip. A `PS3RECOMP_GPU_RING` binding-gate run is unchanged: guest
+`a6fcc849341eba9b`, resolver-SPU `44f962cef2a40ae3`, resolver-GPU
+`903b37427417553a`, gate `20ac1b0f52b40723` (approved policy drift).
+
+Export copies (`tools/bench_c690_gpu_2a`, 192 corpus pairs, 51 exportable):
+
+| quantity | value |
+|---|---:|
+| exports / records | 51 pairs, 398.3 records/export |
+| bytes copied/export (4*extent + count*32 + count*2) | 42.5 KiB |
+| classify + malloc + copies + PUT | **2.2 us/export** |
+| plain memcpy of the same bytes | ~1.0 us/export |
+
+Live that is 223 jobs/frame -> **0.49 ms/frame of CPU across the five lanes,
+0.10 ms/lane**; the lane perf profile shows `c690_gpu_2a_*` at 0.2-0.6 %.
+
+Arena staging (`tools/bench_c690_arena`): the backend's coherent-first rule
+picks the write-combined GTT type (type 3 on the RTX 3060 Ti), **7.98 MB/frame,
+292 us/frame (28.7 GB/s)**; the cached coherent type 4 would be 121 us/frame.
+
+### 9.3 Live run 2: four arms in one launch
+
+`BUILD=build-gpu`, `METER=1 SKIP_CINE=1 WCB=2 PIN=0`, `VIDEODRIVER=x11`,
+`PITCH_THRESH=35`, `N=4 SEG=10 DROP=2`, one X, governor `performance`.
+Arms rotated A,B,C,D; `pin_ab.py --seg 10 --drop 2`:
+
+| arm | frames | fps | p50 | p90 | p99 | walker ms | wait ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A key off | 1,191 | 37.22 | 34.15 | 38.91 | 43.40 | 9.08 | 16.22 |
+| B export, GPU off | 1,150 | 35.94 | 34.15 | 39.62 | 43.26 | 10.47 | 16.63 |
+| C resolve only | 1,111 | 34.72 | 34.16 | 40.31 | 44.02 | 12.41 | 16.51 |
+| D full GPU | 879 | 27.47 | 40.38 | 46.83 | 51.32 | 18.29 | 17.55 |
+
+Per cause (walker time, and the frame change):
+
+| cause | walker delta | fps delta | p50 delta | p90 delta |
+|---|---:|---:|---:|---:|
+| A -> B export + pending markers + prepare | **+1.39 ms** | -1.28 | 0.00 | +0.71 |
+| B -> C resolver (seed ranges served) | **+1.94 ms** | -1.22 | +0.01 | +0.69 |
+| C -> D Vulkan compute + queue hand-off | **+5.88 ms** | -7.25 | +6.22 | +6.52 |
+| A -> D total | **+9.21 ms** | -9.75 | +6.23 | +7.92 |
+
+Walker phases confirm the split: `fetch` (probe + prepare) +1.39 ms,
+`draw` +1.10 ms, `other` +2.38 ms from C to D. The draw count also rises with
+the arm (A 451, B 490, C 528, D 614 draws/flip), so the per-draw normalisation
+is the honest form: **20.1 / 21.2 / 23.6 / 29.5 us/draw** for A/B/C/D.
+
+### 9.4 The dominant cost is the GPU hand-off, not the submit call
+
+D-C is 5.88 ms/frame of walker wall time, but the CPU side is small:
+
+| component | measured |
+|---|---:|
+| compute submit call | 4,106 submits, 16.3 us/submit, 4.67/frame = **0.076 ms/frame** |
+| CPU wait on the timeline | **0** |
+| arena staging | 0.29 ms/frame |
+| export copies (lanes) | 0.10 ms/lane/frame |
+| resolver probe after the page filter | ~0.02-0.1 ms/frame |
+| GPU compute (phase-2b model) | ~0.12 ms/frame |
+
+The residual is in the draw loop while the compute queue is in flight
+(`engine` +5.36 ms, of which `other` +2.38, `draw` +1.10, `fetch` +1.39). It is
+**not** the submit call, the CPU wait, the export copies, the staging or the
+probe. If attributed to the 4.67 compute submits/frame it is ~1.26 ms per
+submit, close to the earlier ~1.9 ms guess - but this experiment does not
+separate a queue/context switch from GTT/PCIe traffic and driver
+serialisation. What it does establish is that the previous "~1.9 ms per
+submit" was not the `vkQueueSubmit` call and not a fence: both are measured
+here at 16 us and 0. The earlier run-1 walker perf (CPU cycles only rose ~8 %
+while drain wall time rose ~34 %) is consistent with the walker blocking in
+the driver, not doing more CPU work.
+
+### 9.5 What the GPU Edge path can realistically save
+
+The 0x2A lane slice is unchanged: **3.43 ms at full coverage, 1.07 ms at the
+current 31.2 % binding share (27.7 % of live 0x2A entries), 2.3 ms at the
+68.2 % now classified offline**. The key-on path as built costs ~9.2 ms of
+walker time (p50 +6.2 ms), of which ~5.9 ms is the GPU hand-off. Even a perfect
+pack replacement cannot recover more than 3.43 ms, so **the binding cannot win
+until the hand-off is removed**:
+
+* **In-stream compute** (record the dispatches into the frame's own command
+  buffer, no separate compute-queue submit, device-local output, no GTT round
+  trip) leaves only the compute (~0.12 ms) and the export/staging
+  (~0.4 ms) - below the 1-3.4 ms pack saving.
+* **Pack replacement** (`exp/native-2a`) then makes the draw consume the GPU
+  output directly; the current seed fallback and its 1.9 ms resolver arm go
+  away.
+* With the hand-off fixed, the net 0x2A saving is ~0.6 ms at 31.2 %, ~1.8 ms
+  at 68.2 %, ~2.9 ms at full coverage; adding 0x21 sel7 (4.74 ms) and the
+  culls (3.03 ms) on the same in-stream binding is what reaches the 5-7 ms
+  Edge target.
+
+The page filter, the live DBG key and the key-off clear are kept (all default
+off; the binding is still `PS3RECOMP_C690_GPU_2A=0`). The next stage is not
+another kernel: it is the in-stream compute hand-off, together with the pack
+replacement.
+
+### 9.6 Reproduction
+
+```sh
+cd /home/m/Documents/mlb16-online/ps3recomp-gpu
+
+# probe cost / entries per frame (before/after the page filter)
+cd ../recomp-work/build-gpu
+RING="1:0xc5a310:/tmp/opencode/gpu2a_32b/pair_453000_spu_records.bin"
+PS3RECOMP_GPU_STATS=1 PS3RECOMP_GPU_RING="$RING" \
+  PS3RECOMP_GPU_RING_FILL=50 PS3RECOMP_GPU_RING_FILL_EA=50 \
+  ./ps3recomp_sdk/replay_rsx_engine ../../recomp-work/meter_frame \
+  --frames 30 --warmup 5
+
+# export copies and arena staging
+cd ../../ps3recomp-gpu
+clang -O2 -march=native -Iruntime/spu -Ilibs/video -Iinclude \
+  -o /tmp/bench_c690_gpu_2a tools/bench_c690_gpu_2a.c \
+  runtime/spu/c690_gpu_2a.c libs/video/ps3_live_ctl.c -lpthread -lm
+C690_GPU_2A_SPOOL=../recomp-work/captures/gpu2a/fncap2b2w3 /tmp/bench_c690_gpu_2a
+cc -O2 -o /tmp/bench_c690_arena tools/bench_c690_arena.c -ldl
+/tmp/bench_c690_arena
+
+# the four-arm live run (already run twice; do not repeat before a fix)
+cd ../recomp-work/ab-tools
+TAG=c690gpudiag BUILD=build-gpu N=4 SEG=10 DROP=2 METER=1 SKIP_CINE=1 \
+  WCB=2 PIN=0 VIDEODRIVER=x11 REPORT=0 LIMIT=700 SETTLE=10 PITCH_THRESH=35 \
+  ARMS='A=PS3RECOMP_C690_GPU_2A=0;PS3RECOMP_C690_GPU_2A_DBG=0|B=PS3RECOMP_C690_GPU_2A=1;PS3RECOMP_C690_GPU_2A_DBG=1|C=PS3RECOMP_C690_GPU_2A=1;PS3RECOMP_C690_GPU_2A_DBG=2|D=PS3RECOMP_C690_GPU_2A=1;PS3RECOMP_C690_GPU_2A_DBG=0' \
+  BOOT_ARM='PS3RECOMP_C690_GPU_2A=0;PS3RECOMP_C690_GPU_2A_DBG=0' \
+  ./ab_live.sh
+python3 pin_ab.py --log ../ab_live_c690gpudiag_<ts>.log \
+  --marks ../ab_live_c690gpudiag_<ts>.marks --seg 10 --drop 2
+```
+
+## 10. Clean room
 
 Own static analysis of the EBOOT (Ghidra), the lifted c690 module, our own
 runtime/walker code, our own captures and Vulkan kernel. The stage/corpus/

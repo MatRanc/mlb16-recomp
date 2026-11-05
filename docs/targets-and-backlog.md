@@ -183,6 +183,15 @@ on the user.
   consume the GPU range after the pack replacement; then the other six classes
   (68.2 % offline), 0x21 sel7 (4.74 ms) and the culls (3.03 ms). Default stays
   off. Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §8.
+- 2026-11-05 (later, diagnosis): **the key-on loss is the GPU hand-off, not the
+  submit call.** Four arms in one clean launch (A off / B export / C resolve /
+  D full): walker +1.39 / +1.94 / +5.88 ms; D-A p50 +6.23 ms, fps -9.75.
+  Submit is 16.3 us, 0.076 ms/frame, wait 0; staging 0.29 ms, export
+  0.10 ms/lane, resolver probe ~0.02-0.1 ms after a new 4 KiB page filter
+  (offline entries/probe 50-100 -> 0.02-1.7). The 0x2A slice is still
+  1.07/2.3/3.43 ms (31.2/68.2/100 %), so the binding cannot win until the
+  compute is recorded in-stream and the pack is replaced. Default off.
+  Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §9.
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

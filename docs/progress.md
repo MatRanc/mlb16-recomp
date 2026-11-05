@@ -1,5 +1,38 @@
 # Progress log
 
+## 2026-11-05 (c690 GPU Edge): key-on cost diagnosed; the hand-off, not the submit, costs 5.9 ms/frame
+
+Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §9. Branch
+`exp/edge-gpu` in `ps3recomp-gpu` (commit `ff29ad46`), build
+`recomp-work/build-gpu`. **Two pitch-meter launches (the cap)**; run 1 is
+discarded (a concurrent mission build loaded the machine and the off arm kept
+the previous drain's ranges). Code pushed to `fork` only; the binding stays
+default 0.
+
+- **Four arms in one clean launch** (`ab_live_gpudiag2_20261105_052030`):
+  A key off, B export-only (`DBG=1`), C resolve-only (`DBG=2`), D full.
+  A 37.22 fps / p50 34.15 / p90 38.91 / walker 9.08; B 35.94 / 34.15 / 39.62 /
+  10.47; C 34.72 / 34.16 / 40.31 / 12.41; D 27.47 / 40.38 / 46.83 / 18.29.
+  Per cause: export **+1.39 ms** walker, resolver **+1.94 ms**, GPU hand-off
+  **+5.88 ms** (p50 +6.22, p90 +6.52). Total D-A +9.21 ms walker, -9.75 fps.
+- **The previous "queue switch ~1.9 ms per submit" was not the submit call.**
+  4,106 submits, **16.3 us/submit, 4.67/frame = 0.076 ms/frame, CPU wait 0**.
+  Arena staging 0.29 ms/frame, export copies 0.10 ms/lane, resolver probe
+  ~0.02-0.1 ms after the fix. The residual is draw-loop driver time while the
+  compute queue is in flight (~1.26 ms per submit if attributed to the
+  submits); this run does not separate queue/context switch from GTT/PCIe and
+  driver serialisation.
+- **Resolver probe fixed (default off):** two 4 KiB page bitmaps reject the
+  range scan. Offline entries/probe drop from ~50-100 to 0.02-1.7
+  (98-99.8 %); replay perf share 0.92 %. The binding-gate hashes are unchanged.
+  Also: `PS3RECOMP_C690_GPU_2A_DBG` is now a live control-file key, and key-off
+  retires the ranges/jobs (the old A arm inherited them).
+- **Ceiling.** The 0x2A lane slice is 1.07 ms at 31.2 %, 2.3 ms at 68.2 %,
+  3.43 ms at full coverage. The hand-off costs ~5.9 ms, so the binding cannot
+  win until the compute is recorded in-stream (no separate queue, no GTT round
+  trip) and the pack is replaced; then the net is ~0.6/1.8/2.9 ms, and 0x21
+  sel7 (4.74 ms) plus the culls (3.03 ms) are what reach the 5-7 ms target.
+
 ## 2026-11-05 (c690 Edge): native 0x2A field pack; policy-exact on 112/131 pairs, live A/B neutral
 
 Full details in [`docs/edge-native-2a.md`](docs/edge-native-2a.md). Branch
