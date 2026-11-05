@@ -192,6 +192,18 @@ on the user.
   1.07/2.3/3.43 ms (31.2/68.2/100 %), so the binding cannot win until the
   compute is recorded in-stream and the pack is replaced. Default off.
   Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §9.
+- 2026-11-05 (later): **native whole-command 0x21 delivered, default off**
+  (`PS3RECOMP_C690_NATIVE_21`, `exp/native-21`). It replaces the 0x13080
+  dispatcher and both selector bodies (including the format
+  transform/pack/normalize tails), not a leaf. Offline **76/76 replayable
+  meter entries bit-exact** (full LS, all 128 GPRs, pc/status/stop); 2 fall
+  back on an unresolved computed target. Fair warm timing is **31.44 us lifted
+  vs 31.42 us native (parity)**, so it is not a speed lever; the one live A/B
+  attempt wedged on a pre-fix marshalling bug (now fixed offline, not
+  re-run because of the 2-launch cap). **Do not send 0x21 to the GPU**: the
+  hand-off costs ~5.96 ms/frame and there is nothing to save. The next 0x21
+  lever is the codegen backend (registry-mapped SPU registers), per
+  `spu-codegen-audit.md`. Details: [`edge-native-21.md`](edge-native-21.md).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

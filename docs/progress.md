@@ -1,5 +1,45 @@
 # Progress log
 
+## 2026-11-05 (native 0x21): whole-command rewrite is bit-exact offline but at parity; the one live A/B attempt wedged (pre-fix)
+
+Full details in [`docs/edge-native-21.md`](edge-native-21.md). Branch
+`exp/native-21` in `ps3recomp-n21`, build `recomp-work/build-n21`. Code pushed
+to `fork` only; `PS3RECOMP_C690_NATIVE_21` stays **default 0**. Two pitch-meter
+launches (the cap): launch 1 lost to a missing archive anchor, launch 2 captured
+the corpus and ran the A/B.
+
+- **Implemented the whole command**, not a leaf: `tools/c690_ref/gen_native_21_stage.py`
+  flattens the 0x13080 dispatcher, the 0x13140/0x131A0 bodies and their
+  transform/pack/normalize tails into `runtime/spu/c690_native_21_stage.inc`
+  (80 blocks). Tail transfers are gotos; `brsl` calls keep the lifted
+  `ctx->gpr` marshalling so the caller-visible state is exact. Weak hooks in
+  the shared `spu_lifted` tree (the 0x2A hooks are untouched); a strong anchor
+  in `spu_dispatch_mt.c` extracts the archive object; capture spool
+  `PS3RECOMP_C690_21_CAPTURE`.
+- **Offline exact:** 78 meter entries captured; on the **76/76** that the
+  lifted reference can replay, the native stage matches the full LS (0 bytes),
+  all 128 GPRs (0 words) and pc/status/stop. The 2 others hit a computed target
+  the lifted resolver cannot resolve from an LS-only capture and fall back.
+- **What the meter runs:** 11 selector 1 / 67 selector 7 entries (14/86 %);
+  selector 7 is `0xA3F8 -> 0xA8A0`, selector 1 here is
+  `0x13250 -> 0xA3C0 -> 0xA410`. The `0xBB80`/`0xBB98` C/D path is only taken by
+  the `r6` bit-4 formats, not these entries.
+- **No speedup.** Warm, back-to-back arms over 76 pairs (200 replays each):
+  **31.44 us lifted vs 31.42 us native (0.998)**. An alternating microbench's
+  2.5-3x is I-cache-confounded. Consistent with the codegen audit: the 0x21 gap
+  is emitted instruction count, not call marshalling.
+- **Live attempt:** `ab_live_native21ab_20261105_060006` captured 96 entries in
+  the settle, ran a clean A segment, then stopped flipping 0.2 s after the
+  first B switch. The pre-fix build wrote 1-2 wrong bytes in the ring word
+  `0x1F0A2..A3` (dropped `brsl` marshalling); keeping the stores/reloads makes
+  it bit-exact. Not re-run: 2-launch cap spent.
+- **Decision:** keep it off; **do not send 0x21 to the GPU** (the hand-off
+  costs ~5.96 ms/frame and there is nothing to save). The realistic 0x21 lever
+  remains a register-mapped codegen backend (~1.2-1.4x per the audit), not
+  another per-command native rewrite. One live soak of the fixed exact build is
+  available if the user wants it.
+
+
 ## 2026-11-05 (present stalls, C4): the frame dump blocked the walker; async writer, default off
 
 Full details in [`docs/present-stalls.md`](present-stalls.md). Branch
