@@ -397,6 +397,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   cost of the draws that were missing. Details and the user command:
   [`jersey-transparent.md`](jersey-transparent.md). Next: user visual check,
   then decide on a play default.
+- **Uniform moire / ripple (OPEN, 2026-11-05).** At the meter the guest asks for
+  54 sampler states: LOD bias 0 on all of them, full mip chains, 2x-8x anisotropy
+  requested but ignored by the Vulkan sampler; the 64-entry sampler table never
+  fills, so the inFAMOUS-style overflow is not it. Candidate
+  `PS3RECOMP_FP_AA` (scale DDX/DDY and implicit 2D samples by the 2x1 sample
+  grid) is default off: key-off digest exact, 51/51 shaders compile, but the
+  meter A/B showed no confirmed visual change and cost ~5 fps (35.56 ->
+  30.44). Next: implement guest MaxAnisotropy behind a key and dump the pants
+  texture at a close-up. Details: [`uniform-moire.md`](uniform-moire.md).
 - Jerseys: previous note (not the cube probes; cause was unknown) superseded by
   the entry above.
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/

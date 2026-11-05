@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (uniform moire): sampler census done, 2x1 derivative candidate is not it
+
+Full details and the user command are in [`docs/uniform-moire.md`](uniform-moire.md).
+Two pitch-meter launches (the cap), build `recomp-work/build-play`, branch
+`exp/live-ab`; no GPL source read or cited.
+
+- **Ruled out by the offline meter census** (`PS3RECOMP_ENG_SAMPLER_DUMP`):
+  54 distinct sampler states, LOD bias **0** on all of them, full mip chains
+  uploaded, min/max LOD matching the level count. The Vulkan 64-entry sampler
+  table never fills in a 1.5-minute live meter run (no overflow warning), so
+  the inFAMOUS-style "default nearest/level-0 sampler past 64" bug is not
+  this scene.
+- **Strongest remaining lead:** the cloth units request 2x-8x anisotropy
+  (`TEXTURE_CONTROL0[6:4]`) and the Vulkan sampler ignores it, while the
+  D3D12 backend honours it and the MIT ports keep an aniso path.
+- **Candidate implemented, default off:** `PS3RECOMP_FP_AA` scales DDX/DDY
+  and implicit 2D samples by the 2x1 sample grid (RSX derives per pixel, we
+  derive per sample). Key off digest unchanged (`FP_TXD=1`:
+  `3c3b3b85532a2ff5` / gate `0a9220f49d76e843`); key on a new digest; 51/51
+  dumped shaders compile; `test_fp_decompiler` covers the text.
+- **The A/B says no:** N=4 x 10 s per arm, fps **35.56 -> 30.44**, p50
+  **27.2 -> 29.5 ms**, p90 **34.3 -> 38.0 ms**, paired +5.13 fps (CI
+  -1.37..+11.62). Matched pants/jersey crops differ at the A/A level, so the
+  derivative scale is not proven and costs fps. The 640x360 scene thumbnails
+  are not a valid judge for this fine-detail bug; the user check in
+  `uniform-moire.md` section 6 is the gate.
+- **Next mission:** implement guest MaxAnisotropy in the Vulkan sampler
+  behind a key, and dump the pants program's texture at a close-up. The meter
+  capture cannot decode the character textures offline (78 texture-page read
+  misses).
+
 ## 2026-11-05 (depth of field): the RPCS3 blur patch runs in the recomp
 
 Full details and the user command are in [`docs/dof-patch.md`](dof-patch.md).
