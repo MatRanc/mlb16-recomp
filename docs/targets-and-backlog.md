@@ -99,6 +99,8 @@ checking if any geometry-only regression remains.
 
 ## Priority: speed and frame-time stability first
 
+**PLAN (2026-11-05 roundtable, docs/roundtable-2026-11-05.md):** 1 live walker profile, 2 native WWS head/tail, 3 walker diet (barriers/render passes/dirty bits/shadow const), 4 SPU register pressure + PGO, 5 ring/record thread/native runner last.
+
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
 - DONE 2026-11-04: 30-fps-cap investigation (docs/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.
 - DONE 2026-11-04: menu flip fix PS3RECOMP_FLIP_TICK_OWN_STATE=1 is the play default (ca855f72 + dcdd6728; medium
