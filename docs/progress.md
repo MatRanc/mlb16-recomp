@@ -1,5 +1,14 @@
 # Progress log
 
+## 2026-11-05 (depth GPU): the 222 depth-guest binds are one empty shadow map
+
+Branch `exp/depth-gpu` (off `exp/crowd-prof`), build `build-depth`, no game launch. `dguest` was a single 2048x1024
+Z24S8 zeta sampled as linear DEPTH24_D8 by 222 draws a frame; the crowded capture clears it and never draws into it, and
+`eng_zdepth_snapshot` refused a clear-only zeta (needs `had_write`), so each frame paid a GPU wait + 8 MB readback +
+store + re-upload. `PS3RECOMP_ENG_DEPTH_GPU=1` (live key, default 0) snapshots it on the GPU while its guest copy is
+unstored; the store stays lazy. Offline real-Vulkan, 3 runs: walker 61.3 -> 42.2 ms, `tex` 23.6 -> 5.4, `dguest`
+222 -> 0; final frame byte-identical. Details: [`depth-gpu.md`](depth-gpu.md). User live check still owed.
+
 ## 2026-11-05 (crowded walker profile): the live texture cost is the Vulkan depth guest fallback
 
 Full details in [`docs/crowded-walker-profile.md`](crowded-walker-profile.md).

@@ -82,6 +82,9 @@ checking if any geometry-only regression remains.
   draws (1,702 sink groups, the live count) / 0 misses. Live meter capture (one launch) replays 0 misses. New fixture
   test_walker_capture. USER still owes one crowded recapture with build-tools (command in the doc §5); gate
   draws/frame >= 1300, 0 misses, digest on. Nothing new is default-on.
+- DEPTH GPU 2026-11-05 (exp/depth-gpu, docs/depth-gpu.md): the 222 `dguest` binds are one cleared-never-drawn 2048x1024
+  Z24S8 shadow map; `PS3RECOMP_ENG_DEPTH_GPU=1` (live key, default 0) snapshots it on the GPU: offline Vulkan walker
+  61.3 -> 42.2 ms, `tex` 23.6 -> 5.4, byte-identical frame. USER owes a ~3 min live fps/shadow check (command in the doc).
 - PROFILED 2026-11-05 (exp/crowd-prof, docs/crowded-walker-profile.md): the crowded capture replayed through the REAL
   Vulkan backend (`PS3RECOMP_REPLAY_VK=1`, headless RTX 3060 Ti, guest programs + batching) gives walker 62.2 ms and
   `tex` 23.8 ms on the 1,694-draw frame, against 34.0 / 5.0 ms with the null backend; the null-replay "2.4-3.0 ms tex"
