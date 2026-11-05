@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (Edge E1): fused native 0x25/0x26 holes pass, caller modelled, one command pass (offline only)
+
+Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md). Worktree
+`ps3recomp-e1` (branch `exp/edge-e1-holes`, from `exp/live-ab` `230acd9f`),
+own build `recomp-work/build-e1` (build-play flags, private
+`recomp-work/spu_lifted-e1`). **Zero game launches** in this mission; nothing
+under `ps3recomp-play`, `build-play` or `build-mt` was touched.
+
+- **The 0x132E0 caller is modelled.** `r4` is a stack slot whose word 0 is the
+  candidate triangle count and word 2 the kept triangle count; after `0xD080`
+  the caller writes `+0x114 = 3 * word2`, `+0x118` and `+0xA0`. The old step-4
+  blocker was that write. The fused pass leaves it untouched, runs the body
+  once, and merges the sample-only triangles afterwards in
+  `c690_cull_fix_end()` (then bumps `+0x114`).
+- **One command pass, two stage evaluations.** The game grid runs exactly on
+  the real context; the sample grid runs on a private LS/GPR copy with the 2x
+  transform patch. No real-context LS/GPR snapshot, no second body run. The
+  key is `PS3RECOMP_C690_HOLES_NATIVE` (live, default 0).
+- **128-pair gate PASS** (`corpus_edge1_25` + `_26`): 0 removed/reordered vs
+  the SPU, 0 added on this corpus, full LS/GPR bit-identical to the lifted
+  union, `+0x114` equals the list length / a multiple of 3 / the union count,
+  buffer pointer and end unchanged. The old 400-pair corpus (7 added) is gone;
+  the add path is covered by the merge unit test plus that bit-identical union
+  equality. `test_c690_holes_merge` passes.
+- **A gate-caught bug:** the private refactor cached a negative transform scan
+  for 256 calls, so the 0x26 pairs after 64 0x25 pairs scored inert. Negatives
+  are never cached now; only the fused probe may skip a rescan, and only for
+  0x25 (every captured 0x25 job has no transform, every 0x26 job has one).
+- **Cost (gcc -O2, one 0x132E0 call):** lifted 24.0 us, native exact 19.5,
+  **fused holes 35.6**, native union 115.7, lifted union 126.5. ~3.2-3.5x
+  cheaper than the union and ~1.5x the lifted cull; 0x25 is at native cost
+  (faster than lifted) and only 0x26 pays the sample evaluation. Estimate:
+  ~-0.5 to 0 fps at the meter, inside the A/B noise. Not measured live.
+- **Next:** merge, re-patch the module and rebuild `build-play`, then run the
+  meter A/B and the user's pitch close-up check with `MLB16_CULL_BYPASS=0`
+  (exact commands in `edge-e1-holes.md` §5).
+
 ## 2026-11-04 (walker MT repair): build fixed, C hang fixed, black field gone, timing/visual gates still fail
 
 Full analysis in [`docs/walker-mt-repair.md`](walker-mt-repair.md). Branch

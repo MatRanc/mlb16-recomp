@@ -29,6 +29,7 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 | 0x0A unpack/pack leaves (0x6D68, 0x7C18, 0x8160) | CPU native | per edge-native docs (off) | exact | exact | n/a | replay corpus | edge-native-step*.md |
 | 0x25/0x26 screen cull (0xD080) | CPU native | `PS3RECOMP_C690_NATIVE_SCREEN` (off) | exact | exact | exact | replay corpus | edge-native-step4/5.md |
 | 0x25/0x26 cull sample grid | lifted, patched | `MLB16_CULL_BYPASS` (0); =3 bypasses 0x25/0x26 | n/a | n/a | **not exact by design** (=3 keeps all; fixes eye holes, -7.6 fps) | user play test | edge-holes-fix.md, cull-bypass-ab.md |
+| **0x25/0x26 cull sample grid, fused native pass** | CPU native, one 0x132E0 body pass (game grid on the real LS, sample grid on a private copy; caller count modelled) | `PS3RECOMP_C690_HOLES_NATIVE` (off) | exact | exact | **conservative**: 0 removed/reordered vs SPU on 128 pairs; 0 added on that corpus; full LS/GPR bit-identical to the lifted union; `+0x114` count/list consistent | 128-pair replay corpus, offline only (no live run) | edge-e1-holes.md |
 | 0x21 sel7 A3E0/BB98, 0x25/0x26 GPU, 0x2A wiring | planned | - | - | - | - | - | edge-gpu-plumbing.md, edge-gpu-2a-wiring.md §4–6 |
 
 Rows marked "not wired" do not run in the game yet. When a stage is wired into the walker, add its live key and change
