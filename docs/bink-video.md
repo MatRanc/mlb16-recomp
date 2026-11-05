@@ -152,3 +152,12 @@ grep -nE "MLB_INTRO|read fd=12|aio read id=.*fd=12|Not a Bink|WAIT_SIGNAL" "$L" 
   that log.
 * The Bink task still sleeping in `WAIT_SIGNAL` after the intro starts: the
   descriptor form did not apply; send the `TaskAttr` lines.
+
+## Live check by Claude (2026-11-05 02:10, build-play with 1dc55e13)
+
+One automated boot (`ab_live_binkcheck_20261105_021037`, START_SCREEN=1). The Bink task now takes the descriptor form
+(`TaskAttr DESC-form (auto) ... size=5120`), the game creates the `Bink Snd` / `Bink IO` threads at the intro open
+(02:10:49), and the Bink SPU task runs in WAIT_SIGNAL cycles (~30 ms each) until 02:10:57, i.e. the intro is being
+decoded for ~8 s instead of being dropped at the header. The start screen afterwards runs at ~47 fps ([flip] lines are
+every 10th flip). Whether the picture is shown is not visible in this run's thumbnails (they start after boot): user
+check pending. Note the decode cadence (~30 ms per task run) if the intro looks slow.
