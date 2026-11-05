@@ -21,6 +21,12 @@ for the class decoded in [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md), following
 > is clean under ASan/UBSan and TSan after the fix. **One live pitch-meter A/B
 > ran without a crash; no speed gain, as designed (the SPU still packs).** The
 > path's own cost is ~6.0 ms/frame (submit+fence). See §7.
+>
+> **Update 2026-11-05 (async hand-off, §8).** The compute now runs on a
+> dedicated queue with a timeline semaphore; the walker never waits (submit
+> cost 0.061 ms/frame, wait 0). The frame still loses ~7.6 ms at p90 to the
+> compute queue's scheduling, so the next step is to record the dispatches
+> into the frame's own command buffer, not another queue submit. See §8.
 
 ## TL;DR
 
@@ -430,7 +436,178 @@ reach the 5-7 ms Edge target. The overlay's measured cost is the reason to do
 the pack replacement and the async hand-off **together**, not as separate
 stages.
 
-## 8. Clean room
+## 8. Asynchronous hand-off: dedicated compute queue + timeline semaphore (2026-11-05, later)
+
+Branch `exp/edge-gpu` in `ps3recomp-gpu`, build `recomp-work/build-gpu`.
+**Two pitch-meter launches (the mission cap).** Run 1 exposed why a CPU wait
+on the compute batch is not cheap; run 2 measured the fixed hand-off. The
+binding stays default off (`PS3RECOMP_C690_GPU_2A=0`).
+
+### 8.1 What changed from §7
+
+* **A compute queue of its own.** `vk_find_compute_queue` picks a compute-only
+  queue family (family 2 on the RTX 3060 Ti). The c690 command pool and all
+  compute submits use it; the walker/present queues are untouched. If the
+  device has no compute-only family, the walker's queue is used.
+* **A timeline semaphore instead of a CPU fence.** The instance is created as
+  Vulkan 1.2 when the loader supports it (a 1.0 instance silently reports
+  `timelineSemaphore = false`; that is why run 1 logged "fence fallback"). The
+  `VK_KHR_timeline_semaphore` extension + feature are enabled, the compute
+  submission signals a value, and the driver is polled
+  (`vkGetSemaphoreCounterValue`) at drain boundaries. No `vkWaitForFences` in
+  the hot path; `vkWaitSemaphores` is used only at shutdown.
+* **Submit at the drain boundary.** `rsx_wprof_drain_begin()` now calls a
+  renderer kick hook: all jobs queued since the last drain become one dispatch
+  set on the compute queue, submitted without waiting. Jobs that arrive
+  mid-drain are batched by the existing prepare hook. The old 64-job cap is
+  gone; only a full arena requeues a job (with its pending marker re-armed).
+* **No blocking on arena reuse.** If the previous batch is still in flight,
+  the new batch is put back on the queue for a later drain instead of waiting.
+  The arena is single-buffered, so this is the only ordering the compute needs.
+* **The resolver's CPU view never blocks.** A range now carries the GPU bytes,
+  the exact SPU seed bytes, and the timeline value that produces them. The
+  probe serves the **seed** until the cached "done" value reaches the range's
+  value, then the GPU bytes. This is the explicit choice the gate asks for:
+  a CPU reader either gets the seed or (once the hand-off has completed) the
+  GPU result; it never stalls. In this stage the per-drain range clear means
+  the live draw path takes the seed in practice; the GPU result is computed
+  and available, not yet consumed.
+* **One memory barrier, validation-clean.** The compute command buffer ends
+  with a shader-write -> compute/transfer/host barrier. The first version used
+  a `VERTEX_SHADER` destination stage, which is invalid on a compute-only
+  queue (VUID-vkCmdPipelineBarrier-dstStageMask-06462); the offline validation
+  arm found it and the mask is now compute/transfer/host only.
+* **Debug values unchanged.** `PS3RECOMP_C690_GPU_2A_DBG=1` (export on, GPU
+  off) and `=2` (resolve only, exact seed) keep their old meaning. The stats
+  line now reports `submits/submit_us/wait_us` and prints every 2 s (the old
+  code compared a nanosecond clock against 2,000,000, printing every 2 ms).
+
+### 8.2 Offline gates
+
+| gate | result |
+|---|---|
+| concurrent race harness (`tools/run_c690_gpu_2a_race.sh`) | ASan/UBSan and TSan clean, 192 captured pairs, 5 lanes with `spu_id 0` |
+| `test_c690_gpu_2a` | PASS (format A, format B, exact fallback) |
+| `tools/test_video_fixtures.py` | **30/30** (one pass; `test_gcm_tick_in_drain` is timing-flaky under load) |
+| `check_spu_context_abi.sh` | shared field offsets agree (no `spu_context` change) |
+| replay gate, `meter_frame --frames 64` | `a6fcc849341eba9b`, gate `ff2a220c28750bc3` (unchanged) |
+| offline Vulkan validation arm (`tools/c690_vk_timeline_validate.c`) | 200 submit/poll/wait rounds, **0 validation errors** |
+
+The live A/B command below was the second launch; with the 2-launch cap there
+was no third launch for a game-run validation arm. The offline harness uses
+the same device/queue/timeline/pipeline-barrier sequence and is the validation
+arm required by the mission; it is not the in-game integration.
+
+### 8.3 The two launches
+
+Both used `BUILD=build-gpu`, `METER=1 SKIP_CINE=1 WCB=2 PIN=0`,
+`VIDEODRIVER=x11`, `PITCH_THRESH=35`, `N=5 SEG=10 DROP=2`, one X, governor
+`performance`, `A=PS3RECOMP_C690_GPU_2A=0` / `B=PS3RECOMP_C690_GPU_2A=1`.
+
+**Run 1** (`ab_live_c690gpu2d_20261105_041941`) used a 1.0 instance, so the
+timeline feature query returned false and the binding fell back to a fence;
+it also still waited at the read. The wait cost **2.48 ms per batch** (4.36 s
+over 1,758 batches) and the frame collapsed:
+
+| arm | frames | fps | p50 | p90 | p99 | walker ms |
+|---|---:|---:|---:|---:|---:|---:|
+| A | 1,133 | 28.32 | 34.20 | 57.20 | 70.74 | 13.42 |
+| B | 636 | 15.90 | 74.07 | 89.40 | 102.79 | 35.87 |
+
+**Run 2** (`ab_live_c690gpu2e_20261105_043438`): timeline semaphore on,
+compute submitted at drain start, no CPU wait:
+
+| arm | frames | fps | p50 | p90 | p99 | std | walker ms | wait ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| A | 1,485 | 37.12 | 34.15 | 38.78 | 42.57 | 11.41 | 8.46 | 15.98 |
+| B | 1,104 | 27.60 | 34.65 | 46.43 | 50.88 | 32.30 | 15.14 | 18.96 |
+
+Thumbnails: the meter shots are clean in both arms (B brightness 102.0 +/- 1.0
+against A's scene-dependent 96.8; no black/garbage frame, consecutive
+thumbnail difference 0.75 in B).
+
+### 8.4 Where the remaining overhead is
+
+From the run-2 counters:
+
+| quantity | value |
+|---|---:|
+| prepares / submits | 4,525 / 4,525 (all key-on) |
+| jobs / records | 232,588 / 87,467,740 |
+| jobs / records per prepare | 51.4 / 19,330 |
+| submits per B-active frame | 4.10 |
+| **submit per submit** | **14.8 us** |
+| **submit per frame** | **0.061 ms** |
+| **CPU wait per frame** | **0** |
+| GPU compute per frame (phase-2b model) | ~0.12 ms (79,228 records/frame) |
+
+So the hand-off itself (submit + wait) is **~0.07 ms/frame**, under the 0.5 ms
+target. The frame level still moves the wrong way: p50 +0.50 ms, p90 +7.65 ms,
+p99 +8.31 ms, fps -25.6 %. With 4.1 compute-queue submits per frame, the tail
+is about **1.9 ms of lost graphics time per submit**: a queue-family switch,
+not the fence and not the arithmetic (87 M records is ~0.12 ms/frame at the
+phase-2b rate). Run 1 shows the same constant from the other side: waiting on
+a compute-queue batch costs as much as the old render-queue fence because the
+graphics queue is saturated and the compute queue is scheduled in coarse
+slices.
+
+This is the mission's main negative result: **removing the fence does not make
+the hand-off free while the compute runs on a separately submitted queue.** The
+next step is to record the dispatches into the frame's own command buffer
+before the first draw that reads the range (a pipeline barrier on the render
+queue, no separate submit), which removes the queue switch. That only pays
+once the draw consumes the GPU bytes directly; while the SPU still packs, the
+CPU takes the exact seed and the in-stream compute is pure overhead.
+
+### 8.5 What is left before a real GPU stage can win
+
+1. **Pack replacement** (`exp/native-2a`, `ps3recomp-n2a`): stop the SPU
+   writing the records so the seed fallback disappears. Then the draw must
+   either read the GPU range directly (preferred; no CPU wait) or wait, which
+   reintroduces the cost measured in run 1.
+2. **In-stream compute or GPU-direct consumption** as above: one submit per
+   frame, no compute-queue context switch. The validation-safe barrier on the
+   render queue may include the vertex stage.
+3. **Class coverage**: the live binding exports only the A/B 32-byte class
+   (27.7 % of 0x2A entries this run: 232,588/840,713). The offline kernels
+   cover 131/192 = 68.2 % of meter pairs; adding the other six classes is the
+   u32 entry-index list + a class selector + the extra stream bases. The 31
+   first-in-job runtime pairs and the 19 no-position outputs stay fallback.
+4. **0x21 sel7 next** (4.74 ms burst), then the culls (3.03 ms), on the same
+   asynchronous binding. The 0x2A saving is unchanged: ~1.07 ms at 31.2 %
+   coverage, ~2.3 ms at 68.2 %, 3.43 ms at full 0x2A — and it only appears
+   once the pack is skipped and the hand-off costs under ~0.5 ms/frame.
+
+### 8.6 Reproduction
+
+```sh
+cd /home/m/Documents/mlb16-online/ps3recomp-gpu
+
+# offline race harness (ASan/UBSan, then TSan)
+tools/run_c690_gpu_2a_race.sh
+
+# unit test / fixtures / ABI / replay gate
+../recomp-work/build-gpu/ps3recomp_sdk/test_c690_gpu_2a
+python3 tools/test_video_fixtures.py
+SDK=$PWD ../recomp-work/ab-tools/check_spu_context_abi.sh
+cd ../recomp-work/build-gpu
+./ps3recomp_sdk/replay_rsx_engine ../../recomp-work/meter_frame --frames 64 --warmup 10
+
+# validation arm
+cd ../../ps3recomp-gpu
+cc -O1 -Ilibs/video/vulkan -o /tmp/vk_c690_timeline_validate \
+  tools/c690_vk_timeline_validate.c -ldl
+VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation /tmp/vk_c690_timeline_validate
+
+# live A/B (already run twice; do not repeat before a fix)
+cd ../recomp-work/ab-tools
+TAG=c690gpu2e BUILD=build-gpu N=5 SEG=10 DROP=2 METER=1 SKIP_CINE=1 WCB=2 \
+  PIN=0 VIDEODRIVER=x11 REPORT=0 LIMIT=420 SETTLE=10 PITCH_THRESH=35 \
+  ARMS='A=PS3RECOMP_C690_GPU_2A=0|B=PS3RECOMP_C690_GPU_2A=1' \
+  BOOT_ARM='PS3RECOMP_C690_GPU_2A=0' ./ab_live.sh
+```
+
+## 9. Clean room
 
 Own static analysis of the EBOOT (Ghidra), the lifted c690 module, our own
 runtime/walker code, our own captures and Vulkan kernel. The stage/corpus/

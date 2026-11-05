@@ -160,6 +160,17 @@ on the user.
   0x2A saving is ~1.07 ms at 31.2 % coverage, ~2.3 ms at the 68.2 % now
   classified.
   Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §7.
+- 2026-11-05 (later, async hand-off): **the c690 compute runs on a dedicated
+  compute queue with a timeline semaphore; the walker never waits.** Submit is
+  **0.061 ms/frame, wait 0** (target <= 0.5 ms), 4,525 batches over 1,104
+  key-on frames; the resolver serves the exact SPU seed until the timeline
+  value completes and never blocks. But p90/p99 still rise (46.4/50.9 vs
+  38.8/42.6 ms) because each compute-queue submit costs ~1.9 ms of graphics
+  scheduling; p50 34.65 vs 34.15, fps 27.6 vs 37.1. Next: record the dispatches
+  into the frame's command buffer (no separate submit) and have the draw
+  consume the GPU range after the pack replacement; then the other six classes
+  (68.2 % offline), 0x21 sel7 (4.74 ms) and the culls (3.03 ms). Default stays
+  off. Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §8.
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

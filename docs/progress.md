@@ -1,5 +1,40 @@
 # Progress log
 
+## 2026-11-05 (c690 GPU Edge): asynchronous 0x2A hand-off; submit 0.061 ms/frame, p90 still pays the compute queue
+
+Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §8. Branch
+`exp/edge-gpu` in `ps3recomp-gpu`, build `recomp-work/build-gpu`. **Two
+pitch-meter launches (the cap)**; the key stays default 0.
+
+- **What changed.** The c690 compute now runs on a dedicated compute-only
+  queue family (family 2 on the RTX 3060 Ti) with a timeline semaphore. The
+  walker submits at the drain boundary and never waits: 4,525 submits,
+  **14.8 us per submit, 0.061 ms/frame** over 1,104 key-on frames, **wait 0**
+  (the target was <= 0.5 ms/frame). Jobs of a drain are one dispatch set.
+  The resolver serves the exact SPU seed until the producing timeline value is
+  observed complete, then the GPU bytes; no CPU reader blocks.
+- **Run 1 found two things.** The instance was Vulkan 1.0, so the core
+  timeline-feature query silently reported false and the binding used a fence;
+  and waiting at the read on a compute-queue batch costs **2.48 ms/batch**
+  (p50 74.1 ms). Run 2 fixed both (instance 1.2, no CPU wait).
+- **Run 2 A/B** (`ab_live_c690gpu2e_20261105_043438`): A 37.12 fps / p50 34.15
+  / p90 38.78 / p99 42.57 / walker 8.46; B 27.60 / 34.65 / 46.43 / 50.88 /
+  15.14. p50 +0.50 ms, p90 +7.65, p99 +8.31, fps -25.6 %. Thumbnails clean.
+  The remaining cost is **~1.9 ms of graphics time per compute-queue submit**
+  (a queue-family switch), not the fence and not the maths (~0.12 ms/frame at
+  the phase-2b rate). Recording the dispatches into the frame's own command
+  buffer before the first reading draw is the way to remove it, but it only
+  pays once the draw consumes the GPU bytes; the SPU still packs.
+- **Gates.** Race harness ASan/UBSan + TSan clean (192 pairs, 5 lanes with
+  `spu_id 0`), `test_c690_gpu_2a` PASS, fixtures 30/30, ABI check, replay hash
+  unchanged, offline Vulkan validation arm 200 rounds **0 errors** (it caught
+  a compute-queue barrier with a vertex stage; fixed). The second launch was
+  the A/B, so the validation arm is the offline harness, not an in-game run.
+- **Next.** Replace the pack (`exp/native-2a`) and make the draw consume the
+  GPU range; fold the compute into the frame stream; then the other six
+  classes (68.2 % offline), 0x21 sel7 (4.74 ms) and the culls (3.03 ms).
+
+
 ## 2026-11-05 (c690 GPU Edge): 0x2A live crash fixed, one clean A/B; overlay costs 5.96 ms/frame
 
 Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §7. Branch
