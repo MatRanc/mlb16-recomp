@@ -144,6 +144,18 @@ on the user.
   isolate the live crash, then replace `0x10C70`/`0x109C0`, then 0x21 sel7
   (4.74 ms) and the culls (3.03 ms).
   Details: [`edge-gpu-binding.md`](edge-gpu-binding.md).
+- 2026-11-05 (later): **native 0x2A field pack delivered, default off**
+  (`PS3RECOMP_C690_NATIVE_2A`, `exp/native-2a`). It replaces the four
+  lifted field passes (`0x7840`/`0x7FC0`/`0x7AC0`/`0x7540`), not
+  `0x10C70`/`0x109C0` (those parse the descriptor). Offline
+  **112/131 classified pairs (85.5 %) policy-exact**, 19 attribute-first
+  fall back byte-identical. Live A/B neutral: 0x2A 21.92 -> 21.59 us/call
+  (-1.5 %), p50 34.15 both, fps paired -0.59 +/- 2.75. Offline the
+  20-byte/position/44-byte classes speed up 22-43 % but the largest
+  32-byte class is 11 % slower. Conclusion: a GPU pack replacement can
+  save at most ~0.2-0.5 ms/frame while its hand-off costs 5.96 ms/frame;
+  0x21 whole-command is the next lever. Details:
+  [`edge-native-2a.md`](edge-native-2a.md).
 - 2026-11-05 (later, crash fix): **the live heap corruption is fixed.** The
   lane key was `ctx->spu_id % 16`, but the c690 jobs run through
   `spu_run_spurs_job`, which builds every lane's context with `spu_id 0`; all

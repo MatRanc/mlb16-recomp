@@ -32,6 +32,7 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 | 0x2A assembler (0x10F78), **28-byte attribute-first** (SPU prefix 4B + 3 x normal + pos@16) | GPU kernel `tools/replay/c690_2a_28b_attr.comp` | offline only, not wired | exact | <= 1 LSB; prefix 0 differing | n/a | **10/10 pairs, 4,120 records** | edge-gpu-2a-classes.md |
 | 0x2A assembler (0x10F78), **44-byte class** (pos + normal + 2 x s16 1/1024 + 4 x s16 tan + 2 x s16 1/16384 + 2 x 3 x s16 1/1024) | GPU kernel `tools/replay/c690_2a_44b.comp` | offline only, not wired | exact | <= 1 LSB | n/a | **13/13 pairs, 2,520 records** | edge-gpu-2a-classes.md |
 | 0x2A assembler (0x10F78), **all seven classes combined** | GPU kernels above, one shared `c690_2a_records.inc`; gate `test_c690_2a_classes.c/.py` | offline only, not wired | exact | <= 1 LSB | n/a | **131/131 classified pairs, 45,440 records**, max 1 LSB, 0 writes outside records; **coverage 131/192 = 68.2 %** of meter 0x2A pairs; fallback 61/192 = 31.8 % (31 first-in-job runtime-path, 19 no-position outputs, 11 rare 64/40/16/4/112-byte layouts) | edge-gpu-2a-classes.md |
+| 0x2A assembler (0x10F78), **native field pack** (five position-first classes; the four field passes `0x7840`/`0x7FC0`/`0x7AC0`/`0x7540`; the driver/pre-pass stays lifted) | CPU native entry hooks, `runtime/spu/c690_native_2a.c` + `tools/c690_ref/patch_native_2a.py` | `PS3RECOMP_C690_NATIVE_2A` (default **0**) | **exact** | **<= 1 LSB** (SPU attr +28..31 untouched) | n/a | **112/131 classified pairs (85.5 %; 58.3 % of the 192 sampled)**, positions 0 differing bytes, packed max 1 LSB, 0 writes outside the field; 19 attribute-first pairs fall back byte-identical; r0/r1/r80..r127 exact (only caller-saved r2..r79 scratch differs); live A/B neutral: 0x2A 21.92 -> 21.59 us/call, p50 34.15 both | edge-native-2a.md |
 | 0x21 sel1 A730 leaf (0xB830) | GPU kernel `tools/replay/c690_b830_batch.comp` | offline only, not wired | exact | exact | n/a | 64/64 meter pairs, 0 ULP, 9 live GPRs exact | edge-gpu-phase2b-step4.md |
 | 0x22 tree/cull subtree (0xFDA0) | CPU native | `PS3RECOMP_C690_NATIVE_CULL` (off) | exact | exact | exact | replay corpus, live A/B | edge-native-step3/4/5.md |
 | 0x0A unpack/pack leaves (0x6D68, 0x7C18, 0x8160) | CPU native | per edge-native docs (off) | exact | exact | n/a | replay corpus | edge-native-step*.md |
@@ -71,7 +72,12 @@ so the binding stays default off until the dispatches join the frame's own
 command buffer and the draw consumes the GPU bytes. Six more record
 layouts are exact offline, 131/192 = 68.2 % of meter 0x2A pairs, while the 31
 first-in-job pairs that enter the low-LS SPURS runtime and the 19
-attribute/index-only outputs have no kernel), GPU 0x21 sel7 /
+attribute/index-only outputs have no kernel). The **native field pack**
+(`PS3RECOMP_C690_NATIVE_2A`, default 0) replaces the four field passes
+for the five position-first classes: policy-exact on 112/131 classified
+pairs and live-neutral (0x2A 21.92 -> 21.59 us/call, p50 34.15 both);
+the 32-byte class is 11 % slower with the scalar pack and needs
+vectorising. GPU 0x21 sel7 /
 0x25/0x26 cull, the 0x22 whole-body native body, and
 the extra host lanes (`wip/c690-extra-lanes`, unfinished; `SPURS_LANE6` wedges
 in ~10 s). They are parked because each is a large mission, not because they

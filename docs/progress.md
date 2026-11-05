@@ -1,5 +1,45 @@
 # Progress log
 
+## 2026-11-05 (c690 Edge): native 0x2A field pack; policy-exact on 112/131 pairs, live A/B neutral
+
+Full details in [`docs/edge-native-2a.md`](docs/edge-native-2a.md). Branch
+`exp/native-2a` in `ps3recomp-n2a`, build `recomp-work/build-n2a`. Code pushed
+to `fork` only; `PS3RECOMP_C690_NATIVE_2A` stays default 0. **Two pitch-meter
+launches (the cap)**: run 1 carried a per-layout lookup bug found afterwards,
+run 2 is the measurement.
+
+- **The pack is not `0x10C70`/`0x109C0`.** Those parse the stream descriptor and
+  build the per-stream conversion/prefix table. The record assembly is four
+  field passes: `0x7840` position copy, `0x7FC0` normal 11:11:10, `0x7AC0`
+  fixed s16 (2/3/4 components), `0x7540` f16 x 2. The driver (index pre-pass,
+  allocator, cursor) stays lifted.
+- **Offline gates.** Entry hooks replace the four passes for the five
+  position-first classes. On the 192-pair `fncap2b2w3` replay:
+  **112/131 classified pairs (85.5 %) policy-exact** (positions 0 differing
+  bytes, packed <= 1 LSB, no writes outside the field; 58.3 % of all sampled
+  0x2A pairs). The 19 attribute-first pairs fall back byte-identical; the 30
+  no-position pairs are exact and the 31 first-in-job pairs are identical to
+  key-off. GPRs: r0/r1/r80..r127 exact, only caller-saved r2..r79 scratch
+  differs. New unit test PASS; fixtures 31/32 (`test_gcm_tick_in_drain` is a
+  timing fixture that also flakes on the base tree); ABI PASS.
+- **Live A/B (run 2, `ab_live_native2b_20261105_044645`).** A 35.15 fps / p50
+  34.15 / p90 38.35 / p99 41.23; B 35.77 / 34.15 / 38.12 / 41.04; paired
+  **-0.59 +/- 2.75 fps** (CI [-3.34, 2.16]). Per-command **0x2A 21.92 ->
+  21.59 us/call (-0.33 us, -1.5 %)**; ~0.18 ms of the total c690 lane time per
+  frame, below noise. Class-level fallback 18.4 %, pass-level native 56 %.
+  Thumbnails unchanged.
+- **Offline per class:** 20-byte -9.9 us (-43 %), position-only -5.8 us
+  (-38 %), 44-byte -6.5 us (-22 %), but the largest class (32-byte
+  position-first) is **+2.4 us (+11 %)** with the scalar pack. That offsets the
+  gains in the live class mix.
+- **Implication.** A perfect GPU pack replacement inherits a ~0.2-0.5 ms/frame
+  ceiling at this coverage, while the measured GPU hand-off costs 5.96 ms/frame
+  (and the async queue still loses ~7.6 ms at p90). The pack is not the meter
+  bottleneck; the driver/pre-pass and the latency-bound burst are. 0x21
+  (4.74 ms, pure compute) is the better target, but only as a whole-command
+  replacement. Next: vectorise the 32-byte pack, then attack the whole 0x2A
+  command or 0x21.
+
 ## 2026-11-05 (c690 GPU Edge): asynchronous 0x2A hand-off; submit 0.061 ms/frame, p90 still pays the compute queue
 
 Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §8. Branch
