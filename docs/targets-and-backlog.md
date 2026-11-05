@@ -528,6 +528,17 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Bink SPU task-attribute descriptor. Details and the ~2-min user check:
   [`bink-video.md`](bink-video.md). Same path as the team-select `BINK_LOGO`.
 
+- **Team-select green flash EXPLAINED 2026-11-05 (key off by default).** The
+  game clears the Bink Y/Cr/Cb planes to zero on open and shows the sprite on
+  the fourth update call without waiting for the first decoded frame
+  (`UI_Movie_GetTextureIfReady` `0x00981488`, `+0x1d0 >= 4`); fast scrolling
+  samples the clear (all-zero YUV = green). `PS3RECOMP_BINK_GREEN_FIX=1` on
+  `exp/bink-green` orders the SPU PUT writes after the copy and revalidates the
+  texture within the bind frame, closing the renderer's bind-vs-GPU window; if
+  the decode lands after the draw, the guest race remains. Offline-tested
+  (34/34 fixtures), no live launch. User command: [`bink-video.md`](bink-video.md)
+  §7.6.
+
 - **Depth of field (close-up/replay blur) PATCH IMPLEMENTED 2026-11-05
   (key off by default).** `PS3RECOMP_DOF_PATCH=1` applies the user's RPCS3
   `MLB16_dof_fix.yml` bytes at ELF load: the 0xA90-byte 17-tap depth-aware

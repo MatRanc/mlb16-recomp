@@ -161,3 +161,168 @@ One automated boot (`ab_live_binkcheck_20261105_021037`, START_SCREEN=1). The Bi
 decoded for ~8 s instead of being dropped at the header. The start screen afterwards runs at ~47 fps ([flip] lines are
 every 10th flip). Whether the picture is shown is not visible in this run's thumbnails (they start after boot): user
 check pending. Note the decode cadence (~30 ms per task run) if the intro looks slow.
+
+## 7. 2026-11-05: the team-select green flash
+
+Date 2026-11-05. **No game was launched.** Sources: the EBOOT in Ghidra, the
+`ps3recomp-play` runtime and fixtures, and the 2026-11-05 user log
+`recomp-work/play_20261105_110451.log`. No RPCS3 or other GPL emulator source
+was read or cited.
+
+### 7.1 The colour is the cleared movie plane
+
+Scrolling the team list quickly shows a solid green rectangle exactly the size
+of the floating logo movie for a frame or two; slow switching does not. The
+logo is a Bink movie: `TeamSelect_UpdateLogoSprites` (`0x0028d78c`) loads
+`LOGO_AWAY`/`LOGO_HOME` and, for sprite type 7, calls `UI_Movie_LoadBik`
+(`0x006d204c`) on the same path as the intro. The movie is sampled as three
+8-bit planes (`binkY` on TEXUNIT3, `binkCr`/`binkCb` on 4/5, `binkA` on 6, the
+`BinkOpaque`/`BinkAlpha` techniques, string table `0x011234c0`) and converted
+in the fragment program. All-zero planes give Y=0, Cb=0, Cr=0, which the BT.601
+conversion clamps to RGB ~(0, 135, 0): the green in the report.
+
+### 7.2 The game clears the planes to zero, then draws them on a blind 4-tick gate
+
+`UI_Movie_Open` (`0x0097fff0`) allocates two frame-buffer sets with
+`UI_Movie_AllocPlanes` (`0x0097f464`): `BinkY` at w x h and `BinkCR`/`BinkCB`
+at w/2 x h/2, format `0xe` (8 bpp), plus an optional `BinkA`. It then, for each
+set:
+
+1. clears every texel to 0 through `Texture_ClearLevelById` (`0x004db4d4`) ->
+   `Texture_FillLevel` (`0x004f7a80`, format-0xe store at `0x004f7bd8`);
+2. locks the level (`Asset_LockTextureLevel` `0x004b907c`) and stores the CPU
+   pointer in the Bink frame-buffer descriptor;
+3. calls `BinkRegisterFrameBuffers` (`0x00ee033c`) and `BinkDoFrameAsync`
+   (`0x00ee9484`).
+
+`UI_Movie_Close` (`0x0097fd18`) clears all eight handles again at `0x0097fdd8`,
+so there is no retained previous logo in the buffers.
+
+The sprite is drawn only when `UI_Movie_GetTextureIfReady` (`0x00981488`)
+returns the plane handles. Its test is:
+
+```
+if (ctx->playing == 0) return 0;          /* +0x1d5 */
+if (ctx->update_tick < 4) return 0;       /* +0x1d0, 0x009814ac..0x009814bc */
+return &ctx->planes[(ctx->decoded_frames & 1) * 0x10];  /* +0x110 */
+```
+
+`UI_Movie_Update` (`0x00980f20`) increments `+0x1d0` on every update call
+*before* `BinkWait` (`0x00ee29d8`) at `0x00981214`, and increments the
+decoded-frame counter `+0x110` only after a frame completes (`0x00981268`,
+`0x009812a8`). The getter never checks `BinkWait` or `+0x110`. So the first
+three updates draw nothing and the fourth draws whatever the planes hold. If
+the first decode has not landed by then, that is exactly the zeroes the open
+wrote: green, at the video's size.
+
+### 7.3 Why fast scrolling and not slow
+
+The gate is a fixed number of update calls (four UI frames), not a wait for
+the decoder. With a slow switch the movie has been open long enough for the
+first frame to land before the fourth draw; with a fast scroll the same frame
+is presented while the planes are still the cleared zeroes. The 2026-11-05
+user log is consistent: the Bink task is idle at team select (`WAIT_SIGNAL`
+between the intro and the switches), the two 1024x512 local targets appear at
+06:25 and a new `Bink IO` thread is created at each switch (06:31, 06:44).
+On hardware/RPCS3 the first Bink frame lands inside that window; in our port
+the Bink decode and the bind/upload do not.
+
+### 7.4 What our renderer adds, and the fix
+
+TEX_DIRTY does cover the plane writes (the SPU MFC PUT path calls
+`ps3_guest_write`, and PPU inlined stores fault into the same counter). Two
+renderer details still diverge from hardware, which samples the live bytes:
+
+* the cache revalidates a texture at most once per presented frame
+  (`last_hash_frame == g.frames` skips every later bind), and the per-unit
+  texture memo answers same-frame repeat binds without revalidating at all;
+* the default host-write order charged the write generation *before* the
+  memcpy, so a bind racing the copy could sample the new generation with the
+  old bytes and then pin that stale upload until some unrelated write.
+
+`exp/bink-green` (build `recomp-work/build-green`) adds, behind
+`PS3RECOMP_BINK_GREEN_FIX` (**env, default 0**):
+
+* an ordered SPU MFC PUT: open the tracked pages, copy, then charge the write
+  (`rsx_texdirty_prepare_write_host` + `ps3_guest_write`);
+* same-frame revalidation of a dirty-tracked texture (`eng_texture_slot_work`)
+  and a memo bypass when the generation moved (`sink_bind_textures`).
+
+The first 16 hits log `[bink-green] same-frame reupload 0x... WxH fmt=...`;
+engine shutdown logs the session count.
+
+**Limit, stated honestly.** The fix closes the window between our bind/upload
+and the GPU's sampling. If the first decoded frame lands after the frame's
+draw, the guest's own four-tick gate still shows the cleared planes; removing
+that residue needs a faster Bink decode (the intro's 100-132 ms frames are the
+same decoder, [`boot-gaps.md`](boot-gaps.md) §4) or a guest-side wait, not a
+renderer change. The user check below says which case we are in.
+
+### 7.5 Offline verification
+
+```sh
+cd /home/m/Documents/mlb16-online/ps3recomp-green
+python3 tools/test_video_fixtures.py
+```
+
+`test_rsx_draw_engine` gains three checks: a write after the first bind is
+re-uploaded on a second bind in the **same** frame; opening the pages alone
+does not invalidate the texture; the post-copy note does. The suite passed
+34/34. (`test_gcm_tick_in_drain` is a pre-existing ~50 % flake: it fails the
+same way on unmodified `exp/live-ab`; every other fixture is deterministic.)
+The full `build-green` binary builds with the play options copied from
+`build-play` (`-O2 -DNDEBUG -march=native`, Vulkan, 14 SPU images).
+
+### 7.6 User check (~2 minutes)
+
+```sh
+cd /home/m/Documents/mlb16-online/recomp-work
+BUILD=build-green PS3RECOMP_BINK_GREEN_FIX=1 ../mlb16-recomp/tools/play_windowed.sh
+```
+
+Reach team select and scroll the team list quickly with the d-pad. Look at the
+floating logo:
+
+* green gone or visibly shorter: the bind/GPU window was the loss; keep the
+  key on and report the `[bink-green]` lines;
+* green unchanged: the first frame lands after the draw, i.e. the guest's
+  own four-tick race; the next step is the decode side, not the renderer.
+  Send the `[bink-green]` summary (it will be absent or small) and the Bink
+  task `WAIT_SIGNAL` `ran=` values.
+
+Then close the window and check:
+
+```sh
+L=$(ls -t play_*.log | head -1)
+grep -n 'bink-green' "$L" | head -20
+```
+
+Run once more without `PS3RECOMP_BINK_GREEN_FIX=1` to confirm the A/B.
+
+### 7.7 Ghidra renames made for this mission
+
+| Old | New | EA |
+|---|---|---|
+| `FUN_00980f20` | `UI_Movie_Update` | `0x00980f20` |
+| `FUN_00981488` | `UI_Movie_GetTextureIfReady` | `0x00981488` |
+| `FUN_0097fff0` | `UI_Movie_Open` | `0x0097fff0` |
+| `FUN_0097f464` | `UI_Movie_AllocPlanes` | `0x0097f464` |
+| `FUN_0097fd18` | `UI_Movie_Close` | `0x0097fd18` |
+| `FUN_00980b00` | `UI_Movie_OpenFile` | `0x00980b00` |
+| `FUN_004db4d4` | `Texture_ClearLevelById` | `0x004db4d4` |
+| `FUN_004f7a80` | `Texture_FillLevel` | `0x004f7a80` |
+| `FUN_0028d78c` | `TeamSelect_UpdateLogoSprites` | `0x0028d78c` |
+| `FUN_006a8108` | `UI_Sprite_Render` | `0x006a8108` |
+| `FUN_006d17b0` | `UI_Movie_TickAndGetTexture` | `0x006d17b0` |
+| `FUN_00981de0` | `UI_Movie_KickNextDecode` | `0x00981de0` |
+| `FUN_0098145c` | `UI_Movie_UpdateThunk` | `0x0098145c` |
+
+### 7.8 Caveats
+
+* The `+0x1d0 >= 4` gate and the zero clear explain the colour and the fast/slow
+  difference statically; no live trace of `+0x1d0` was taken.
+* Which of the two renderer windows (bind-vs-GPU, or decode landing after the
+  draw) dominates is not decided offline; the keyed A/B in 7.6 decides it.
+* The two 1024x512 local targets at team entry are consistent with the movie
+  planes but not proven to be them; the colour reasoning does not depend on
+  their identity.

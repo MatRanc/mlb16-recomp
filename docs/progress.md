@@ -1,5 +1,36 @@
 # Progress log
 
+## 2026-11-05 (team-logo green flash): the Bink planes are drawn before the first decode
+
+Full details in [`docs/bink-video.md`](bink-video.md) §7. Branch `exp/bink-green`
+in `ps3recomp-play`, build `recomp-work/build-green`; **no game launch** (the
+user plays and checks team select). Code pushed to `fork` only; the key is
+**default off**.
+
+- **The green is the game's own clear.** `UI_Movie_Open` (`0x0097fff0`) clears
+  both Bink Y/Cr/Cb frame-buffer sets to zero (`0x004f7a80`, store
+  `0x004f7bd8`), then registers them and kicks `BinkDoFrameAsync`. The logo
+  sprite is gated only on `ctx+0x1d0 >= 4` update calls
+  (`UI_Movie_GetTextureIfReady` `0x00981488`, `0x009814ac`), never on
+  `BinkWait` or the decoded-frame counter `+0x110`. If the first decode has not
+  landed by the fourth draw, the sprite samples the cleared planes:
+  Y=0/Cb=0/Cr=0 -> RGB ~(0,135,0). Fast scrolling opens and shows the movie
+  inside that window; slow scrolling gives the decode time.
+- **Renderer divergence fixed behind `PS3RECOMP_BINK_GREEN_FIX`.** TEX_DIRTY
+  does cover the decoder's SPU PUTs, but the cache revalidated at most once per
+  presented frame, the texture memo skipped same-frame repeat binds, and the
+  default SPU PUT charged the write generation before the memcpy. The key adds
+  open-pages -> copy -> charge for SPU MFC PUTs, same-frame generation
+  revalidation, and a memo bypass when the generation moved.
+- **Offline:** three new `test_rsx_draw_engine` checks (same-frame re-upload;
+  prepare alone does not invalidate; post-copy note does). `test_video_fixtures`
+  34/34; `test_gcm_tick_in_drain` is a pre-existing ~50 % flake, reproduced on
+  unmodified `exp/live-ab`. `build-green` builds with build-play's options.
+- **Limit:** if the decode lands after the frame's draw, the guest's own
+  four-tick gate still shows the clear; that needs the decode side, not the
+  renderer. The user A/B (`BUILD=build-green PS3RECOMP_BINK_GREEN_FIX=1`, then
+  without) and the `[bink-green]` lines decide which case it is.
+
 ## 2026-11-05 (c690 lane gaps): the ~20 % idle is the PM's head/tail, not runtime dispatch
 
 Full details in [`docs/c690-lane-gaps.md`](c690-lane-gaps.md). Branch
