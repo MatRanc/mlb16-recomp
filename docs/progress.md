@@ -3,6 +3,44 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker MT M3): N workers + ordered commit, exact but timing gate fails
+
+Full analysis in [`docs/walker-mt-m3.md`](walker-mt-m3.md). Branch
+`exp/live-ab`, `build-mt`. M3 of
+[`docs/walker-multithread-design.md`](walker-multithread-design.md), default
+off (`PS3RECOMP_WALKER_MT=0`, workers 1..4 via
+`PS3RECOMP_WALKER_MT_WORKERS`). No game launch: the mission stopped at the
+first failed gate.
+
+- **M0 capture fix (code only, recapture pending).** The live capture images
+  only the pages the captured frame reads, so a warm fetch-plan memo or a
+  cached texture leaves out pages a cold replay asks for; the replay then
+  drops 427 draws (1,278 of 1,705) with 23,535 misses. The capture boundary
+  now bumps the fast-cache epoch and notes every cached texture span. An
+  offline replay-as-capture reproduced the bug and improved 1,278 -> 1,703
+  draws / 23,535 -> 211 misses; the user recapture command is in the doc.
+- **M3 implemented, exact.** N workers take contiguous chunks of immutable
+  packets; each does its own remap, span resolve, index rebuild, mesh-ring
+  snapshot and conversion in per-worker scratch, and commits only at its
+  packet's global turn, so the backend still sees guest order on one thread
+  at a time. `REPLAY_NULL_VSRANGE` digests are identical for N=off/0/1/2/3/4
+  on `meter_frame` (`461ff3a834c62331`) and `walker_frame`
+  (`9b78ac38a25c5cbf`); fixtures 30/30.
+- **Timing gate FAILS.** 7 interleaved runs, 120 frames + 20 warm-up,
+  `REPLAY_NULL_HASH=0`: `walker_frame` N=1 **16.07**, N=3 **14.14 ms
+  (-12.0%, gate -25%), N=4 14.52 (worse than N=3); `meter_frame` N=3 10.60,
+  N=4 10.89. N=3 is level with M2 (14.21 ms), not 25% better. Killed per the
+  gate; no live A/B, nothing default-on.
+- **Why:** the state thread still owns texture create/upload/snapshot,
+  pipeline fingerprint and reference building, and every texture operation
+  drains the worker chunks. On `walker_frame` the state `tex` term rises
+  1.45 -> 7.47 ms at W=3, eating the fetch/convert win. The 25% step is the
+  M4 texture/pipeline resolver, not more workers; N=4 also oversubscribes
+  this 6C/12T box.
+- **Concurrency:** TSAN on `test_draw_queue` found the SPSC producer reusing
+  a slot after a relaxed read of the consumer cursor; it now acquire-loads
+  `r` before overwrite, and the queue test is TSAN-clean.
+
 ## 2026-11-04 (walker MT M1/M2): packet path + one record worker, meter p50 flat
 
 Full analysis in [`docs/walker-mt-m1m2.md`](walker-mt-m1m2.md). Branch

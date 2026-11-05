@@ -621,6 +621,15 @@ design-only one.
 self-consistent but the timing is not crowded-case evidence; M3 timing must
 wait for a clean recapture.
 
+**Status (2026-11-04, M3 mission): capture code fixed, recapture pending.**
+The live frame notes only the reads it performs, so a warm fetch-plan memo or
+cached texture leaves out pages a cold replay then asks for and drops the
+draws. `rsx_wcap_begin_if_triggered` now bumps `s_fast_epoch` and notes every
+cached texture span. An offline replay-as-capture reproduced the failure and
+went 1,278 -> 1,703 draws / 23,535 -> 211 misses; the user recapture command
+is in [`walker-mt-m3.md`](walker-mt-m3.md) section 2.3. The existing capture
+still fails the gate and is not used for timing.
+
 ### M1: packet ABI, serial packet path (no threads)
 
 * Add `eng_draw_packet` + `eng_prepare_draw` / `eng_commit_draw` (or a
@@ -662,6 +671,21 @@ wait for a clean recapture.
   p50 within +/-0.5 ms. **Kill:** <10% incremental, any validation/TSAN race,
   any mesh/vertex hash diff, or a worker stall that shows up as a frame-time
   tail.
+
+**Status (2026-11-04, M3 mission): implemented, exact, default off; timing
+gate FAILS.** N workers, contiguous chunks and a global ordered-commit turn
+are in `exp/live-ab` (M1/M2 packet shape): each worker does its own remap,
+span resolve, index rebuild, mesh-ring snapshot and conversion, and may touch
+the backend only at its packet's turn. Digests are identical for N=0..4 on
+`meter_frame` and `walker_frame` (VSRANGE and normal), fixtures 30/30, and the
+SPSC ring is TSAN-clean after fixing the producer-side acquire on the consumer
+cursor. 7-run medians: `walker_frame` N=1 16.07, N=3 14.14 ms (-12.0%),
+N=4 14.52 (worse than N=3); `meter_frame` N=3 10.60, N=4 10.89. N=3 is level
+with M2 (14.21 ms), not 25% better. The lost win is the state thread's texture
+create/upload/snapshot sync waits (`tex` 1.45 -> 7.47 ms on `walker_frame`)
+plus its remaining texture/pipeline/reference work: that is the M4 resolver,
+not more workers. No launch was used and nothing is default-on. Full numbers
+and the failure analysis: [`walker-mt-m3.md`](walker-mt-m3.md).
 
 ### M4: texture and pipeline resolvers
 
