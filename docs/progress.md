@@ -1,5 +1,22 @@
 # Progress log
 
+## 2026-11-05 (RSX sync): the guest's GPU-done wait, and the write-vs-pending-draw window
+
+Branch `exp/rsx-sync` (off `exp/live-ab`) in `ps3recomp-sync`, build
+`recomp-work/build-sync`; **zero game launches** (Ghidra + the 2026-11-05 logs).
+The game's resource-release fence is `Gfx_WaitFrameRef` (`0x00063b98`): it
+polls the GCM control `ref` word for the last frame's `SET_REFERENCE`
+(NV406E `0x0050`) token, on lwcond `DAT_01245068`; `UI_Movie_Open` calls it on
+the first-open path only, and the per-frame gate is N-1 (one render frame in
+flight). Our walker executes the token after the draws and reads their texture
+bytes synchronously (`eng_texture_upload_work`; the async resolver is a no-op),
+so the label is not early. The remaining window is a guest write that lands
+after the fence but before the pending draw's bind; `PS3RECOMP_RSX_SYNC_FIX=1`
+holds such a write until one drain pass that started after it has finished.
+Offline 34/34 fixtures (the known `test_gcm_tick_in_drain` flake rerun passes);
+no live launch. Details, frame-lag numbers and the A/B command:
+[`rsx-sync.md`](rsx-sync.md). User live check still owed.
+
 ## 2026-11-05 (depth GPU): the 222 depth-guest binds are one empty shadow map
 
 Branch `exp/depth-gpu` (off `exp/crowd-prof`), build `build-depth`, no game launch. `dguest` was a single 2048x1024

@@ -540,8 +540,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Bink SPU task-attribute descriptor. Details and the ~2-min user check:
   [`bink-video.md`](bink-video.md). Same path as the team-select `BINK_LOGO`.
 
-- **Team-select green flash EXPLAINED 2026-11-05 (key off by default).** The
-  game clears the Bink Y/Cr/Cb planes to zero on open and shows the sprite on
+- **Team-select green flash EXPLAINED 2026-11-05 (key off by default).** The  game clears the Bink Y/Cr/Cb planes to zero on open and shows the sprite on
   the fourth update call without waiting for the first decoded frame
   (`UI_Movie_GetTextureIfReady` `0x00981488`, `+0x1d0 >= 4`); fast scrolling
   samples the clear (all-zero YUV = green). `PS3RECOMP_BINK_GREEN_FIX=1` on
@@ -550,6 +549,17 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   the decode lands after the draw, the guest race remains. Offline-tested
   (34/34 fixtures), no live launch. User command: [`bink-video.md`](bink-video.md)
   §7.6.
+
+- **RSX write-vs-pending-read ordering ANALYSED 2026-11-05 (key off by
+  default).** The guest's GPU-done wait is the `SET_REFERENCE` token
+  (`Gfx_WaitFrameRef` `0x00063b98`, control `ref`, N-1 per frame); our walker
+  publishes it after it has read the draws' texture bytes synchronously, so
+  the label is not early. The remaining window is a guest write (the Bink plane
+  clear / SPU decode PUT) that lands after the fence the game took but before
+  the pending draw's bind. `PS3RECOMP_RSX_SYNC_FIX=1` on `exp/rsx-sync` holds
+  the write until one drain pass that started after it has finished, then
+  charges it. Offline 34/34; estimates and the user A/B:
+  [`rsx-sync.md`](rsx-sync.md).
 
 - **Depth of field (close-up/replay blur) PATCH IMPLEMENTED 2026-11-05
   (key off by default).** `PS3RECOMP_DOF_PATCH=1` applies the user's RPCS3

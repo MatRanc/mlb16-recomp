@@ -326,3 +326,7 @@ Run once more without `PS3RECOMP_BINK_GREEN_FIX=1` to confirm the A/B.
 * The two 1024x512 local targets at team entry are consistent with the movie
   planes but not proven to be them; the colour reasoning does not depend on
   their identity.
+
+**Follow-up (2026-11-05):** the RSX-side ordering is now analysed separately,
+with the guest's `SET_REFERENCE` reuse fence and the write-vs-pending-draw
+window: [`rsx-sync.md`](rsx-sync.md) (fix `PS3RECOMP_RSX_SYNC_FIX`, default 0).
