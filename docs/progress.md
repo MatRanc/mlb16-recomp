@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (30 fps investigation): no active cap, sim is elapsed-time driven, 60 is a speed problem
+
+Full analysis in [`docs/fps30-investigation.md`](fps30-investigation.md).
+**Zero game launches**; static Ghidra analysis of the EBOOT plus existing logs
+and docs only. No build and no runtime change.
+
+- The title's own frame clock (`Engine_FrameClock`, `0x0005F120`) measures the
+  79.8 MHz timebase, sleeps to a target period, and publishes
+  `g_engine_frame_dt` as `max(param_1, floor((residual + elapsed) * 60)) / 60`
+  seconds, carrying the sub-1/60 residual. `param_1` = 1 for 60 fps mode, 2
+  for 30 fps mode. The main loop (`Game_FrameLoop`, `0x002ED360`) hands
+  `g_game_frame_dt * g_game_time_scale` to every gameplay update, so at 16.7 ms
+  frames dt = 1/60 and the sim is real time, not 2x.
+- The pitch meter is dt-scaled (`Pitch_ActionUpdate` `0x00BE16B0` accumulates
+  `+0x29BC` from `Pitch_GetFrameDelta` `0x006323B0` =
+  `g_game_frame_dt * g_game_time_scale`). The older `boot-spu-hitches.md` §4
+  "fixed per-update increment" reading is superseded.
+- The title has a real 30 fps mode, selected by two flags that are off here:
+  `g_engine_fps_setting_index` is 6 (60 fps) because the Gfx display-thread
+  flag (`gfx_ctx+0x4E4`) is 1, and `Engine_FrameClock` only promotes `param_1`
+  to 2 when `cellPadGetInfo2().system_info & 1` is set, which our HLE writes
+  as 0 (`cellPadGetInfo2`, `libs/input/cellPad.c:1250`). **Do not set that
+  bit.**
+- The only other frame-time wait is the known flip deadline
+  (`2 * DAT_011203F8`): 16,683 us (33.366 ms) in 720p, 20,000 us (40 ms) in
+  the 576-line mode; written only by video-mode configure `FUN_00064B68`, not
+  per scene. No `1/30`, `33333 us` or 2-vblank constant feeds the sim.
+- Verdict **(a)**: no cap active; 60 fps is a pure speed problem. Above 60 fps
+  the dt floor would make the sim run fast (<= ~5 % at the title's own ~63.2
+  fps limiter); at 60.0 fps it is exact. One-run confirmation command (not
+  run): `PPU_WWATCH=0x01132F7C` and check the stored value is 1 at game entry.
+
 ## 2026-11-04 (Edge E1 live): merged, fps neutral, but the added triangles draw giant occluders
 
 Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md) §5.4. E1

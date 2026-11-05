@@ -82,6 +82,7 @@ checking if any geometry-only regression remains.
 ## Priority: speed and frame-time stability first
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
+- DONE 2026-11-04: 30-fps-cap investigation (docs/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.
 - DONE 2026-11-04: menu flip fix PS3RECOMP_FLIP_TICK_OWN_STATE=1 is the play default (ca855f72 + dcdd6728; medium
   review ok: FIFO fall-through keeps the old status gate, 17 ms bound never completes an abandoned frame, all under
   FLIP_LOCK). User: menus hit 60 fps (recording 42.1 -> 59.4 fps). Meter A/B: fps 34.97 -> 36.22, p50 34.15 both.
