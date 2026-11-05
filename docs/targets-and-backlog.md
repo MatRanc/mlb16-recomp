@@ -204,6 +204,20 @@ on the user.
   hand-off costs ~5.96 ms/frame and there is nothing to save. The next 0x21
   lever is the codegen backend (registry-mapped SPU registers), per
   `spu-codegen-audit.md`. Details: [`edge-native-21.md`](edge-native-21.md).
+- 2026-11-05 (later): **extra c690 host lanes answered speed option (d) in the
+  negative, default off** (`PS3RECOMP_C690_EXTRA_LANES`, `exp/c690-lanes`).
+  Hidden host workers run the same lifted PM on a physical row whose same wid
+  is not active, so the guest still sees <= `maxContention` (5) mesh
+  instances. One pitch-meter launch, 0/2/4 hidden lanes, 4 x 12 s each: p50
+  **34.15 ms in all arms**, fps 36.60/36.25/36.45, timeline last c690 job p50
+  32.59/32.29/32.99 ms and lanes 4.04/4.05/4.25. The helper does ~2.5 k
+  jobs/s but w0 drops 3,028 -> 1,945: it replaces a lane lost to another
+  workload, it does not add a sixth stream. The lane-6 wedge is a guest
+  completion-prefix deadlock (the wait is `min` of six per-lane cursors + the
+  list counter; the title only accounts for 5), so going above
+  `maxContention` is not a small change. Remaining levers: per-job
+  compute/codegen or a host-side job stealer for intra-lane gaps. Details:
+  [`c690-extra-lanes.md`](c690-extra-lanes.md).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test
