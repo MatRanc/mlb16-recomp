@@ -127,7 +127,8 @@ on the user.
 Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
 Long frames (40-80+ ms): the replay/real-play long frames are walker-bound (docs/c690-serialisation.md); meter
 long frames are c690 (docs/long-frames.md).
-Parked until the user says otherwise: team logo (user diagnostic run ready), visuals, HLE batch 2, review nits.
+Parked until the user says otherwise: team logo (offline follow-up done, user diagnostic run ready in
+team-logo.md §8.3), visuals, HLE batch 2, review nits.
 
 Decided with the user 2026-11-02: visual bugs are logged here and parked; work goes to frame rate and steady frame
 times until we match RPCS3.
@@ -390,7 +391,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   the entry above.
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/
   scene_1793665113991.png).
-- Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it). **NEXT after the jersey + exposure missions (user, 2026-11-05).** Start from team-logo.md: the capture shows the logo is never submitted (upstream of RSX); the StressTestUIElem diagnostic run is ready.
+- Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it). **NEXT after the jersey + exposure missions (user, 2026-11-05).** Start from team-logo.md: the capture shows the logo is never submitted
+  (upstream of RSX). Offline follow-up (team-logo.md §8, 2026-11-05): the 0x900 lookup is a world **model/material**
+  match, and all plain-text disc ScriptUIElem targetnames found are stadium screens, so "the logo is a ScriptUIElem" is unproven. The
+  title's miss text goes to `BADJUMBOS_PS3.TXT`, not the log, and the ISO is read-only, so the old CONFIG_MAIN recipe
+  fails. User command: §8.3.1 (no config, `PPU_WWATCH=0x013560D8 PPU_WWATCH_LEN=0x120`) or §8.3.2 (writable overlay +
+  `StressTestUIElem`, with create and remove steps). No HLE cause found; no runtime fix yet.
 - Live-play lighting changes after plays, normal after replays (lighting-drift-notes.md).
 - Crowd placement: port the RPCS3 crowd-fix patch.
 - Loading hangs (~3 s) and start-menu hitches (these also hurt playability; may move up).

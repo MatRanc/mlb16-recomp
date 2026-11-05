@@ -480,6 +480,13 @@ grep -n 'Did not find target texture' /tmp/logo_diag.log
 This is a diagnostic run, not a fix; no renderer change can be justified from
 the capture alone because the draw never reaches the renderer.
 
+> **Correction, 2026-11-05 (§8).** Two details above are wrong. The miss text
+> is written to `BADJUMBOS_PS3.TXT`, not to the log (the log only gets
+> `FAILED`), and it is suppressed for target names exactly `k` and `kled`.
+> Also, the ISO is mounted **read-only**, so the `printf > recomp-work/vfs/
+> PS3_GAME/...` line fails with `EROFS`; §8.3.2 gives a writable-overlay recipe
+> that leaves `recomp-work/vfs` untouched.
+
 #### 5.5.5 Tool fixes made for this mission (offline, `exp/live-ab`)
 
 * `tools/fifo_dump_scan.py`: count a batch for every dispatched data word of a
@@ -530,3 +537,190 @@ recomp-work/build-play/ps3recomp_sdk/replay_rsx \
   768 MiB) and one frame of capture time. If it is too slow on the user's
   machine, drop `PS3RECOMP_WALKER_CAPTURE` and the `touch` from §1.2; the raw
   FIFO dump is unaffected.
+
+## 8. 2026-11-05 offline follow-up: the 0x900 node is a world model, and the debug text goes to BADJUMBOS_PS3.TXT
+
+Date 2026-11-05. **No game was launched.** Sources: the EBOOT in Ghidra, the
+four WADs on the mounted ISO, every existing log under `recomp-work/` (including
+`drive5.log`), the generated C++ in `recomp-work/recompiled/`, and the
+`ps3recomp-play` runtime (read only). No RPCS3 or other GPL source was read or
+cited. This section corrects two details of §5.5.4 and records what is still
+unknown.
+
+### 8.1 Static result: the 0x900 nodes are world models, not texture nodes
+
+`ScriptUIElem_FindTargetTexture` (old `FUN_009d4c68`, `0x009d4c68`) does not
+walk a "texture set". It:
+
+1. gets the scene object `"world"` with `Scene_GetOrCreate("world", 1)`
+   (`FUN_006d69b0`, `0x006d69b0`);
+2. enumerates its children with `Scene_GetChildByType(world, 0x900, i)`
+   (`FUN_006d8334`, `0x006d8334`) and keeps only `node+0x18 == 0x100`;
+3. resolves the node payload with `SceneNode_GetObject` (`FUN_006d9ef0`,
+   `0x006d9ef0`), which is a **model** object (its `+0x2c` is a material count
+   and `+0x30` a material array, 8 bytes per entry);
+4. for each material (`Model_GetMaterial`, `FUN_004c5024`, `0x004c5024`) takes
+   the two texture ids and resolves each through the texture table with
+   `TextureSet_GetNameById` (`FUN_004f8cf8`, `0x004f8cf8`);
+5. compares each returned name with the element's `targetname` property
+   (`elem+0xcc`, bound by the script property `targetname` at
+   `0x009daba0`) using the exact string compare `FUN_00a40168`. A match stores
+   the model, material and texture record (up to 10); no match returns 0.
+
+So the target is a **texture used by a material of a model in the world scene**.
+The element then uses that model/material as the surface it renders into; this
+is the jumbotron/scoreboard-screen system, not a free-standing UI texture.
+
+That matters because every plain-text `ScriptUIElem` definition in the WADs
+targets a stadium screen. Extracting every `ScriptUIElem`/`targetname` from
+`MLBPS3_GD.WAD` (905 occurrences) and `MLBPS3_EXT.WAD` (223) gives only types
+`jumbotron`, `ootscore`, `clock` and target names such as `color_2x1`,
+`amber_5x1`, `digitalclock`, `OOTS`, `k`, `kled`. There is **no** `logo3d_`
+literal in any WAD. The `logos\logo3d_<TEAM>` names exist only in the EBOOT
+table at `0x01177574` (entries at `0x01011c7c`) and are built by
+`FUN_000f56f4` case 2. Whether the team-select floating logo is a
+`ScriptUIElem` at all is therefore an open question; the static path that was
+the leading candidate is at least the stadium-screen path, and the disc data
+does not show a frontend element that targets a logo.
+
+### 8.2 The miss branch writes to `BADJUMBOS_PS3.TXT`, not to the log
+
+`ScriptUIElem_Create` (old `FUN_009d7b30`, `0x009d7b30`):
+
+* `DisableUIElem` sets `DAT_013561d8 = 1` and suppresses element creation;
+* a target-texture miss returns without creating the model;
+* with `StressTestUIElem` and a target name other than exactly `k` or `kled`,
+  it formats `"%s (%s): Did not find target texture: %s\n"`, opens
+  `BADJUMBOS_PS3.TXT` with `File_Open(..., flags=2)` **relative to the guest
+  cwd**, and writes the line there. It then calls `Debug_Printf("FAILED")`
+  (`FUN_00052b5c`, `0x00052b5c`). The log gets `FAILED`; the target name is
+  only in that file.
+
+`Debug_Printf` is enabled by default (it is disabled only by the config flag
+`noTTY`). `Config_LoadFile` (`FUN_00984c70`, `0x00984c70`) reads one flag per
+line from `BOOT/CONFIG_MAIN.TXT` (lines beginning `#` are comments), and
+`Config_HasFlag` (`FUN_009847fc`, `0x009847fc`) tests them.
+
+The element counters that the diagnostic watches are:
+
+| EA | Meaning |
+|---|---|
+| `0x013560d8` | `ScriptUIElem_Create` success counter (incremented at the end) |
+| `0x013561d8` | `DisableUIElem` (set only by that config flag) |
+| `0x013561e4` | per-element id counter |
+
+### 8.3 Why the old config command fails, and the corrected one
+
+`/run/media/m/PS3VOLUME` is a UDF loop mount with `ro` (`findmnt`: `udf ro`),
+and `recomp-work/vfs/PS3_GAME` is a symlink to it. The `mkdir`/`printf` into
+`recomp-work/vfs/PS3_GAME/USRDIR/BOOT/` from §5.5.4 therefore fails with
+`EROFS`; it cannot create the file the title reads. Also, `PATCH_GD.WAD` is the
+v01.10 update's server-config WAD (the vfs copy is the revival-server XML
+data), not a model store; its missing open is unrelated.
+
+#### 8.3.1 Tier 1: one run, no config, works as-is
+
+This answers "is any `ScriptUIElem` created at team select?" without editing
+anything. The watch window `0x013560d8..0x013561f0` also covers
+`DisableUIElem` and the id counter.
+
+```sh
+cd /home/m/Documents/mlb16-online/recomp-work
+PPU_WWATCH=0x013560D8 PPU_WWATCH_LEN=0x120 PPU_WWATCH_MAX=512 PS3_FSLOG=1 \
+  ../mlb16-recomp/tools/play_windowed.sh 2>&1 | tee captures/logo_watch.log
+```
+
+In the game: main menu -> Play Now / team select, let it settle ~5 s, close the
+window. Then:
+
+```sh
+grep -n '\[ww\] 0x013560' captures/logo_watch.log | tail -40
+grep -n '\[ww\] 0x013561' captures/logo_watch.log | tail -20
+grep -n 'BADJUMBOS\|FAILED\|TEXTURESET\|COULD NOT LOAD' captures/logo_watch.log
+```
+
+* No `0x013560D8` hits and no `0x013561D8` hits at team select: no
+  `ScriptUIElem` is created there. The logo is not this path (or the
+  constructor is never reached); the next step is the frontend 3D model path,
+  not `FUN_009d4c68`.
+* `0x013560D8` hits: elements are being created. If `0x013561D8` is also 1,
+  `DisableUIElem` is set (it should not be). If the counter rises but the logo
+  is still absent, run Tier 2 for the target name.
+
+#### 8.3.2 Tier 2: writable overlay, title target name (one run)
+
+This creates a throwaway `PS3_GAME` tree whose files are symlinks to the ISO
+plus a writable `BOOT/CONFIG_MAIN.TXT`, and runs a temporary copy of
+`play_windowed.sh` that takes its VFS root from `DIAG_VFS`. It does not touch
+`recomp-work/vfs`, the ISO, `build-play`, or `ps3recomp-play`. `/dev_hdd0` and
+`/dev_hdd1` stay on the normal vfs so saves and caches are unchanged.
+
+```sh
+cd /home/m/Documents/mlb16-online
+OV="$PWD/recomp-work/captures/logo-vfs"
+ISO="/run/media/m/PS3VOLUME/PS3_GAME"
+rm -rf "$OV"
+mkdir -p "$OV/PS3_GAME/USRDIR/BOOT"
+for e in "$ISO"/*; do b=${e##*/}; [ "$b" = USRDIR ] && continue; ln -s "$e" "$OV/PS3_GAME/$b"; done
+for e in "$ISO"/USRDIR/*; do b=${e##*/}; [ "$b" = BOOT ] && continue; ln -s "$e" "$OV/PS3_GAME/USRDIR/$b"; done
+printf 'StressTestUIElem\n' > "$OV/PS3_GAME/USRDIR/BOOT/CONFIG_MAIN.TXT"
+sed 's|PS3_VFS_ROOT="\$W/vfs"|PS3_VFS_ROOT="${DIAG_VFS:-$W/vfs}"|' \
+  mlb16-recomp/tools/play_windowed.sh > recomp-work/captures/play_logo_diag.sh
+chmod +x recomp-work/captures/play_logo_diag.sh
+DIAG_VFS="$OV" PS3_HDD0_ROOT="$PWD/recomp-work/vfs" PS3_HDD1_ROOT="$PWD/recomp-work/vfs" \
+  PPU_WWATCH=0x013560D8 PPU_WWATCH_LEN=0x120 PPU_WWATCH_MAX=512 \
+  recomp-work/captures/play_logo_diag.sh 2>&1 | tee recomp-work/captures/logo_diag.log
+```
+
+Drive the same team-select session (~5 s, close the window), then:
+
+```sh
+grep -n 'BADJUMBOS\|FAILED\|TEXTURESET\|COULD NOT LOAD' recomp-work/captures/logo_diag.log
+cat "$OV/PS3_GAME/USRDIR/BADJUMBOS_PS3.TXT" 2>/dev/null
+find recomp-work/vfs/game/BCUS01089_R/USRDIR -maxdepth 1 -name 'BADJUMBOS_PS3.TXT' -print -exec cat {} \;
+```
+
+If the target name appears, that is the exact hand-off to follow next. If the
+log says `FAILED` but neither file exists, the write was refused (it is also
+skipped for target names exactly `k`/`kled`).
+
+Remove the config and the scratch tree afterwards (copy the BADJUMBOS file to
+`recomp-work/captures/` first if it exists):
+
+```sh
+rm -f "$OV/PS3_GAME/USRDIR/BOOT/CONFIG_MAIN.TXT" recomp-work/captures/play_logo_diag.sh
+rm -rf "$OV"
+```
+
+### 8.4 HLE and lifted-code checks (no concrete runtime cause found)
+
+* `cellFsAioRead`/`cellFsAioWrite` are implemented (`runtime/ppu/ppu_fs.cpp`);
+  `drive5.log` shows successful AIO reads from the GD WAD (`fd=7`, 52,912-byte
+  chunks) during the frontend load. There is no missing-callback or short-read
+  evidence in any log.
+* `cellFsStat`/`cellFsFstat` fill the ABI struct and the existing runs show no
+  stat/size failure on the game data or cache files.
+* The target lookup itself is entirely guest code; none of the HLE file or SPU
+  entry points appear inside it. The generated C++ for `func_009D4C68` and
+  `func_009D7B30` matches the EBOOT on the decisive branches (type `0x900`,
+  `+0x18 == 0x100`, name compare, abort on miss, 10-entry cap, BADJUMBOS
+  write).
+* So no runtime fix is justified from the offline evidence. The capture already
+  rules out the RSX; this section rules out an HLE call in the lookup. What is
+  left is a guest-side question the title can answer: is the element
+  constructed, and if it misses, what is its target name.
+
+### 8.5 Ghidra renames made for this mission
+
+| Old | New | EA |
+|---|---|---|
+| `FUN_009d4c68` | `ScriptUIElem_FindTargetTexture` | `0x009d4c68` |
+| `FUN_009d7b30` | `ScriptUIElem_Create` | `0x009d7b30` |
+| `FUN_004ba320` | `TextureSet_LoadAsset` | `0x004ba320` |
+| `FUN_004c5024` | `Model_GetMaterial` | `0x004c5024` |
+| `FUN_004f8cf8` | `TextureSet_GetNameById` | `0x004f8cf8` |
+| `FUN_006d69b0` | `Scene_GetOrCreate` | `0x006d69b0` |
+| `FUN_006d8334` | `Scene_GetChildByType` | `0x006d8334` |
+| `FUN_00984c70` | `Config_LoadFile` | `0x00984c70` |
+| `FUN_009847fc` | `Config_HasFlag` | `0x009847fc` |
+| `FUN_00052b5c` | `Debug_Printf` | `0x00052b5c` |

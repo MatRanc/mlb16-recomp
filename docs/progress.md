@@ -3,6 +3,46 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (team logo): the 0x900 lookup is a world model, and the debug line goes to BADJUMBOS_PS3.TXT
+
+Full analysis in [`docs/team-logo.md`](team-logo.md) §8. **Zero game
+launches**; Ghidra, all existing `recomp-work` logs, the four ISO WADs, the
+generated C++, and `ps3recomp-play` read only. No RPCS3 or other GPL source
+read or cited.
+
+- **The 0x900 node is a model.** `ScriptUIElem_FindTargetTexture`
+  (`0x009d4c68`) walks the `"world"` scene's type-`0x900` children, keeps
+  `node+0x18 == 0x100`, and iterates the model's materials
+  (`Model_GetMaterial`, `0x004c5024`) and their two texture names
+  (`TextureSet_GetNameById`, `0x004f8cf8`). The element's `targetname`
+  (`elem+0xcc`) must match one of those names. This is the
+  jumbotron/scoreboard-screen path: all 905 GD + 223 EXT plain-text
+  `ScriptUIElem` definitions target stadium screens (`color_2x1`, `amber_5x1`, `k`, ...), and
+  there is no `logo3d_` literal in any WAD. Whether the team-select floating
+  logo is a `ScriptUIElem` is now the open question, not an assumption.
+- **The miss text is not in the log.** On a miss the title writes
+  `"%s (%s): Did not find target texture: %s\n"` to `BADJUMBOS_PS3.TXT` in the
+  guest cwd and only prints `FAILED`; it also skips both for target names
+  exactly `k`/`kled`. `Debug_Printf` is on by default (`noTTY` disables it).
+  This corrects team-logo.md §5.5.4.
+- **The old config command cannot work.** The ISO is mounted `ro` and
+  `recomp-work/vfs/PS3_GAME` is a symlink to it, so `printf > .../BOOT/
+  CONFIG_MAIN.TXT` is `EROFS`. §8.3.2 gives a throwaway writable overlay that
+  redirects only `/dev_bdvd`; `/dev_hdd0`/`/dev_hdd1` stay on the normal vfs, so
+  saves and caches are unchanged. §8.3.1 is a no-config `PPU_WWATCH` run on
+  `0x013560d8..0x013561f0` (element counter, `DisableUIElem`, id counter).
+- **No HLE cause found.** `cellFsAioRead`/`Write` succeed in `drive5.log`
+  (GD WAD `fd=7`, 52,912-byte reads); `cellFsStat` fills the ABI struct; the
+  lookup itself has no HLE call; generated `func_009D4C68`/`func_009D7B30`
+  match the EBOOT branches. No runtime fix is justified yet.
+- **Next:** the user runs §8.3.1 (or §8.3.2 for the target name). If the
+  element counter never rises, the next path is the frontend 3D model, not
+  `FUN_009d4c68`.
+- Ghidra renames: `ScriptUIElem_FindTargetTexture`, `ScriptUIElem_Create`,
+  `TextureSet_LoadAsset`, `Model_GetMaterial`, `TextureSet_GetNameById`,
+  `Scene_GetOrCreate`, `Scene_GetChildByType`, `Config_LoadFile`,
+  `Config_HasFlag`, `Debug_Printf` (see team-logo.md §8.5).
+
 ## 2026-11-05 (jerseys): the torso was two dropped character draws, not a texture
 
 Full analysis in [`docs/jersey-transparent.md`](jersey-transparent.md).
