@@ -21,6 +21,7 @@ pitch-meter A/B or an offline gate named in the linked doc.
 | GPU 0x2A (exact kernels, 68 % class coverage offline) | overlay costs +9.2 ms walker/frame (export 1.4, resolver 1.9, GPU hand-off 5.9); max saving 1-3.4 ms | edge-gpu-binding.md, edge-gpu-2a-classes.md |
 | Native 0x2A field pack (exact) | live-neutral (-1.5 % per call) | edge-native-2a.md |
 | Native whole 0x21 (bit-exact 76/76) | offline parity 31.42 vs 31.44 us/call; live arm wedged on a since-fixed bug | edge-native-21.md |
+| Intra-lane gaps (5.56 ms idle per lane in a 29.2 ms burst) | 84 % is the guest's own per-job WWS job-manager head/tail (~17 + 21 us per job, lifted SPU code); our runtime is ~1 lane-ms/frame; the wake-on-ready fix was neutral | c690-lane-gaps.md |
 | Extra host lanes (0/2/4 helpers) | p50 34.15 in every arm; the guest's maxContention=5 + intra-lane gaps limit it; >5 deadlocks | c690-extra-lanes.md |
 
 Reading: our lifted SPU code is already as fast as hand-written native C for the same work (the compiler emits the
