@@ -218,6 +218,21 @@ on the user.
   `maxContention` is not a small change. Remaining levers: per-job
   compute/codegen or a host-side job stealer for intra-lane gaps. Details:
   [`c690-extra-lanes.md`](c690-extra-lanes.md).
+- 2026-11-05 (later): **the intra-lane gaps are 84 % the PM's own head/tail,
+  not runtime; the "6 ms of runtime" premise is false** (`exp/live-ab`, two
+  meter launches, 24 s timelines). A 29.16 ms burst keeps 4.05 of 5 lanes
+  busy; each lane is idle 5.56 ms (19.1 %), split per lane per frame as tail
+  2.519 (job end -> PM end), head 2.075 (PM start -> job), host 0.599 (PM end
+  -> next PM), other-workload 0.258, lock-line 0.035. Host = native rerun
+  check 0.311 (p50 1.0 us) + coordinator wait 0.215 (p50 20 us; the tail is
+  the PPU not having published the list) + wake 0.043 (p50 10 us). The only
+  local runtime candidate, a PPU ready-store coordinator wake
+  (`SPURS_READY_WAKE`, **default off**), is neutral: fps 36.50 -> 35.88, p50
+  34.15 both, lanes 4.05 -> 4.06, coordinator wait 0.215 -> 0.201
+  lane-ms/frame. Even zeroing host + DMA copies (~0.34) + lock line cannot
+  move 6 ms or the 34.15 p50; the lever is per-job lifted code
+  ([`spu-codegen-audit.md`](spu-codegen-audit.md)). Details:
+  [`c690-lane-gaps.md`](c690-lane-gaps.md).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

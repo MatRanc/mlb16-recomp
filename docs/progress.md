@@ -1,5 +1,39 @@
 # Progress log
 
+## 2026-11-05 (c690 lane gaps): the ~20 % idle is the PM's head/tail, not runtime dispatch
+
+Full details in [`docs/c690-lane-gaps.md`](c690-lane-gaps.md). Branch
+`exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Two
+pitch-meter launches (the cap), X once: `ab_live_lanegapsA_20261105_080615`
+and `ab_live_lanegapsB_20261105_081004`; 24 s timelines each.
+`SPURS_READY_WAKE` stays **default off**. Code pushed to `fork` only.
+
+- **The lanes are 4.05 of 5 busy inside a 29.16 ms burst; each lane is idle
+  5.56 ms (19.1 %).** The gap splits per lane per frame as tail 2.519 (job end
+  -> PM end), head 2.075 (PM start -> job), host 0.599 (PM end -> next PM),
+  other-workload 0.258, lock-line 0.035. **Tail + head = 84 % of the gap**:
+  the guest WWS policy/job code around each job, run through our lift.
+- **Host dispatch is small and already tight.** Native/fast rerun check 0.311
+  lane-ms/frame (p50 1.0 us); coordinator wait 0.215 (p50 20.1 us, mean
+  106 us, tail = the PPU has not published the next list); signal -> run wake
+  0.043 (p50 10.1 us); both-kick 0.029. Lock-line retries 0.035.
+- **Fixed the only plausible local runtime class, measured neutral.**
+  `SPURS_READY_WAKE=1` makes a PPU `cellSpursReadyCountStore`/`Swap`/`Cas` or
+  `cellSpursWakeUp` kick the coordinator at once instead of leaving it to the
+  1 ms timed pass. Offline: coordinator-kick unit test PASS, scheduler PASS,
+  TSan clean in the new path (4 documented fixture reports), ABI PASS. Live
+  A/B: fps **36.50 -> 35.88**, p50 **34.15 both**, p90 37.62 -> 38.18, p99
+  40.42 -> 41.04, lanes 4.05 -> 4.06; coordinator wait 0.215 -> 0.201
+  lane-ms/frame (p50 unchanged). No win; key left off.
+- **The "close 6 ms of runtime" premise is false.** Even zeroing host + DMA
+  copies (~0.34) + lock line leaves the burst unchanged by ~1 ms; 4.6 ms of
+  the 5.56 ms lane idle is per-job lifted PM code. The remaining lever is
+  `spu-codegen-audit.md`, not the scheduler.
+- Deviations: the switch is env-only (this mission may only touch
+  `runtime/spu` + `libs/spurs`; the live-key table is in `libs/video`), so
+  the A/B used the two-launch fallback. TSan used clang because gcc's
+  `libtsan.so.2.0.0` symlink is missing.
+
 ## 2026-11-05 (boot gaps / match load): C6 was already fixed by the DXT lift; the shader cache never hit
 
 Full details in [`docs/boot-gaps.md`](boot-gaps.md). Branch `exp/live-ab` in
