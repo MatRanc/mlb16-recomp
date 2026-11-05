@@ -111,6 +111,14 @@ on the user.
 2. GPU Edge stages via the plumbing (edge-gpu-plumbing.md): 0x2A 32-byte record class + walker GPU-buffer binding,
    then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status: edge-exactness.md.
 3. 0x22 whole-body native (0x10190 command body, 21.2 % of c690 inclusive time; partial 0xFDA0 port is neutral).
+- 2026-11-05: 0x2A position-first 32-byte class exact on the GPU: 51/51 clean
+  meter pairs, 20,312 records, 0 position bytes, <= 1 LSB packed fields, SPU
+  attribute word exact, ring position/attr exact. Coverage 60/192 (31.2 %) of
+  meter 0x2A pairs -> fallback 68.8 %, so no live A/B; there is also no
+  `PS3RECOMP_C690_GPU_2A` key/walker binding on any branch. Next: walker
+  binding + live key, then the 20/48/other 0x2A classes, 0x21 sel7 (4.74 ms),
+  culls (3.03 ms); 0x22 (5.80 ms) is already CPU-native.
+  Details: [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

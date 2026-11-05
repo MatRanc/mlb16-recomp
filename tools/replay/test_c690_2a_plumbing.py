@@ -70,7 +70,7 @@ def parse_spool(path):
         gpr = payload[base + BITMAP_BYTES + LS_SIZE:
                       base + BITMAP_BYTES + LS_SIZE + GPR_SIZE]
         ent = {'type': rtype, 'op': meta[4], 'key': meta[5], 'seq': meta[7],
-               'ls': ls, 'gpr': gpr}
+               'cmd': meta[12:20], 'ls': ls, 'gpr': gpr}
         pairs.setdefault(meta[7], {})['in' if rtype == T_IN else 'out'] = ent
     return {k: v for k, v in pairs.items() if 'in' in v and 'out' in v}
 

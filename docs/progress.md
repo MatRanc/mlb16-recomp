@@ -3,6 +3,32 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (c690 GPU Edge): 32-byte 0x2A index contract and exact kernel; live A/B blocked
+
+Full details in [`docs/edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md). Two pitch-meter
+launches, both capture-only (the cap); **no live A/B**. Branch `exp/edge-gpu`
+in a new `ps3recomp-gpu` worktree, build `recomp-work/build-gpu`; `build-play`
+and `recomp-work/spu_lifted` were not touched.
+
+- **Index pre-pass decoded.** The 0x2A handler gathers all four planar arrays
+  at one per-record u16 byte offset: `cmd[0][k]` (format A) or the implicit
+  `k*16` (format B). The 4 bytes at record `+28..31` are SPU-written.
+- **Kernel built and gated.** `c690_2a_32b.comp` writes record bytes 0..27;
+  on the regenerated meter spool it is **51/51 pairs, 20,312 records**:
+  **0 differing position bytes**, **max 1 LSB** normal/tangent/UV, the SPU
+  attribute word exact, 0 writes outside 0..27, ring position/attribute bytes
+  exact. The 36-byte regression is still 0 differing bytes / 0 ring bytes.
+- **Coverage is 31.2 %, not 43 %.** `STRIDE=1000` sampling over the meter
+  window: 60/192 32-byte, 1/192 36-byte, 17/192 20-byte, 16/192 48-byte,
+  98/192 other. The 32-byte stage leaves 68.8 % of 0x2A on the SPU (gate 5 %).
+- **No live A/B.** There is no `PS3RECOMP_C690_GPU_2A` key or walker binding
+  on any `ps3recomp-play` branch (`git grep` zero hits); §4 is still design.
+  Both the missing wiring and the 68.8 % fallback violate §6's preconditions.
+  The two launches went to regenerating the deleted corpora. The measured
+  stage is ~1.07 ms of the 24.39 ms critical lane; next: walker binding + live
+  key, then the remaining 0x2A classes, 0x21 sel7 (4.74 ms), the culls
+  (3.03 ms); 0x22 (5.80 ms) is already CPU-native.
+
 ## 2026-11-05 (Bink video): the intro never opened because the fd spaces were split
 
 Full details, the two fixes and the user check are in

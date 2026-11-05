@@ -1,5 +1,13 @@
 # c690 Edge 0x2A: the meter is not one 32-byte class (coverage stop, no kernel, no wiring)
 
+> **Update 2026-11-05:** §5.1 (index pre-pass contract) and §5.2 (32-byte
+> kernel exactness) are done; see [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md).
+> The 32-byte class is a single-offset gather (u16 byte offsets, or implicit
+> `k*16`); the kernel is exact on 51/51 clean pairs (20,312 records), but the
+> class is only 31.2 % of the regenerated meter 0x2A corpus and the live key /
+> walker binding are still absent, so no §6 A/B was run.
+
+
 Date: 2026-11-04. Branch `exp/live-ab` in `ps3recomp-play`, build
 `recomp-work/build-play`. **Offline only: zero game launches.** The data is
 the phase-2b meter tail spools `fncap2b2w` and `fncap2b3a730` (64 pairs each;
