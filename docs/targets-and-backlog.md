@@ -86,6 +86,10 @@ checking if any geometry-only regression remains.
   review ok: FIFO fall-through keeps the old status gate, 17 ms bound never completes an abandoned frame, all under
   FLIP_LOCK). User: menus hit 60 fps (recording 42.1 -> 59.4 fps). Meter A/B: fps 34.97 -> 36.22, p50 34.15 both.
   Bound 2 (33.4 ms) measured worse (p50 36.05, -6 fps) — keep 1.
+**User rule (2026-11-04 21:35): keep the ball rolling.** Walker MT paused after 4 failed rounds (repair: exact,
+no hang, black field fixed, but walker 9.5 -> 12.8 ms and thumbnails differ 38.8 vs A/A 3.4; code kept on exp/live-ab
+230acd9f). Now: single-thread texture cost (walker-tex-cost.md). IF IT FAILS: park the renderer track and move straight
+to Edge E1 (eye holes), then E2 — no further renderer rounds without the user.
 **Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) Claude review of M2-M4 + crowded-capture
 fix (full mesh-ring spans) + walker-prof sampling fix; (3) user recapture + crowded replay test; (4) M5 hardening ->
 default if it wins (renderer track done); (5) then Edge E1, E2. E1 only jumps ahead if the renderer is blocked waiting
