@@ -81,7 +81,15 @@ checking if any geometry-only regression remains.
 
 ## Priority: speed and frame-time stability first
 
-**FOCUS (user, 2026-11-04): Edge (c690) work only; everything else waits.** Order:
+**CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
+**Edge queue when it resumes, in order:**
+- E1. EYE HOLES FIX (user: "aren't we gonna get to that?" -- yes, Edge work, not parked): fuse the holes rule into the
+  native 0x25/0x26 screen cull (one pass, conservative: never drop a triangle the 2x1 AA grid keeps). Blocker from
+  edge-native-step4.md: the final kept count is written by the 0x132E0 caller, so the fused pass must model it. Goal:
+  eyes fixed at ~0 fps cost (BYPASS=3 is -7.6 fps, union -4.8). Can run right after M4 (both rebuild build-play);
+  user checks the eyes visually. Until then BYPASS stays off (user, 2026-11-04).
+- E2. Edge compute for the meter p50: 0x22 whole body, 0x21, 0x2A (CPU native or GPU), per the decision below.
+**FOCUS history (user, 2026-11-04): Edge (c690) work only; everything else waits.** Order:
 1. SPU codegen: inline acyclic direct callees (spill cut) FAILED its gate (spu-inline-callees.md).
 2. GPU Edge stages via the plumbing (edge-gpu-plumbing.md): 0x2A 32-byte record class + walker GPU-buffer binding,
    then 0x21 sel7 (A3E0/BB98), then 0x25/0x26 cull. Exactness policy and per-stage status: edge-exactness.md.
