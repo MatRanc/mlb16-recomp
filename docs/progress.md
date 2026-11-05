@@ -3,6 +3,45 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker MT M4): per-worker Vulkan recording + texture resolver, timing gate fails
+
+Full analysis in [`docs/walker-mt-m4.md`](walker-mt-m4.md). Branch
+`exp/live-ab`, `build-mt`. M4 of
+[`docs/walker-multithread-design.md`](walker-multithread-design.md), default
+off (`PS3RECOMP_WALKER_MT=0`). No game launch: the mission stopped at the
+first failed gate (offline timing).
+
+- **Per-worker Vulkan recording implemented.** Each record worker gets a
+  private command pool/buffer/fence, descriptor pool, GPU-unpack set and
+  ring slices, plus per-thread E2 bind state (targets, constants, textures,
+  render-pass/framebuffer caches, scratch depth, sampler cache). Workers
+  record segments; the engine submits them at the M3 global turn, so
+  `vkQueueSubmit` order is guest order. Primaries, not secondaries (every
+  draw is its own render pass). Pipeline variants are created under a
+  mutex around the shared `VkPipelineCache`. The null replay backend keeps
+  the M3 serialised turn path.
+- **M4 texture resolver implemented** (`PS3RECOMP_WALKER_MT_TEX_RESOLVE`,
+  default on with MT): the state thread enqueues plain guest textures, the
+  packet carries a token, and the `rsx-tex` thread resolves at an ordered
+  texture-group turn between packets. Guest bytes are snapshotted at
+  enqueue by default (`PS3RECOMP_WALKER_MT_TEX_SNAP=1`). Target/depth/cube/
+  feedback stay on the walker.
+- **Exact.** MT off/W=0..4, 5 and 64 frames, normal and
+  `REPLAY_NULL_VSRANGE=1`: `meter_frame` `a6fcc849341eba9b` /
+  `ff2a220c28750bc3`, `461ff3a834c62331` / `089e7b1082b4bcc3`;
+  `walker_frame` `416abee2c5bff47d` / `0bdb6c112e64e643`,
+  `9b78ac38a25c5cbf` / `e20a9511ff2547c3`. Fixtures 30/30;
+  `test_draw_queue` OK; `test_color_readback_guest` 85/0 (its CMake target
+  now links `rsx_draw_queue.c`).
+- **Timing gate FAILS.** 7 interleaved runs, 120 frames + 20 warm-up,
+  `REPLAY_NULL_HASH=0`: `walker_frame` MT off 14.756 ms, W=1 15.731,
+  W=2 15.912, **W=3 16.055 (+8.8%)**, W=4 17.194; W=3 with the resolver off
+  **12.869 ms (-12.8%)**, still short of -25%. State `tex` ~6.1-6.6 ms, not
+  <=2. Nearly every packet binds a new texture, so the ordered texture group
+  becomes a third thread in the serial chain; per-worker recording has no
+  effect on the null replay (no command buffers). No live A/B, nothing
+  default-on.
+
 ## 2026-11-04 (walker MT M3): N workers + ordered commit, exact but timing gate fails
 
 Full analysis in [`docs/walker-mt-m3.md`](walker-mt-m3.md). Branch

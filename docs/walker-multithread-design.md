@@ -687,6 +687,26 @@ plus its remaining texture/pipeline/reference work: that is the M4 resolver,
 not more workers. No launch was used and nothing is default-on. Full numbers
 and the failure analysis: [`walker-mt-m3.md`](walker-mt-m3.md).
 
+**Status (2026-11-04, M4 mission): per-worker recording and the texture
+resolver are implemented, exact, default off; the timing gate FAILS and the
+mission stopped there.** The Vulkan backend now has per-worker contexts
+(private command pool/buffer/fence, descriptor pool, GPU-unpack set and
+ring slices, per-thread bind/render-pass/framebuffer/scratch state);
+workers record whole segments and the engine submits them at the global
+turn, so guest order is preserved. The `rsx-tex` resolver takes plain guest
+textures; target/depth/cube/feedback stay on the walker. Digests are
+identical for MT off/W=0..4 on `meter_frame` and `walker_frame` (VSRANGE and
+normal), fixtures 30/30, `test_draw_queue` and `test_color_readback_guest`
+pass. 7 interleaved runs on `walker_frame`: MT off 14.756 ms, W=3 16.055 ms
+(+8.8%), W=3 with `TEX_RESOLVE=0` 12.869 ms (-12.8%, still short of -25%);
+the state `tex` term is ~6.1-6.6 ms, not <=2 ms. Nearly every packet binds a
+new texture, so the ordered texture group becomes a third thread in the
+serial chain and costs more than the drain it replaced. Per-worker
+recording cannot be judged offline (the null replay has no command
+buffers); the live A/B was not run because the stop rule had already fired.
+No live key and no `spu_context` change. Details:
+[`walker-mt-m4.md`](walker-mt-m4.md).
+
 ### M4: texture and pipeline resolvers
 
 * Add the one `rsx-tex` thread (plain guest textures only; target/depth/cube
