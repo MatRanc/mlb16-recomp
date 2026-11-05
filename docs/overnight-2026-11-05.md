@@ -11,6 +11,7 @@ pitch-meter A/B or an offline gate named in the linked doc.
 | Better depth of field (`PS3RECOMP_DOF_PATCH`) | user-confirmed better blur | dof-patch.md |
 | Bink video: shared fd space + Bink SPU task descriptor | intro now decodes (live boot check); picture/logo = user check | bink-video.md |
 | Async frame dump (`PS3RECOMP_VK_DUMP_ASYNC`) | 0.5-0.7 s freezes from the thumbnail dump gone (2 -> 0 per 133 s) | present-stalls.md |
+| Shader disk cache survives rebuilds (`PS3RECOMP_SHADER_CACHE_STABLE_KEY`) | match load 4.3 s -> 1.2 s after any rebuild (cache had 0 hits) | boot-gaps.md |
 | Walker profiler + full crowded captures | profiler engine=0 lines 19 % -> 0; crowded replay 1,261 -> 1,694 draws, 0 misses | capture-tools-fix.md |
 
 ## Edge speed: three routes measured, none moves the meter p50 (34.15 ms)
