@@ -1,5 +1,40 @@
 # Progress log
 
+## 2026-11-05 (boot gaps / match load): C6 was already fixed by the DXT lift; the shader cache never hit
+
+Full details in [`docs/boot-gaps.md`](boot-gaps.md). Branch `exp/live-ab` in
+`ps3recomp-play`, build `recomp-work/build-play`. Two boot -> pitch-meter
+launches (the cap), X once: `ab_live_bootgap_off_20261105_073251` and
+`ab_live_bootgap_on_20261105_073812`; the second was after a rebuild.
+`PS3RECOMP_SHADER_CACHE_STABLE_KEY` stays **default off**. Code pushed to
+`fork` only.
+
+- **The 237-654 ms C6 boot gaps are gone.** They were the interpreted DXT
+  kernel on the four `Wws_Job/DXTJob` lanes; the lift (750cb5e9, default on)
+  removed them (11 gaps / 7.6 s -> 1 / 0.31 s at the start screen). Post-lift
+  boot runs have no asset-loading gap of that size.
+- **The remaining boot gaps are Bink intro decode, not a runtime wait.**
+  100-132 ms frames at 16-28 s: six `spurs pm` lanes idle (`spu.run` 2-3 ms
+  per window), walker idle, display on its flip lwcond, main PPU polls
+  `sys_timer_usleep(400)` at guest LR `0x00EE93E4` (Bink SDK) 200-273 times
+  per frame; the Bink task runs 28-32 ms rounds on its own host thread.
+- **The match-load cheap bug:** the shader disk cache never hit. Its HLSL
+  hash is seeded with `kTranslatorBuild = __DATE__ " " __TIME__`
+  (`rsx_shader_spirv.cpp:144`, `:266`), so every rebuild rejects every file.
+  Both cold runs: **0 hits, 856 misses, 856 rejected**.
+- **Fix (opt-in, default off):** `PS3RECOMP_SHADER_CACHE_STABLE_KEY=1`
+  hashes without the build stamp and accepts an old-build file when the
+  translator version, glslang, guest key and HLSL length agree. It still
+  rejects a version bump, a different key/length, a bad checksum or trailing
+  bytes. `test_shader_spirv` **67/67**.
+- **Measured:** load frame **4,341 ms -> 1,239 ms** (-71 %); shader work in
+  it **3,292 ms -> 36 ms**; `[pipe-timing]` **213 glslang / 643 mem / 0 disk
+  -> 862 disk / 0 glslang / 0 mem**. Boot -> meter 167 s -> 152 s; the
+  key-off run also has an unrelated 6.8 s `pres_to_show` compositor stall
+  (`[fliplog] n=1862`), so the controlled number is the load frame.
+- **No SPURS_MAXC run was needed.** The idle lanes in the old DXT gap are
+  not the current limiter.
+
 ## 2026-11-05 (c690 extra host lanes): the guest's maxContention is the ceiling; no burst win
 
 Full details in [`docs/c690-extra-lanes.md`](c690-extra-lanes.md). Branch

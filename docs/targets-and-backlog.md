@@ -333,6 +333,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Check each launch is alive a few minutes in.
 
 **Boot SPU / replay / logo (docs/boot-spu-hitches.md, static)**
+- DONE 2026-11-05 (docs/boot-gaps.md): **C6 closed** — the 237-654 ms boot gaps were the interpreted DXT
+  kernel and are gone with the DXT lift (750cb5e9, default on); post-lift boot gaps are Bink intro decode
+  (100-132 ms, one SPU task, not a runtime wait). The match-load gap was a shader-cache key bug: `__DATE__
+  __TIME__` invalidated every file on every rebuild (0 hits / 856 rejected). `PS3RECOMP_SHADER_CACHE_STABLE_KEY=1`
+  (default off) keeps cross-build hits: load 4,341 -> 1,239 ms, shader work 3,292 -> 36 ms, 862 disk hits.
+  `test_shader_spirv` 67/67. No SPURS_MAXC run needed.
 - Start-screen and instant-replay freezes = the game's DXT texture-compression jobs (Wws_Job/DXTJob), pure lifted SPU
   compute on 4 lanes (title sets maxContention 4; 2 of 6 lanes idle; host CPU 26-36 %). Next: probe
   PS3RECOMP_SPURS_MAXC=6 (cheap, needs an HLE switch + one start-screen run); bigger: native DXT encoder (pure
