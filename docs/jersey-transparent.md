@@ -291,3 +291,10 @@ specification and the Mesa/nouveau `nvfx_shader.h` opcode table (MIT-style,
 not an emulator); no RPCS3 or other GPL emulator source was read or cited. The
 MIT NHL Legacy and inFAMOUS 2 notes were consulted for the alpha /
 render-to-texture classes above; no code was copied.
+
+## Default on (2026-11-05)
+
+The user confirmed the jerseys draw in their own session. Claude reviewed 0d117ffa (TXD -> SampleGrad, DDX/DDY,
+gamma/EXP_TEX wrappers, key in the pipeline identity) and made `PS3RECOMP_FP_TXD=1` the default in
+`tools/play_windowed.sh` and the recomp-work play/ab scripts. The fine wavy (moire) pattern on uniforms is NOT from
+this fix: the user saw it on the pants before the jerseys came on. It is a separate texture-filtering bug (backlog).
