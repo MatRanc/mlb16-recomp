@@ -205,6 +205,12 @@ on the user.
 - DECISION: if the meter p50 is the target, continue Edge compute (0x22 21.2 %, 0x21 emit 25.0 %, 0x2A 13.5 %; a 2x
   cut of those is ~5-7 ms of burst, p50 ~28-29 ms). If the real-play 40-80 ms frames are the target, the renderer/
   walker is the lever and the meter median stays 34 ms. The remaining Edge GPU/native items are parked below.
+- DONE 2026-11-05 (docs/present-stalls.md): the 0.5-0.9 s meter present/pump stalls are the **synchronous 2.7 MB
+  frame dump on the walker** (ab_live every 10 presents; `stalltrace dump=717.6 ms`, matching the 717 ms
+  present/pump stall above). `PS3RECOMP_VK_DUMP_ASYNC=1` (default off) hands the write to a one-slot writer thread:
+  meter-phase dump stalls 2 -> **0** in the same config, 0 dump lines in 132 s. Remaining: meter-start first-use
+  pipeline/shader drains (0.25-2.1 s, before the measured segments) and the rare x11/FIFO `vkQueuePresentKHR`
+  compositor stall; C5's 4.3 ms menu tail is a different (ref-publication) wait.
 Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
 Long frames (40-80+ ms): the replay/real-play long frames are walker-bound (docs/c690-serialisation.md); meter
 long frames are c690 (docs/long-frames.md).

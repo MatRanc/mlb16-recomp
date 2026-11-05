@@ -1,5 +1,34 @@
 # Progress log
 
+## 2026-11-05 (present stalls, C4): the frame dump blocked the walker; async writer, default off
+
+Full details in [`docs/present-stalls.md`](present-stalls.md). Branch
+`exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. **Two
+pitch-meter launches (the cap)**: one diagnostic with a stall tracer, one
+confirm with the fix. Code pushed to `fork` only; the key is default off.
+
+- **C4 is the synchronous frame dump.** `PS3RECOMP_VK_DUMP` (ab_live every 10
+  presents, a 2.7 MB PPM) ran `fopen/fwrite/fclose/rename` on the RSX walker
+  thread inside present. Under btrfs writeback it blocked 0.5-0.7 s; the walker
+  cannot tick, so the pump stops and the display waits out its fallbacks.
+  Measured `stalltrace dump=717.6 ms` (the exact 717 ms "present/pump stall" in
+  meter-p50-pin), `596.6` and `541.6 ms`; the fence/acquire/vkQueue present
+  calls were all < 200 ms and there were no dropped frames.
+- **Fix, default off:** `PS3RECOMP_VK_DUMP_ASYNC=1` (`vk_dump_queue.c`): the
+  walker keeps the packed RGB copy and hands the buffer to a one-slot writer
+  thread; a newer frame replaces an unwritten one. 33/33 video fixtures pass
+  (new `test_vk_dump_queue`), ABI check passes, no `spu_context` field.
+- **Confirm run (same config):** dump stalls in the meter phase 2 (608, 563 ms;
+  0.90/min) -> **0**, and 0 `stalltrace dump` lines in 132 s vs 3 in the
+  baseline. The one in-window stall left is the x11/FIFO compositor's
+  `vkQueuePresentKHR` 804 ms (23 no-slot, recovered), not this code.
+- **Not the dump:** the meter-start 0.25-2.1 s drains are first-use
+  pipeline/shader translation (`pipe=1267 ms`, `pipecrt=101` in one report),
+  before the measured segments. **C5 is not covered**: its 4.3 ms menu tail is
+  the buffer-ref wait after the flip handler, a producer-cadence wait.
+- Census: 1,594 stalls >= 200 ms in 211 runs; 160 inside measured meter windows
+  in 68 runs. Full split in the doc.
+
 ## 2026-11-05 (c690 GPU Edge): key-on cost diagnosed; the hand-off, not the submit, costs 5.9 ms/frame
 
 Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §9. Branch
