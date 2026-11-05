@@ -31,6 +31,42 @@ change, no build, no launch. Evidence: the user's menu capture
   moved 823 -> 776 deadlines there and cost 4.3 fps. Differs from
   FLIP_ON_DONE / TICK_IN_DRAIN / FLIP_FENCE_DONE / KEEP_STATUS (see doc §5).
 
+## 2026-11-04 (walker MT M4 live): MT-on frame is wrong and the resolver arm hangs
+
+Full analysis in [`docs/walker-mt-live.md`](walker-mt-live.md). Branch
+`exp/live-ab` (`87cfe3aa` + measurement-only live-ctl key `e381d650`),
+`build-play`, one pitch-meter `ab_live.sh` launch. The Khronos validation
+layer is not installed; no validation arm.
+
+- **No usable A/B/C sample.** A = MT off, B = MT W=3 `TEX_RESOLVE=0`, C =
+  MT W=3 default. A and B each got one 8 s measured window; C **hung on its
+  first frame** (zero flips / zero `[walker-prof]` for 13 s, no Vulkan
+  error, no fallback). Per the stop rule the run ended and no second launch
+  was made.
+- **B loses live.** p50 34.76 -> 38.08 ms (+9.5 %), fps 34.0 -> 27.5,
+  walker 12.2 -> 24.0 ms, `tex` 0.44 -> 14.47 ms. Draws/frame drifted
+  553 -> 617 (+11.6 %), so per draw: walker 23.7 -> 37.2 us, `tex` 0.86 ->
+  22.4 us. Per-worker recording does cut the state-thread `draw` phase
+  (7.3 -> 2.0 us/draw) and `bind` to zero, but the per-texture
+  `eng_mt_sync` drain swamps it.
+- **B's frame dump is visibly wrong.** Thumbnail mean abs diff vs A 78.9
+  (A/A 2.2); pixels below RGB 12 rise 14.5 % -> 58.6 % overall and 13.5 % ->
+  93.9 % in the lower half (the field is black for the whole B window). C's
+  thumbnails are frozen, byte-identical to each other and essentially the
+  last B frame (mean abs diff 1.8).
+- **Cause of the C hang (leading candidate).** Worker waits for
+  `tex_taken` before starting a segment (`rsx_draw_engine.c:7630`); the
+  resolver waits for its group turn (`:7207`), which the state thread
+  allocated inside that same chunk (`:7147`, packet epoch `:7991`). The
+  null replay never takes the per-worker recording path, so M4's exactness
+  tests could not see it. Proving which side is stuck needs a stack dump or
+  a C-from-boot repro; the stop rule excluded both.
+- **Verdict:** stop MT in its current form. One measurement-only code change
+  (make `PS3RECOMP_WALKER_MT_TEX_RESOLVE` live-switchable) is on
+  `exp/live-ab`; offline `meter_frame` VSRANGE hashes stay
+  `461ff3a834c62331` for MT off / W=3 `TEX_RESOLVE=0` / W=3 on. Nothing is
+  default-on and no user replay command is issued.
+
 ## 2026-11-04 (walker MT M4): per-worker Vulkan recording + texture resolver, timing gate fails
 
 Full analysis in [`docs/walker-mt-m4.md`](walker-mt-m4.md). Branch
