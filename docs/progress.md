@@ -3,6 +3,37 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (team logo): the resolver is a `BINK_LOGO` asset, not a mesh path
+
+Full details and the user command are in [`docs/team-logo.md`](team-logo.md) §10.
+**Static only: no game launch.** EBOOT in Ghidra, the four WADs streamed, the
+existing team-select FIFO capture, and the 2026-11-05 logs.
+
+- **Premise correction:** the capture's 0 triangle batches rule out a mesh, not
+  a logo. The same frames carry 107 primitive-8 quads with 1024x1024, 512x1024,
+  540x960, 341x683, ... textures. The 3D logo can be a Bink/UI-movie sprite or a
+  rotated texture card; both are quads.
+- **Resolver:** `UI_ResolveTopLevelAssetPath` (`0x000f56f4`, old `FUN_000f56f4`)
+  is called from the UI property dispatcher `.opd.FUN_00297b60` for case 0xf.
+  Its 8-entry asset-kind table at `0x01126600` names entry 2 **`BINK_LOGO`**;
+  case 2 builds `logos\logo3d_<TEAM>` from `0x01177574`. The in-game twin is a
+  `MovieSprite` (`UI_InGame3DTeamLogo` in the `IFF0ASSH` at 3,983,857,506).
+- **Team select:** the `IFF0ASSH` at 1,188,031,035 (3.53 MB) has `TEAM_LOGO` and
+  `[TeamSelect_Wheel`, no `ScriptModel`/`MovieSprite`; the logo is a run-time
+  script property. The 00:47 log creates two 1024x512 colour surfaces at
+  `00:47:27` (consistent with a movie/RT double buffer).
+- **HLE:** no gap found. >4 GiB WAD I/O is 64-bit and tested; GCM config/tile/
+  zcull, video out, and SPURS are implemented; the 00:47 log has no
+  `[RSX fp]`/`FAILED (draw dropped)`/`TEXTURESET`/Bink error.
+- **No fix was implemented**: no concrete runtime bug was proven. The next run
+  watches the `logo3d` table (`PPU_RWATCH=0x01177574,0x228`) and dumps the FIFO
+  at a **team switch** (the settled capture can miss a change-time 3D/RT pass).
+  Command and greps: team-logo.md §10.6.
+- **Ghidra renames:** the resolver/context, wheel, `UI_Movie_LoadBik`,
+  `Model_LoadChunked`, `ScriptModel_Load`, `Model_Bind`, `Model_LoadChunk`,
+  `Mesh_EmitTriangles`, `RenderTarget_Create`, and the ScriptUIElem render/copy
+  functions (team-logo.md §10.7).
+
 ## 2026-11-05 (uniform moire): sampler census done, 2x1 derivative candidate is not it
 
 Full details and the user command are in [`docs/uniform-moire.md`](uniform-moire.md).

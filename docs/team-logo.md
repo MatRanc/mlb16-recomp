@@ -733,3 +733,205 @@ CustomCams file opened 00:47:26). All 45 watched writes are boot-time init at 00
 known fs open failures. **The team-select logo is not a ScriptUIElem.** Next: follow the `logos\logo3d_<TEAM>` string
 (resolver `FUN_000f56f4` case 2, table `0x01177574`) to its consumer in the frontend and find where the 3D model load or
 draw is skipped.
+
+## 10. 2026-11-05 offline follow-up: the logo is a UI-script asset, and "no triangles" does not mean "not submitted"
+
+Date 2026-11-05. **No game was launched.** Sources: the EBOOT in Ghidra, all four WADs on the mounted ISO (streamed,
+never copied whole), the existing team-select FIFO capture in `recomp-work/captures/logo/`, the 2026-11-05 user logs
+(`recomp-work/play_20261105_003651.log`, `..._004150.log`, `..._004704.log`), and `ps3recomp-play` (read only). No
+RPCS3 or other GPL emulator source was read or cited.
+
+### 10.1 Premise correction: the capture rules out a mesh, not the logo
+
+§5.5 and §9 read "no primitive-5/6/7 batch" as "the logo is never submitted". That is only true for a triangle mesh.
+The re-scan of the same 12-frame capture (`tools/fifo_dump_scan.py`) shows **107 primitive-8 quads per full UI flip**
+and, in the same frames, textured quads at 1024x1024, 512x1024, 540x960, 341x683, 256x256, 128x256 and smaller
+(offsets such as `0x0C348680`, `0x0C448780`, `0x0D8EBF80`). A pre-rendered logo, a Bink sprite or a rotated card is a
+**quad**, not a triangle batch, so this capture can neither see nor rule it out. The loss is upstream of the RSX in the
+sense that no *mesh* is emitted; it is not established that no logo quad is emitted.
+
+The team-select script data itself is a `IFF0ASSH` chunk at WAD offset **1,188,031,035** (size 3,530,236). Its string
+pool contains `[TeamSelect_Career`, `[TeamSelect_Season`, `[TeamSelect_Practice`, `[TeamSelect_Wheel`,
+`[14_TeamSelectController` and the property key **`TEAM_LOGO`**, but **no `ScriptModel` and no `MovieSprite`**. The
+in-game counterpart is different: the small `IFF0ASSH` chunk at **3,983,857,506** contains
+`[PresIntroStartingLineup`, `UI_InGame3DTeamLogo`, `Offense`, **`MovieSprite`**, `OSD_OFF`, `STARTING_LNUP`. So in the
+starting-lineup presentation the "3D team logo" is explicitly a **MovieSprite**, and at team select the logo is a
+script property (`TEAM_LOGO`) resolved at run time rather than a declared model.
+
+### 10.2 The resolver, its tables, and the asset kind
+
+`UI_ResolveTopLevelAssetPath` (old `FUN_000f56f4`, `0x000f56f4`) is called from the UI-script property dispatcher
+`.opd.FUN_00297b60` (`0x00297b60`) for dispatcher case `0xf` (`0x002982b8`), with the UI context `DAT_011266c0`. It
+reads the requested asset kind from the first script argument and binary-searches the 8-entry table at `0x01126600`
+(`FUN_009a0a08`, entries `0x18` bytes: string pointer, enum index at `+0x0a`, hash at `+0x14`). The file order is:
+
+| enum | name |
+|---:|---|
+| 0 | `MUGSHOT` |
+| 1 | `PLAYER_MODEL` |
+| 2 | **`BINK_LOGO`** |
+| 3 | `TUTORIAL_MOVIE` |
+| 4 | `WAD_STR` |
+| 5 | `UNIFORM_JERSEYS` |
+| 6 | `UNIFORM_HATS` |
+| 7 | `UNIFORM_PANTS` |
+
+Case `2` is the one that formats `"logos\\%s"` (`0x00f405e4`) from the 0x8a-entry table at `0x01177574` (strings at
+`0x01011c7c`, `logo3d_BAL` … `logo3d_AAA_SL`) using the team-id argument, then copies the result into a UI string value
+with `FUN_009a0fb4`. The enum label is **`BINK_LOGO`**: the name is a Bink/logo asset key, not a model path with
+chunk suffixes. That matches the in-game MovieSprite above and the Bink SDK in the EBOOT (`BinkPlayer` `0x00f2d858`,
+`BinkSprite` `0x00f326c4`, `"%s\\UI\\Movies\\%s.bik"` `0x00fb51bc`, `BinkSPU.spu.elf` `0x0119f734`,
+"Not a Bink file." `0x01056f80`, "Error reading Bink header." `0x01057028`).
+
+The two downstream routes are therefore:
+
+* **Bink/UI-movie sprite.** A script sets the `TEAM_LOGO`/`BINK_LOGO` string as a MovieSprite's movie name; the movie
+  path is built by `UI_Movie_LoadBik` (old `FUN_006d204c`, `0x006d204c`) as `"<root>\\UI\\Movies\\<name>.bik"` and
+  loaded with `FUN_00980e14`; the Bink decoder writes frames into a movie texture, and a `BinkSprite` quad composites
+  it. Evidence: the enum name, the in-game MovieSprite, the path format, the Bink SDK, and the 2026-11-05 log at
+  `00:47:27`, which creates **two 1024x512 colour surfaces** (`0x07C27000`, `0x07E27000`, fmt 3) plus a
+  1024x1024→16x16 mip chain right as the frontend/team-select data loads. Those two surfaces are what a
+  double-buffered Bink/movie target looks like; they are not the main 1280x720 target and not the 2560x720 UI target.
+* **Texture-card sprite.** If the returned name is a texture set key, `TextureSet_LoadAsset` (`0x004ba320`) loads it
+  and a UI sprite samples it; a miss prints `"\nTEXTURESET: COULD NOT LOAD %s\n"` (`0x00faa324`). This path is still
+  possible, but it has a default failure print, and no such line appears in the 2026-11-05 logs.
+
+A pure `ScriptModel` model is now the **least** likely reading: the team-select ASSH declares no ScriptModel, the
+captured frames contain no triangle batches, and the in-game counterpart is a MovieSprite.
+
+### 10.3 Silent early-outs between "name built" and "pixels"
+
+| Site | What stops it | Log by default? |
+|---|---|---|
+| `UI_ResolveTopLevelAssetPath` `0x000f56f4` | `_opd_FUN_0001e1e0() == 0`; fewer than 2 args; argument pointer null; team id < 0 or >= 0x8a; dispatcher case is not `0xe/0xf`; the UI string copy is empty | no |
+| UI script / property hand-off | the `TEAM_LOGO` property is never assigned, or the script never creates its sprite/movie widget | no |
+| `UI_Movie_LoadBik` `0x006d204c` | `FUN_006d1598` returns null / `*piVar3 == 0`; `FUN_009815b8() == 0`; path build; `FUN_00980e14` returns 0 (movie not opened/started) | no |
+| Bink decoder | "Not a Bink file." / "Error reading Bink header." / "already an async decompression in progress"; SPU image or job never completes; decoded frame never uploaded | only the decoder's own error strings |
+| Movie/Bink sprite composite | texture target blank/stale; format/alpha/blend; quad outside the scissor | no |
+| `ScriptModel_Load` `0x009cd1ac` | not called with `param_2 == 1`; object vtable/`param_3` gate; `param_1[3] == 0` (no name); `Model_LoadChunked` fails; `Model_Bind` fails; `param_1[0xd] == 0`; scene node type `0x900`/`+0x18 == 0x100` miss | no |
+| `Model_LoadChunked` `0x009b5578` | model already loaded; a `Model_LoadChunk("%s.%d")` fails (frees and breaks); `Model_Bind` fails (cleanup, return 0) | no |
+| `ScriptUIElem_Render`/`RenderScene` | the §5.5 table; not reached here because the 00:47 watch saw no element | no |
+
+The `00:47` log has **no** "TEXTURESET", "COULD NOT LOAD", "Bink", "Movie", `[RSX fp]`, or `FAILED (draw dropped)`
+line at team select; the only failures are the known missing `PATCH_GD.WAD`/config files. The 00:36 log (before
+`PS3RECOMP_FP_TXD` became the play default) has the jersey `TXD` drops; the 00:47 log does not. So a TXD-style
+fragment-program drop is not the current cause.
+
+### 10.4 HLE cross-check (read only)
+
+| Candidate | Our runtime | Evidence |
+|---|---|---|
+| WAD/file reads past 4 GiB (GD 4.92 GB, EXT 5.24 GB, SYS 6.36 GB) | `cellFsLseek`/`Read`/`Stat` are 64-bit; `cellFsAioRead` reads a 64-bit absolute offset; `test_fs_large_file` covers a 5 GiB sparse file; the 00:47 log stats EXT.WAD at 5,243,095,962 and mounts it | no short read at boot/team select |
+| GCM local memory/tile/zcull | `cellGcmGetConfiguration` reports localAddress/localSize 256 MB; `GetTileInfo`/`GetZcullInfo` return the live `s_tiles`/`s_zcull`; `SetTileInfo`/`BindTile` are implemented | no warning/failure in the log |
+| Video out | `cellVideoOutGetState` = enabled, 1280x720, 16:9, 59.94; `GetResolution` is big-endian-correct | 00:47 log `GetResolution(id=2) -> 1280x720` |
+| SPURS/Bink resources | `cellSpursRequestIdleSpu`, `GetInfo`, `GetWorkloadInfo` drive the guest instance bytes; `_sys_spu_image_import` parses the ELF | 195 `cellSpurs` lines, no Bink error |
+| `cellFsSdataOpenByFd` | returns `CELL_ENOSYS` | **not called** in the 2026-11-05 logs; the path form is used instead |
+
+No HLE call in the name→asset→draw chain is missing or visibly wrong from the logs. The remaining failure is
+guest-asset/media-side or in the composite state, not a capability query.
+
+### 10.5 Ranking
+
+1. **Bink/UI-movie sprite path** (most likely). The resolver's enum is `BINK_LOGO`; the in-game twin is a MovieSprite;
+   the 2026-11-05 log creates two 1024x512 targets as the team-select data loads. A failed/missing movie file, a
+   never-completing Bink decode, or a blank movie target produces exactly "no triangles, no logo, no error".
+2. **Texture-card sprite / texture-set miss.** The capture has many textured quads; if the `logo3d_*` texture set is
+   not found, the card is blank. Less likely because `TextureSet_LoadAsset` prints a default failure line and none is
+   present.
+3. **`ScriptModel` load/bind/node mask.** Still possible if the script creates a model at run time, but the data
+   declares no ScriptModel and the capture has no triangles.
+4. **Renderer state on the composite quad** (texture format, alpha, blend, scissor). Possible; no `[RSX fp]` drop in
+   the 00:47 run, and `PS3RECOMP_FP_TXD=1` is now the play default.
+5. **HLE capability.** Checked; no concrete gap.
+
+### 10.6 Next decisive user run (one ~2-min team-select session)
+
+The previous capture waited ~5 s after team select settled. If the logo's 3D/RT/movie pass runs at the team **change**
+and is then composited from a cached texture, the settled capture misses it. This run does two things at once: it
+proves whether the resolver is called at team select at all (`PPU_RWATCH` on the `logo3d` table) and captures the
+12-16 flips around a **team switch** (`PS3RECOMP_DUMP_FIFO_ARM`). `PS3_FSLOG=1` also records any loose-file movie or
+texture open.
+
+```sh
+cd /home/m/Documents/mlb16-online/recomp-work
+rm -f /tmp/logo2.ctl /tmp/logo2.bin
+PPU_RWATCH=0x01177574,0x228 PS3_FSLOG=1 \
+PS3RECOMP_CTL=/tmp/logo2.ctl \
+PS3RECOMP_DUMP_FIFO=/tmp/logo2.bin \
+PS3RECOMP_DUMP_FIFO_FRAMES=16 PS3RECOMP_DUMP_FIFO_ARM=1 \
+../mlb16-recomp/tools/play_windowed.sh
+```
+
+In the game: reach team select, then press **d-pad once** to switch team and immediately (within ~0.2 s, in another
+terminal) start the dump:
+
+```sh
+rm -f /tmp/logo2.ctl; echo 'PS3RECOMP_DUMP_FIFO_TRIGGER=1' > /tmp/logo2.ctl
+```
+
+Wait ~1 s, close the window. The runtime writes to `recomp-work/play_<time>.log`; the `tee` of
+`play_windowed.sh` stdout only carries the wrapper lines. Then:
+
+```sh
+cd /home/m/Documents/mlb16-online
+L=$(ls -t recomp-work/play_*.log | head -1)
+grep -n '\[rwatch\]' "$L" | head -40
+grep -n '^\[rw\]' "$L" | head -40
+grep -n 'TEXTURESET\|COULD NOT LOAD\|Bink\|Movie\|\[fs\] open' "$L" | tail -60
+python3 ps3recomp-play/tools/fifo_dump_scan.py /tmp/logo2.bin --top 20
+python3 ps3recomp-play/tools/fifo_dump_scan.py /tmp/logo2.bin --draws --prim 5 | head -80
+python3 ps3recomp-play/tools/fifo_dump_scan.py /tmp/logo2.bin --draws | head -160
+```
+
+Interpretation:
+
+* **`[rwatch]` hits at `0x01177574` with a guest call chain in `[rw]`**: the script *does* ask for a `logo3d` asset at
+  the team switch. The loss is downstream (movie/texture/composite), so the next step is the Bink/movie path in §10.5
+  item 1. The logged value is the `logo3d_*` string pointer; `(value - 0x01011c7c) / 16` is the team id (sanity).
+* **No `[rwatch]` hit**: the resolver is never called at team select; the `TEAM_LOGO` property/hand-off or the wheel
+  script is the loss (rank 2/3), and watching `0x00f405e4` or the wheel selection is next.
+* **Primitive-5 batches in the new dump**: a mesh pass exists at the switch and the settled capture missed it; replay
+  the dump and bisect the renderer state (§3, hypotheses #3/#4).
+* **Only primitive-8 quads again, with `[rwatch]` hits**: the logo is the Bink/texture-card path. Compare the new
+  dump's surfaces/textures with the settled capture (`0x07C27000`/`0x07E27000` 1024x512 targets are the first thing to
+  look for); a missing/blanks 1024x512 target or a movie file open is the next lead.
+* **`TEXTURESET: COULD NOT LOAD` or a Bink error** names the exact asset/movie; follow that name.
+
+### 10.7 Ghidra renames made for this mission
+
+| Old | New | EA |
+|---|---|---|
+| `FUN_000f56f4` | `UI_ResolveTopLevelAssetPath` | `0x000f56f4` |
+| `FUN_000f5be0` | `UI_AssetPathCtx_Create` | `0x000f5be0` |
+| `FUN_000f5ccc` | `UI_AssetPathCtx_Destroy` | `0x000f5ccc` |
+| `FUN_000f0ffc` | `TeamSelect_RegisterScriptOps` | `0x000f0ffc` |
+| `FUN_000ecaf8` | `TeamSelect_Wheel_ctor` | `0x000ecaf8` |
+| `FUN_000ecb70` | `TeamSelect_Wheel_GetSelection` | `0x000ecb70` |
+| `FUN_000ecdec` | `TeamSelect_Wheel_ApplySelection` | `0x000ecdec` |
+| `FUN_000ecff4` | `TeamSelect_Wheel_SetSelectionArg` | `0x000ecff4` |
+| `FUN_000ed0c0` | `TeamSelect_Wheel_Advance` | `0x000ed0c0` |
+| `FUN_006d204c` | `UI_Movie_LoadBik` | `0x006d204c` |
+| `FUN_009b5578` | `Model_LoadChunked` | `0x009b5578` |
+| `FUN_009cd1ac` | `ScriptModel_Load` | `0x009cd1ac` |
+| `FUN_009e2048` | `ScriptUIElem_CopyRTToTexture` | `0x009e2048` |
+| `FUN_009d611c` | `ScriptUIElem_Render` | `0x009d611c` |
+| `FUN_009d5c08` | `ScriptUIElem_RenderScene` | `0x009d5c08` |
+| `FUN_004c1c28` | `Model_Bind` | `0x004c1c28` |
+| `FUN_004c345c` | `Model_LoadChunk` | `0x004c345c` |
+| `FUN_004d9084` | `Mesh_EmitTriangles` | `0x004d9084` |
+| `FUN_004b8f04` | `RenderTarget_Create` | `0x004b8f04` |
+
+Already renamed by §8: `TextureSet_LoadAsset`, `ScriptUIElem_FindTargetTexture`, `ScriptUIElem_Create`,
+`Model_GetMaterial`, `TextureSet_GetNameById`, `Scene_GetOrCreate`, `Scene_GetChildByType`, `Config_LoadFile`,
+`Config_HasFlag`, `Debug_Printf`.
+
+### 10.8 Caveats
+
+* The resolver table is sorted/initialized at run time; the enum order above is the file order and matches the switch
+  cases (0..7). The mapping of a script's type key to enum 2 is inferred from the table label `BINK_LOGO` and the
+  in-game MovieSprite; it is not proven by a live trace yet.
+* The two 1024x512 colour surfaces at `00:47:27` are consistent with a Bink/movie double buffer but are not proof;
+  the frontend may use them for other UI targets.
+* The texture sizes in §10.1 come from method `0x1A18` (image rect) and are logged as width x height in the order the
+  capture stores them; use them as relative sizes, not as an asset identity.
+* `PS3RECOMP_FP_TXD` is on in `play_windowed.sh` since 2026-11-05; any A/B of the logo must state whether the key is on.

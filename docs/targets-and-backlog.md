@@ -410,6 +410,10 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   the entry above.
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/
   scene_1793665113991.png).
+- Team-select 3D logo: **not a mesh path.** 2026-11-05 offline follow-up ([`team-logo.md`](team-logo.md) §10): the resolver's
+  asset kind is `BINK_LOGO`; the in-game twin is a `MovieSprite`; the settled capture's 107 quads and the two 1024x512
+  targets at team entry point at a Bink/UI-movie or texture-card sprite, not a `ScriptModel`. No HLE gap found; no fix
+  implemented. Next user run: `PPU_RWATCH=0x01177574,0x228` + armed FIFO dump at a **team switch** (team-logo.md §10.6).
 - Team-select 3D logo missing (not a missing texture; RESYNC_FIX doesn't restore it). **NEXT after the jersey + exposure missions (user, 2026-11-05).** Start from team-logo.md: the capture shows the logo is never submitted
   (upstream of RSX). Offline follow-up (team-logo.md §8, 2026-11-05): the 0x900 lookup is a world **model/material**
   match, and all plain-text disc ScriptUIElem targetnames found are stadium screens, so "the logo is a ScriptUIElem" is unproven. The
