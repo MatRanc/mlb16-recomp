@@ -3,6 +3,38 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (Bink video): the intro never opened because the fd spaces were split
+
+Full details, the two fixes and the user check are in
+[`docs/bink-video.md`](bink-video.md); the team-logo pointer is in
+[`docs/team-logo.md`](team-logo.md) §11. Two automated launches (the cap);
+no GPL source read or cited.
+
+- **Failure site, from a live write-watch:** after `MLB_INTRO.BIK` opens on
+  fd 12, BinkOpen's header read returns no data and the SDK writes
+  **"Not a Bink file."** to `0x01476028` at `0x00EE5B10`. No `cellFs`/AIO read
+  of fd 12 ever happens.
+- **Cause:** the Bink SDK's default PS3 IO (`0x00EE7D00` open, `0x00EE8690`
+  read) uses raw `sys_fs_lseek`/`sys_fs_read` (`0x00A41F1C`/`0x00A420A0`) on
+  the fd the game opened with **cellFsOpen**. On hardware both share one
+  kernel fd space; this runtime had two tables, so the sys_fs slot was empty
+  and the read returned `EBADF` silently.
+- **Fix 1 (movie open):** `sys_fs_read/lseek/fstat` bridge to
+  `ppu_cellfs_file_for_fd` when the fd is not a sys_fs one; both allocators
+  avoid the other table's numbers. Offline: `tools/test_sys_fs_cellfs_bridge.py`
+  (12 PASS).
+- **Fix 2 (decode):** the Bink SPU task was created with `szctx=0 lsp=0` and
+  parked in `WAIT_SIGNAL` because `_cellSpursTaskAttributeInitialize` read the
+  R8 form while `FUN_00EF8494` passes a `{context EA, size, lsPattern}`
+  descriptor in r7 and r8=0. Auto-detect now decodes that shape when r8==0
+  and the words are plausible. Offline:
+  `tools/test_spurs_taskattr_desc.py` (18 PASS).
+- **Live status:** the run with the stricter SPURS bounds still failed at
+  `01:52:29` and showed the Bink IO table is the default `0x010D9760`; the
+  automated nav still reached the pitch meter. The fd bridge landed after the
+  2-launch cap, so it is offline-tested but **not live-verified**. User check:
+  bink-video.md §6.
+
 ## 2026-11-05 (team logo): the resolver is a `BINK_LOGO` asset, not a mesh path
 
 Full details and the user command are in [`docs/team-logo.md`](team-logo.md) §10.

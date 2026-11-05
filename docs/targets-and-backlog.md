@@ -378,6 +378,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 
 ## Visual backlog (parked)
 
+- **Bink video / team logo ROOT CAUSE FOUND 2026-11-05 (offline-tested, live
+  verification pending).** The intro `.BIK` opened on fd 12 with `cellFsOpen`,
+  but the Bink SDK's default PS3 IO reads it with raw `sys_fs_read/lseek`; the
+  runtime had two fd tables, the read returned `EBADF`, and BinkOpen reported
+  "Not a Bink file." with no read. Fixed by bridging the fd spaces plus the
+  Bink SPU task-attribute descriptor. Details and the ~2-min user check:
+  [`bink-video.md`](bink-video.md). Same path as the team-select `BINK_LOGO`.
+
 - **Depth of field (close-up/replay blur) PATCH IMPLEMENTED 2026-11-05
   (key off by default).** `PS3RECOMP_DOF_PATCH=1` applies the user's RPCS3
   `MLB16_dof_fix.yml` bytes at ELF load: the 0xA90-byte 17-tap depth-aware

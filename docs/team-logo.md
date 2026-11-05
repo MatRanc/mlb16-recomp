@@ -935,3 +935,17 @@ Already renamed by §8: `TextureSet_LoadAsset`, `ScriptUIElem_FindTargetTexture`
 * The texture sizes in §10.1 come from method `0x1A18` (image rect) and are logged as width x height in the order the
   capture stores them; use them as relative sizes, not as an asset identity.
 * `PS3RECOMP_FP_TXD` is on in `play_windowed.sh` since 2026-11-05; any A/B of the logo must state whether the key is on.
+
+## 11. 2026-11-05: the Bink movie path, and this logo
+
+The intro movie failure and the team-select logo are the same asset path. The
+Bink open was failing with **"Not a Bink file."** because the game's file layer
+opened the `.BIK` with `cellFsOpen`, while the Bink SDK's default PS3 IO read it
+with raw `sys_fs_lseek`/`sys_fs_read`; our runtime kept those two fd tables
+separate, so the header read returned `EBADF` and no bytes were read. The
+`logos\logo3d_<TEAM>` resolver (`BINK_LOGO`) goes through the same movie open.
+The fd-space bridge and the Bink SPU task-attribute fix are in
+[`bink-video.md`](bink-video.md) (offline-tested; live verification pending the
+2-launch cap). If the intro now plays, re-check the team-select logo with that
+build; if it still does not, the next log distinguishes a failed header read
+from a decode/composite loss (bink-video.md §6).
