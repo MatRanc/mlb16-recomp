@@ -126,6 +126,14 @@ on the user.
   binding + live key, then the 20/48/other 0x2A classes, 0x21 sel7 (4.74 ms),
   culls (3.03 ms); 0x22 (5.80 ms) is already CPU-native.
   Details: [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md).
+- 2026-11-05: **0x2A record classes decoded and kerneled (offline).** Ten
+  layouts; seven class kernels gate **131/131 classified meter pairs**
+  (45,440 records, positions 0, packed <= 1 LSB, SPU bytes untouched, no
+  outside writes) = **131/192 = 68.2 % coverage**. The 9 packed-offset 32-byte
+  pairs are included. Fallback 31.8 %: 31 first-in-job pairs enter the low-LS
+  SPURS runtime (16.1 %), 19 outputs write no positions (9.9 %), 11 rare
+  64/40/16/4/112-byte layouts (5.7 %). `0x00A00004` is 26 %, not 51 %.
+  Details: [`edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md).
 - 2026-11-05 (later): **0x2A binding + live key delivered, default off.**
   `PS3RECOMP_C690_GPU_2A` exports the A/B class, runs the 32-byte Vulkan kernel
   on the renderer's device and serves the range through the draw-engine

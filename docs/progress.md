@@ -1,5 +1,33 @@
 # Progress log
 
+## 2026-11-05 (c690 GPU Edge): 0x2A record-class decode + per-class kernels, 68.2 % coverage
+
+Full details in [`docs/edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md). **Offline
+only: zero game launches**, no `ps3recomp-gpu` changes; the walker-binding
+mission's worktree and the existing `c690_2a_32b.*` files were not touched.
+
+- **Ten record layouts decoded, not four.** The 192-pair meter spool is 60
+  position-first 32-byte, 17 twenty-byte, 17 position-only (the 48-byte family
+  is four consecutive 12-byte positions), 19 attribute-first (nine 32-byte /
+  ten 28-byte), 13 forty-four-byte, 5 twenty-eight-byte position-first, plus
+  31 first-in-job pairs that enter the low-LS SPURS runtime and 30 outputs with
+  no positions. `0x00A00004` is 50/192 = 26 %, not 51 %; only 19 of those are
+  vertex records.
+- **Seven class kernels (one shared `.inc`) are exact.** 131/131 classified
+  pairs, 45,440 records: positions 0 differing bytes, packed <= 1 LSB, the
+  SPU-written prefix/attribute bytes untouched, 0 GPU writes outside the
+  records. The 9 packed-offset 32-byte pairs are included (same layout; the
+  exported index is a u32 source entry, not the `cmd[0]` u16 list).
+- **Coverage 131/192 = 68.2 %** (was 60/192 = 31.2 %). Fallback 61/192 =
+  31.8 %: 31 first-in-job runtime-path (16.1 %), 19 attribute/index-only
+  (9.9 %), 11 rare 64/40/16/4/112-byte layouts (5.7 %). The 5 % gate is still
+  not met; the first-in-job path cannot move until the low-LS runtime is
+  modelled or the SPU exports its result.
+- Binding interface: per job it needs the IN LS, up to seven stream bases,
+  a u32 per-record source entry index list, `out_base`, `count`, `record_size`
+  and the class selector; the kernel writes only the class fields in the ring
+  range. The current `PS3RECOMP_C690_GPU_2A` export covers only A/B.
+
 ## 2026-11-05 (c690 GPU Edge): 0x2A binding + live key; offline gates pass, live A/B crashes
 
 Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md). Branch

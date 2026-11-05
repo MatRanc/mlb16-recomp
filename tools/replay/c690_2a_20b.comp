@@ -1,0 +1,4 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#define C690_CLASS_20B 1
+#include "c690_2a_records.inc"
