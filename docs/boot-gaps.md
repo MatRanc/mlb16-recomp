@@ -167,9 +167,9 @@ the cache is always one build deep. The stats line proves it:
          856 rejected (translator v1)
 ```
 
-The directory had 2,684 files (48 MB) before the run; they were all
-rejected. This is a wrong-looking number (a full cache with zero hits) and
-it is a cheap key bug, not translation work.
+The directory had 2,684 files (48 MB) before the run; every requested file
+was rejected (856 of them). This is a wrong-looking number (a full cache
+with zero hits) and it is a cheap key bug, not translation work.
 
 ### 2.3 The fix (default off)
 
