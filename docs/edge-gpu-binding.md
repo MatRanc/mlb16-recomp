@@ -338,8 +338,9 @@ did not model five contexts with the same id.
    `runtime/spu/c690_gpu_2a.c`). A lane is one host thread here: the job
    runner and the lifted thread run the whole job, including the submit
    epilogue PUT, synchronously on the caller. No id dependence, no lock.
-2. `g_c690_gpu_2a_on` is `_Atomic int` (TSan flagged the atomic store vs the
-   plain reads in `exit`/`put`/`spu_dma.h`).
+2. `g_c690_gpu_2a_on` is read and written with relaxed `__atomic`
+   load/store everywhere (TSan flagged the atomic store vs the plain reads in
+   `exit`/`put`/`spu_dma.h`).
 3. **Seed-fallback lifetime.** The init-failure / resolve-only paths installed
    `j->seed` in the resolver and freed it immediately, leaving the range
    pointing at freed heap. Seeds are now retained until the next

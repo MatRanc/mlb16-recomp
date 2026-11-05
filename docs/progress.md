@@ -16,8 +16,8 @@ pitch-meter launch (the cap), no crash.** Code pushed to `fork` only;
   shared `s_lane[0]`; one lane's exit/export could free or overwrite a buffer
   another lane had already queued.
 - **Fix.** Lane state is thread-local (a lane is one host thread, which runs
-  the job and its submit epilogue PUT synchronously); `g_c690_gpu_2a_on` is
-  `_Atomic`; seed-fallback ranges now retain their buffers until the next
+  the job and its submit epilogue PUT synchronously); `g_c690_gpu_2a_on` is read/written
+  with relaxed `__atomic` loads/stores; seed-fallback ranges now retain their buffers until the next
   drain clear; requeued jobs hand ownership over explicitly; the release path
   frees queued/retained jobs after clearing the ranges. Debug isolation values:
   `PS3RECOMP_C690_GPU_2A_DBG=1` export-only, `=2` resolve-only (exact SPU seed,

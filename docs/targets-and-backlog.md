@@ -149,7 +149,7 @@ on the user.
   `spu_run_spurs_job`, which builds every lane's context with `spu_id 0`; all
   five lanes shared one export slot (run-1 log: `worker=0..4 spu=0`). The core
   shows the abort in `vk_c690_prepare` freeing an already-freed job buffer.
-  Lane state is now `SPU_THREAD_LOCAL`; the live key is `_Atomic`; the
+  Lane state is now `SPU_THREAD_LOCAL`; the live key uses relaxed `__atomic` loads/stores; the
   seed-fallback and requeue lifetimes are fixed. A new 5-lane/1-drain corpus
   harness (`tests/test_c690_gpu_2a_race.c`) reproduces the old bug under ASan
   and is clean under ASan/UBSan and TSan. **One live pitch-meter A/B, no
