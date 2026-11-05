@@ -103,6 +103,7 @@ checking if any geometry-only regression remains.
 ## Priority: speed and frame-time stability first
 
 **PLAN (2026-11-05 roundtable, docs/roundtable-2026-11-05.md):** 1 live walker profile, 2 native WWS head/tail, 3 walker diet (barriers/render passes/dirty bits/shadow const), 4 SPU register pressure + PGO, 5 ring/record thread/native runner last.
+- Item 2 Stage A (2026-11-05, exp/wws-native): contract + native ticket claim only (1.12-1.21x on ~160 ns, ~0.02 lane-ms/frame); the head staging/dispatch and job submit/exit tail are still lifted, so the -50 % gate is not met and Stage B must not start. Key `PS3RECOMP_WWS_NATIVE_PM` default 0. [`wws-native-pm.md`](wws-native-pm.md).
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
 - DONE 2026-11-04: 30-fps-cap investigation (docs/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.

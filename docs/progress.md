@@ -4399,3 +4399,20 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   live key) that records texture/target/snapshot creates into the open batch instead of submit+wait. Replay: cold
   one-shots 815 -> 5, md5 unchanged, fixtures 34/34; live effect unmeasured ([oneshot-waits.md](oneshot-waits.md)).
 
+
+## 2026-11-05: WWS native PM head/tail, Stage A contract + native ticket claim (exp/wws-native)
+
+- Roundtable item 2, Stage A. `PS3RECOMP_WWS_NATIVE_PM` (env, default 0) routes the WWS ticket claim
+  (`0x23A8 -> 0x23BC -> 0x2460/0x2498/0x24C0/0x250C/0x2518/0x2534`, GETLLAR/PUTLLC + LS caches) through
+  `runtime/spu/wws_native_pm.h`; the rest of the head (`0x3020`/`0x3080`/`0x31B0`) and the job submit/exit tail
+  (`0x12AB8 -> 0x4A5C...`, `0x2D10 -> 0x3630`) stay lifted. The generated PM is patched reproducibly by
+  `tools/c690_ref/patch_wws_pm_native.py`.
+- Differential test (`runtime/spu/tests/run_wws_native_pm_test.sh`): lifted vs native on identical 256 KiB LS +
+  memory model, five cases (claim/index/tag/early-out/PUTLLC retry), LS + main memory + r3-r5 byte-identical;
+  claim cost 156.7-164.1 -> 135.4-142.6 ns (1.12-1.21x).
+- Kill criterion: the claim is <1 % of the 4.59 lane-ms head+tail, so the saving is ~0.02 lane-ms/frame. Stage A
+  does not reach -50 %, Stage B (native runner) must not start, key stays 0, no live A/B. Contract and the full
+  address map: [`wws-native-pm.md`](wws-native-pm.md).
+- Offline: `check_spu_context_abi.sh` PASS (no `spu_context` change); `build-sync` builds; video fixtures 34/34 after
+  a test-only weak `g_spu_put_hook`/`ps3_ms_now` stub (the `exp/live-ab` Bink DMA log path broke the fixtures on the
+  base commit). Code to `fork` only.
