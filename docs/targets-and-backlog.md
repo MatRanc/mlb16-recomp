@@ -71,6 +71,11 @@ checking if any geometry-only regression remains.
   draws report engine=0.000 (87/871 in ab_live_walkermt2_20261104_181555.log) -> phase sums ~10 % low. walker=/wait=
   unaffected; A/B comparisons hold, absolute phase numbers do not. Fix after M4 lands (same file); filter engine=0
   lines in analysis until then. Diagnostic only, no gameplay effect.
+- Crowded capture (walker_replay): replay sees all ~1,702 draws but drops ~440 (26 %) because the capture images only
+  the first page of each ~2 MB c690 mesh-ring vertex read (4,547 misses/frame, location=1, offsets 0x900000-0x15xxxxx).
+  M3's capture fix (memo/texture noting) does not cover it. Fix next (after M4, same file): image full mesh-ring spans
+  at capture begin; verify with the digest ON (REPLAY_NULL_HASH=0 disables it -> constant 14650fb0739d0383).
+  Details: scratchpad fingerprint_findings.md (subagent, 2026-11-04). Then ask the user for one recapture.
 - Not yet reviewed (all default OFF): WCB prefetch 097e6c46, flip deadline 2dbca8a2, remap direct 73deaefd, walker MT
   M1/M2 cbcd3289 and M3 749fd6c8 (review with M4 before any user test).
 
