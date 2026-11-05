@@ -3,6 +3,40 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (menus, revision 2): user confirms ~60 fps; FIFO fall-through and 17 ms bound kept
+
+Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Branch
+`exp/live-ab` (`dcdd6728`), `build-play`. The user's two recordings confirm the
+fix (`PS3RECOMP_FLIP_TICK_OWN_STATE=1`): **42.10 -> 59.44 fps**, ticks/flip
+**1.485 -> 1.052**. The 34 ms two-timeout class falls **20.81 -> 2.55/s
+(-88 %)**; it is not zero, because 257 of 5,989 frames still see the tick land
+after the 17 ms bound. New distribution: 17-20 ms 3.44/s, 20-32 ms 2.65/s,
+32-36 ms 2.55/s (the rest are < 17 ms and below the recorder threshold).
+
+- **FIFO fall-through (revision 2).** The own-state test only judges a direct
+  request; when it does not complete one, the tick now falls through to the
+  FIFO-reached half (`gcm_flip_fifo_take`) under the old `WAITING` status gate.
+  A flip queued in the command stream has no direct-pending bit and was never
+  completed while the key was on. The fall-through never consumes the direct
+  flag, so it cannot bypass the age bound.
+- **Selectable bound.** Key value 1 = 17,000 us (guest's first wait), 2 =
+  33,366 us (whole two-wait deadline), other non-zero = 2. Unit tests cover
+  the fall-through, both bounds, no double completion, and no completion past
+  the abandon point; 30/30 video fixtures pass.
+- **Three-arm meter A/B** (`ab_live_menufix2_20261104_203012`, one launch,
+  N=4 x 10 s, 2 s dropped, A/B/C = 0/1/2):
+  - 0: fps 34.97, p50 34.15, walker 10.43, two-timeout 0.324/frame.
+  - 1 (17 ms): fps 36.22, p50 **34.15**, walker 8.91, two-timeout
+    **0.336/frame** (paired differences mixed sign, mean +0.012; neutral).
+  - 2 (33.4 ms): fps **29.09**, p50 **36.05**, walker **14.69**, two-timeout
+    0.121/frame. It removes deadline frames by completing in the second wait,
+    but the guest then advances and blocks on the next buffer's ref: the
+    `KEEP_STATUS` failure mode (-5.9 fps).
+- **Thumbnails** inside the measured windows: cross-arm means 2.49-2.56/255
+  vs within-arm 2.48-2.69, so no visual regression. 0 dropped presents.
+- **Recommendation:** keep **1 (17 ms)**. Default stays off in code; the play
+  default is set after review.
+
 ## 2026-11-04 (menus): flip tick fix implemented behind a live key, meter A/B neutral
 
 Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Implements the
