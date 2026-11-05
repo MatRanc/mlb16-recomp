@@ -3,6 +3,62 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-05 (auto-exposure): the 1x1 chain, a high-gain dead band, and a timing-dependent read
+
+Full analysis in [`docs/exposure-flicker.md`](exposure-flicker.md).
+**Zero game launches**, no runtime or build changes; static Ghidra on
+`EBOOT.elf` plus the existing light/WCB logs. No RPCS3 or other GPL source
+read or cited; NHL Legacy and inFAMOUS 2 MIT notes used with attribution.
+
+- **Chain named.** `Lighting_InitStadium` creates `ToneMapSample` (32x32,
+  6 mips, A8R8G8B8); `Lighting_RenderExposureRT` renders a temp camera into
+  it and runs `ToneMapMipGen`; `Lighting_UpdateAutoExposure` (`0x004f3590`,
+  renamed) runs on the PPU, locks the **last mip (1x1)** through the asset
+  library (`Asset_LockTextureLevel` -> `Asset_TextureLevelPtrFromTable`, a
+  plain guest pointer) and reads its first two bytes with ordinary loads.
+  No SPU job and no GCM read in the path. The controller is a dead band:
+  the byte above/below the per-mode threshold drives exposure at **62.5/s**
+  (`dt` clamped to 1/60..1), clamp **0.3..1.1**, then
+  `powf(..., 0.454)*255`. One sample on the wrong side moves the whole LUT.
+- **Cadence/latency.** The chain is re-rendered every frame but read only
+  ~0.32-0.35 times/frame per level (about every 2-3 frames), tied to
+  `Lighting_UpdateTimeOfDay` (`0x004f3ac8`). It has no explicit sync and
+  assumes the RSX has left the previous frame's chain in main memory (the
+  title allows one render frame in flight).
+- **What our readback actually did.** In every existing probe session the
+  exposure chain is served fresh (`fresh=1`, serial advanced) and the 1x1
+  luma is a steady 78-80 on the meter; the 11-02 user session that showed
+  the drift has 80.5-82.1 at the reported moments, and the only zero/large
+  swings are scene transitions/camera cuts. The "stale/zero on alternate
+  frames" premise is **not reproduced** by any capture.
+- **The hole.** An ondemand copy is made when the walker services the
+  request (`eng_wcb_copy_surface`, `rsx_draw_engine.c:3784`), so which
+  frame the PPU gets depends on how far the walker has advanced. On the
+  meter the cadence is regular and the value flat; in live play the walker
+  position varies and the high-gain controller turns one wrong sample into a
+  visible step. `PS3RECOMP_RSX_WCB_PREFETCH` (already implemented, default
+  off) makes the read the sync-point snapshot instead: measured in
+  `wcb-async.md` at 32x32 copy **0.955 -> 0.117 ms/f**, guest wait
+  **2.50 -> 0.93 ms**, walker **-4.2 %**, meter p50 unchanged.
+- **Over-bright field** is either a zero 1x1 sample (NHL Legacy documents
+  the same "1x1 luminance RTT read as 0 -> blown to white" failure; our
+  logs have exact-zero runs at scene changes) or a separate
+  tonemap/sRGB/format issue if the 1x1 is stable and non-zero.
+- **Also check the cube/ambient path.** The 11-02 visual changes coincide
+  with the scene-setup 32x32 sky reads (`0x018C9200`), one of which is pure
+  black every time, while exposure is stable; the player-lighting half may
+  be the cube probe, not exposure.
+- **Fix proposed:** always serve the exposure chain (32x32 and <=4x4) from
+  the last sync point, keep the first read synchronous, optionally batch
+  the six levels. The one-launch pitch-meter A/B command (prefetch 0 vs 1,
+  `PS3RECOMP_LIGHT_PROBE=1`, what to grep) is §5 of the doc; not run here.
+  Correctness fix should be neutral-to-positive; a forced synchronous
+  per-level read costs the existing ~1.3 ms copy + ~1.4 ms wait/frame.
+- Ghidra renames: `Lighting_UpdateAutoExposure`, `Lighting_UpdateTimeOfDay`,
+  `Asset_LockTextureLevel(Impl)`, `Asset_TextureLevelReadPtr`,
+  `Asset_TextureLevelPtrFromTable`, `Asset_UnlockTextureLevel`,
+  `Lighting_ToneMapMipGen` (table in the doc).
+
 ## 2026-11-04 (30 fps investigation): no active cap, sim is elapsed-time driven, 60 is a speed problem
 
 Full analysis in [`docs/fps30-investigation.md`](fps30-investigation.md).
