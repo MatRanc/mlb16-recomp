@@ -404,3 +404,13 @@ Pre-existing renames used: `Lighting_InitStadium`, `Lighting_RenderExposureRT`,
 - A run where prefetch on/off changes nothing but the flicker also does not
   reproduce: the pitch meter is not the scene; the live-play session is
   needed before any code change.
+
+## Addendum (user, 2026-11-05): the bug to fix is the latched lighting drift, not a flicker
+
+The user clarified: the main colour/lighting bug is not an alternation. At some point in live play the scene lighting
+switches to a wrong look ("the colour buffer gets ignored") and stays wrong until the user enters a replay, which
+restores it. That is the 11-02 symptom in lighting-drift-notes.md. The exposure 1x1 was stable during that drift, so
+the leading suspects are that note's: the scene-setup sky-light burst with one pure-black reading of six, and the
+cube-probe fallback binding a stale image after a scene change. The pregame-cinematic flicker is a separate,
+intermittent issue (lower priority). Reproducing the drift needs live play (a hit, then a replay), so it is a
+user-driven session.
