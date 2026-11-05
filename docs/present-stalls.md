@@ -218,3 +218,9 @@ grep -E '\[stalltrace\]|max pump gap' recomp-work/ab_live_stall*.log
   path; the 160 in-window lines are a population, not a controlled A/B.
 * All of this is our own runtime, captures, logs and EBOOT. No RPCS3 or other
   GPL emulator source was read or cited.
+
+## Default on (2026-11-05, Claude)
+
+Reviewed 18c96398 (one-slot writer, drop-oldest, joined at shutdown). `play_windowed.sh` also dumps a frame every 30
+flips for thumbnails, so the user's play sessions had the same 0.5-0.7 s walker hitches. `PS3RECOMP_VK_DUMP_ASYNC=1` is
+now the default in `tools/play_windowed.sh` and the recomp-work play/ab scripts; build-play rebuilt.
