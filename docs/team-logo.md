@@ -724,3 +724,12 @@ rm -rf "$OV"
 | `FUN_00984c70` | `Config_LoadFile` | `0x00984c70` |
 | `FUN_009847fc` | `Config_HasFlag` | `0x009847fc` |
 | `FUN_00052b5c` | `Debug_Printf` | `0x00052b5c` |
+
+## 9. User watch run (2026-11-05 00:47): no ScriptUIElem at team select
+
+`PPU_WWATCH=0x013560D8 PPU_WWATCH_LEN=0x120`, log `recomp-work/play_20261105_004704.log` (user reached team select;
+CustomCams file opened 00:47:26). All 45 watched writes are boot-time init at 00:47:04 (`FUN_009d4a20`, `FUN_00edd1d0`,
+`FUN_00eddea4`, `FUN_006d9a00`); the element counter `0x013560D8` is never written. No BADJUMBOS/FAILED lines; only the
+known fs open failures. **The team-select logo is not a ScriptUIElem.** Next: follow the `logos\logo3d_<TEAM>` string
+(resolver `FUN_000f56f4` case 2, table `0x01177574`) to its consumer in the frontend and find where the 3D model load or
+draw is skipped.
