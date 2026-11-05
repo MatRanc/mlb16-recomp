@@ -3,6 +3,34 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (menus): the 34 ms frames are the display tick skipping a status the title rewrites
+
+Full analysis in [`docs/menu-34ms.md`](menu-34ms.md). Diagnosis only: no code
+change, no build, no launch. Evidence: the user's menu capture
+`recomp-work/captures/menus_20261104_193448.pstl` (146.2 s, every frame
+> 17 ms) and `recomp-work/play_20261104_193448.log`.
+
+- **41.8 fps, not work-bound.** 6,120 flips / 146.23 s; 3,044 frames at
+  34.12-34.16 ms (89 %), 353 at 17-20 ms (10 %). Walker work p50 0.13 ms,
+  idle wait 23.6 ms, zero `c690.job` events. Log vblank counter: 9,154 ticks
+  / 6,120 flips = 1.494; 3,044 two-tick + 3,076 one-tick frames = 6,120.
+- **The 34 ms mode is two 17 ms timeouts because the completion is never
+  generated.** The only edge is the display tick (`GCM_FLIPCB_ONTICK=1`);
+  `cellGcmTickFlip` requires `s_flip_status == WAITING` (cellGcmSys.c:1054),
+  and `cellGcmSetPrepareFlip` writes `DONE` (cellGcmSys.c:4334). In menus the
+  prepare lands p50 3.07 ms after the flip request, the tick ~13 ms later.
+  The 353 short frames are the cases where the producer was blocked, so the
+  status stayed WAITING: tick completion p50 +13.43 ms, handler +0.08 ms,
+  signal at +13.55 ms, frame end +17.6 ms. Handler-thread latency 0.08-0.15 ms
+  and present p50 0.15 ms rule those out.
+- **Proposal (not run):** take the tick gate off the guest's status word, use
+  our own outstanding flip and an age bound (< the guest's first 17 ms wait);
+  menus should go to one flip per vblank, ~55-60 fps (RPCS3 parity). It is a
+  no-op at the meter, whose 282/853 two-timeout frames are the c690
+  drain/producer ([`meter-p50-pin.md`](meter-p50-pin.md)); KEEP_STATUS=1 only
+  moved 823 -> 776 deadlines there and cost 4.3 fps. Differs from
+  FLIP_ON_DONE / TICK_IN_DRAIN / FLIP_FENCE_DONE / KEEP_STATUS (see doc §5).
+
 ## 2026-11-04 (walker MT M4): per-worker Vulkan recording + texture resolver, timing gate fails
 
 Full analysis in [`docs/walker-mt-m4.md`](walker-mt-m4.md). Branch
