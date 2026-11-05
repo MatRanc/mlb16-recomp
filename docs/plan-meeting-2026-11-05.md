@@ -99,3 +99,18 @@ Open questions for the user:
 - Is 60 fps in every scene the bar, or 60 fps at the meter and menus plus "playable" crowded scenes first?
 - How much user time per day is available for driven tests (crowded replay, cinematics, eye check)?
 - Visual priority order.
+
+## 5. Decisions (user, 2026-11-04)
+
+- **Target: 60 fps in every scene.** RPCS3 nearly does it, so the port should too.
+- **Order:**
+  1. 30-fps-cap investigation: does the game's flip/vsync interval or sim timing pace gameplay to 30 fps? If so,
+     plan an unlock patch. (The user notes MLB15 runs 60+ smooth in RPCS3, and our meter sometimes hits ~40.)
+  2. Jerseys (missing textures), then colour-buffer (WCB) bugs, both checked for fps links.
+  3. Edge on the GPU (E2) is the main push after that, ahead of the renderer.
+  4. Renderer work after Edge.
+- **E1 eye-holes repair: on hold.** It is the same eye-hole fix (fused holes pass), not part of moving Edge to the
+  GPU. Key stays default 0. Revisit once the GPU Edge cull stages exist; the fix may belong there.
+- **All visual bugs matter:** jerseys, eye holes, colours, lighting, logos, and the tiled logo pattern in transitions
+  (a separate bug from the missing logos). fps-linked ones go first.
+- **User time:** at least 10 min a day, in short sessions every few hours. Don't plan long sit-down sessions.
