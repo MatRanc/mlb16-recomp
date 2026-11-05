@@ -378,7 +378,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 ## Visual backlog (parked)
 
 - **Jerseys FIXED 2026-11-05 (key off by default).** The torso was not a
-  texture: two character fragment programs were dropped because they use
+  texture: character fragment programs were dropped because they use
   `DDX`/`DDY` + gamma `TXD`, which the decompiler did not translate. Implemented
   `TXD`/`DDX`/`DDY` behind the live key `PS3RECOMP_FP_TXD` (default off);
   key-off replay digest unchanged, key-on restores **23 draws/frame** and the

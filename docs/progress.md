@@ -11,7 +11,7 @@ Offline replay of the existing `meter_frame` capture plus one pitch-meter A/B
 the NHL Legacy and inFAMOUS 2 MIT notes were checked for the alpha /
 render-to-texture classes and did not match.
 
-- **Cause.** Two character fragment programs use `DDX`/`DDY` then `TXD` on a
+- **Cause.** The character fragment programs use `DDX`/`DDY` then `TXD` on a
   gamma-flagged unit. The decompiler had no `TXD`/`DDX`/`DDY`, and a gamma
   `TXD` returned `-1`, failing the whole fragment program; the engine dropped
   every draw through it (`FAILED (draw dropped)`). The jersey torso is those

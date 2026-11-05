@@ -11,7 +11,7 @@ checked first for a similar alpha/render-to-texture fix (section 1).
 * The symptom is **not** a missing/odd texture. The whole-jersey draw is
   **dropped before it reaches the backend**: its fragment program is rejected
   by our decompiler.
-* Two fragment programs used by the characters contain `DDX`/`DDY` followed by
+* The character fragment programs contain `DDX`/`DDY` followed by
   **`TXD` with a gamma-flagged texture unit**. The decompiler handled neither
   opcode, and for gamma `TXD` it returned `-1`, which fails the whole fragment
   program. The engine then drops every draw through it
