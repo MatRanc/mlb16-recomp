@@ -3,6 +3,43 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (Edge E1 live): merged, fps neutral, but the added triangles draw giant occluders
+
+Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md) §5.4. E1
+(`exp/edge-e1-holes` `2b5f17d1`, fused native 0x25/0x26 holes, default off)
+merged into `exp/live-ab` as `bba9787a` on top of `4ba548e6`; the shared
+generated c690 module was re-patched and is **byte-identical** to the verified
+private `spu_lifted-e1` module. Rebuilt `build-play`; no game was running.
+Offline gates re-run: `test_c690_holes_merge` OK, native-screen holes gate
+**128/128 PASS** (0 removed, 0 added, full LS/GPR = lifted union, counts and
+buffer extent consistent), `check_spu_context_abi.sh` PASS (no `spu_context`
+field added). `test_video_fixtures.py` is **29/30**: the one failure is the
+pre-existing timing-sensitive `test_gcm_tick_in_drain`
+(`test_gcm_tick_in_drain.c:170`, a 1 us margin; it fails identically with and
+without the E1 merge, same source as `4ba548e6`).
+
+One pitch-meter A/B (`ab_live_e1holes_20261104_225522`, 12 segments,
+N=6 x 10 s, `MLB16_CULL_BYPASS` unset):
+
+- fps **36.04 -> 35.71** (paired **-0.33 +/- 1.26 SE**; -0.16 +/- 0.54
+  excluding the two segments hit by a ~1 s in-game stall), p50
+  **34.14 -> 34.15 ms**.
+- Tail worse in every B segment: p90 per-segment median **38.95 -> 41.20 ms**,
+  p99 **42.67 -> 45.34 ms** (ship gate "p90/p99 not worse" fails).
+- c690 wall/s **2.75 -> 3.04 s**, us/job **200.5 -> 223.9**, lane busy
+  **0.560 -> 0.614**.
+- Holes counters (B windows only): **374,001** sample runs, **121,242** added
+  triangles, **253,711** fallbacks, **175** cap-skips, 37.47 s of sample-run
+  time.
+- **Visual regression:** arm B draws giant brown occluder polygons over the
+  pitch view; A does not. Thumbnail mean-abs A/A **2.18**, B/B **30.01**,
+  A/B **18.36**. B differs from A only by `PS3RECOMP_C690_HOLES_NATIVE`, so
+  the added sample-only geometry is the cause. The 128-pair corpus has 0
+  added triangles, so the live add path was never covered.
+- **Nothing default-on.** The key stays off and the branch is not shippable
+  until the bogus added triangles are isolated; the user eye-check command is
+  in §5.5 (it will also show the occluders). One launch used; no second.
+
 ## 2026-11-04 (walker texture cost): crowded `tex` is per-bind work, not the rehash
 
 Full analysis in [`docs/walker-tex-cost.md`](walker-tex-cost.md). Branch

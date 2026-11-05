@@ -29,7 +29,7 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 | 0x0A unpack/pack leaves (0x6D68, 0x7C18, 0x8160) | CPU native | per edge-native docs (off) | exact | exact | n/a | replay corpus | edge-native-step*.md |
 | 0x25/0x26 screen cull (0xD080) | CPU native | `PS3RECOMP_C690_NATIVE_SCREEN` (off) | exact | exact | exact | replay corpus | edge-native-step4/5.md |
 | 0x25/0x26 cull sample grid | lifted, patched | `MLB16_CULL_BYPASS` (0); =3 bypasses 0x25/0x26 | n/a | n/a | **not exact by design** (=3 keeps all; fixes eye holes, -7.6 fps) | user play test | edge-holes-fix.md, cull-bypass-ab.md |
-| **0x25/0x26 cull sample grid, fused native pass** | CPU native, one 0x132E0 body pass (game grid on the real LS, sample grid on a private copy; caller count modelled) | `PS3RECOMP_C690_HOLES_NATIVE` (off) | exact | exact | **conservative**: 0 removed/reordered vs SPU on 128 pairs; 0 added on that corpus; full LS/GPR bit-identical to the lifted union; `+0x114` count/list consistent | 128-pair replay corpus, offline only (no live run) | edge-e1-holes.md |
+| **0x25/0x26 cull sample grid, fused native pass** | CPU native, one 0x132E0 body pass (game grid on the real LS, sample grid on a private copy; caller count modelled) | `PS3RECOMP_C690_HOLES_NATIVE` (off) | exact | exact | **conservative offline**: 0 removed/reordered vs SPU on 128 pairs; 0 added on that corpus; full LS/GPR bit-identical to the lifted union; `+0x114` count/list consistent. **Live: 121,242 added triangles and giant brown occluder polygons in the pitch view; p90/p99 +2 ms.** Not shippable | 128-pair replay corpus + one live pitch-meter A/B (2026-11-04) | edge-e1-holes.md §5.4 |
 | 0x21 sel7 A3E0/BB98, 0x25/0x26 GPU, 0x2A wiring | planned | - | - | - | - | - | edge-gpu-plumbing.md, edge-gpu-2a-wiring.md §4–6 |
 
 Rows marked "not wired" do not run in the game yet. When a stage is wired into the walker, add its live key and change
@@ -43,6 +43,14 @@ These change *when* a lane re-enters the PM, not the job output; the exactness
 policy above is unchanged. Meter effect: p90 43.2 -> 39.2 ms, p99 46.7 -> 42.7,
 40-50 ms share 24.3 -> 7.1 %, p50 34.15 unchanged
 ([`c690-native-dispatch.md`](c690-native-dispatch.md)).
+
+**E1 (fused native holes) is merged but not shipped.** `exp/live-ab` now
+carries it default off. The one live pitch-meter A/B (2026-11-04) is fps
+neutral (-0.33 +/- 1.26 SE) but raises p90/p99 by ~2 ms and, more importantly,
+draws giant brown occluder polygons in arm B. The offline 128-pair corpus had
+0 added triangles, so the live "adds" path is the open bug. Do not enable the
+key until a live capture isolates the bogus sample-only triangles
+([`edge-e1-holes.md`](edge-e1-holes.md) §5.4).
 
 **Parked:** GPU 0x2A record classes (36-byte exact offline; the 32-byte
 position-first class is 55/128 meter pairs and the rest of the family is not

@@ -4,9 +4,16 @@ Date: 2026-11-04. Worktree `ps3recomp-e1`, branch `exp/edge-e1-holes`
 (created from `exp/live-ab` `230acd9f`). Own build dir
 `recomp-work/build-e1` (Release, `-O2 -DNDEBUG -march=native`, same options
 as `build-play`; lifted SPU sources copied and re-patched privately to
-`recomp-work/spu_lifted-e1`). **Offline only: zero game launches in this
-mission.** No file under `ps3recomp-play`, `recomp-work/build-play` or
-`build-mt` was touched.
+`recomp-work/spu_lifted-e1`). **Offline only: zero game launches in the
+original E1 mission.** No file under `ps3recomp-play`,
+`recomp-work/build-play` or `build-mt` was touched by that mission.
+
+**Update 2026-11-04 (merge mission):** E1 is now merged into `exp/live-ab`
+(merge `bba9787a` on top of `4ba548e6`), the shared generated module is
+re-patched and byte-identical to `spu_lifted-e1`, and one live pitch-meter A/B
+was run. The key is still default off, and the live run found a **visual
+regression** (giant occluder polygons when the key is on), so it is not
+shippable. Numbers and the user command are in §5.4 and §5.5.
 
 This follows [`edge-holes-fix.md`](edge-holes-fix.md),
 [`cull-bypass-ab.md`](cull-bypass-ab.md),
@@ -41,12 +48,22 @@ cost **-4.8 fps**; both are diagnostics only.
   116.2-119.9 us.
   The fused pass is **~2.7-3.5x cheaper than the union** and ~1.5-1.9x the
   lifted cull. Three repeats: 24.9 / 18.9 / 39.7 / 116.3 us (medians).
-* **Meter estimate: near-neutral, not yet measured.** 0x25 (8.6 % of the
+* **Live meter A/B (2026-11-04, one launch, 12 segments): fps neutral, tail
+  worse, and a visual regression.** fps **36.04 -> 35.71** (paired
+  **-0.33 +/- 1.26 SE**; -0.16 +/- 0.54 excluding the two segments hit by a
+  ~1 s stall), p50 **34.14 -> 34.15 ms**, p90 per-segment median
+  **38.95 -> 41.20 ms**, p99 **42.67 -> 45.34 ms**. c690 wall/s
+  **2.75 -> 3.04 s** and lane busy **0.560 -> 0.614**. The holes counters ran
+  **374,001** sample stages, **121,242** added triangles, **253,711**
+  fallbacks, **175** cap-skips. In the pitch-meter view arm B draws **giant
+  brown occluder polygons** that are absent in arm A; the key stays off.
+* **Original meter estimate (offline): near-neutral.** 0x25 (8.6 % of the
   meter c690 wall) runs the native stage and is *faster* than the lifted
   cull; 0x26 (4.1 %) pays the extra sample evaluation. The union was -4.8 fps
   while costing ~4.7-5.4x the lifted cull; the fused pass is at ~1.6-1.9x, so
   the expected meter delta is about **-0.5 to 0 fps**, i.e. inside the A/B noise.
-  The live A/B is the next mission's job (§5).
+  The measured fps was indeed inside the noise (-0.33 fps), but the tail and
+  the visuals regressed (§5.4).
 * **Nothing is enabled by default.** `PS3RECOMP_C690_HOLES_NATIVE` is a new
   live key, 0 in every script. `PS3RECOMP_C690_CULL_FIX`,
   `PS3RECOMP_C690_NATIVE_SCREEN` and `MLB16_CULL_BYPASS` keep their old
@@ -228,15 +245,16 @@ become confusing).
 
 One launch, alternating arms, meter screen; `PITCH_THRESH=35` (25 misses the
 cube render targets). Both arms must name every key (the control file does
-not revert an omitted key):
+not revert an omitted key); `MLB16_CULL_BYPASS` is left unset, so both arms
+keep its default 0:
 
 ```sh
 cd /home/m/Documents/mlb16-online/recomp-work/ab-tools
 TAG=e1holes PITCH_THRESH=35 N=6 SEG=10 DROP=2 METER=1 SKIP_CINE=1 PIN=0 \
   WCB=2 VIDEODRIVER=x11 REPORT=0 LIMIT=900 SETTLE=10 \
   PS3RECOMP_C690_GAP=1 PS3RECOMP_WALKER_PROF2=1 PS3RECOMP_C690_STATS=1 \
-  ARMS='A=PS3RECOMP_C690_HOLES_NATIVE=0;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0;MLB16_CULL_BYPASS=0|B=PS3RECOMP_C690_HOLES_NATIVE=1;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0;MLB16_CULL_BYPASS=0' \
-  BOOT_ARM='PS3RECOMP_C690_HOLES_NATIVE=0;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0;MLB16_CULL_BYPASS=0' \
+  ARMS='A=PS3RECOMP_C690_HOLES_NATIVE=0;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0|B=PS3RECOMP_C690_HOLES_NATIVE=1;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0' \
+  BOOT_ARM='PS3RECOMP_C690_HOLES_NATIVE=0;PS3RECOMP_C690_NATIVE_SCREEN=0;PS3RECOMP_C690_CULL_FIX=0' \
   ./ab_live.sh
 
 python3 pin_ab.py --log ../ab_live_e1holes_<ts>.log \
@@ -266,9 +284,15 @@ MLB16_CULL_BYPASS=0 PS3RECOMP_C690_CULL_FIX=0 \
   ./play_windowed.sh
 ```
 
-Expected: the pin-holes are gone with the key on and the geometry looks
-unchanged otherwise (no missing triangles, no new shimmer). If they remain,
-look at the exit/progress counters:
+**Do not expect a clean picture on this build.** The live A/B (§5.4) shows
+that the sample-only additions include bogus, screen-spanning triangles, so
+the key-on arm draws **giant brown occluder polygons** over the pitch view.
+The command is still the way to see the eyes and to confirm the artifact;
+this build is not a candidate to enable.
+
+Expected for a healthy build: the pin-holes are gone with the key on and the
+geometry looks unchanged otherwise (no missing triangles, no new shimmer). If
+they remain, look at the exit/progress counters:
 
 * `holes_runs = 0` -> no screen-transform block was found in that scene, so
   the 2x rule was never evaluated (the union would be inert too);
@@ -280,11 +304,99 @@ look at the exit/progress counters:
 `MLB16_CULL_BYPASS=3` remains the fallback control only (it fixes the holes
 at -7.6 fps and is never a shipping default).
 
+### 5.4 Live A/B result (2026-11-04, `ab_live_e1holes_20261104_225522`)
+
+One launch, pitch meter only, 12 segments (N=6 x 10 s per arm, 2 s dropped),
+`MLB16_CULL_BYPASS` unset. The harness applied both arms; the A/A check is
+not applicable because this is a real A/B.
+
+| metric | A (key 0) | B (key 1) |
+|---|---:|---:|
+| fps (per-segment mean) | **36.04** | **35.71** |
+| paired B-A | | **-0.33 +/- 1.26 SE** |
+| paired B-A, 4 segments without the ~1 s stall | | **-0.16 +/- 0.54 SE** |
+| p50 ms | 34.14 | 34.15 |
+| p90 ms (per-segment median) | **38.95** | **41.20** |
+| p99 ms (per-segment median) | **42.67** | **45.34** |
+| walker / wait ms | 15.96 / 10.86 | 15.54 / 11.70 |
+| c690 wall/s (from cumulative periodic) | **2.75 s** | **3.04 s** |
+| c690 us/job | 200.5 | 223.9 |
+| c690 lane jobs/s | 13,700 | 13,588 |
+| c690 lane busy | 0.560 | 0.614 |
+
+The 12 segments are otherwise clean: two segments (one B, one A, adjacent)
+each contain one ~1 s stall (1,071 ms and 961 + 307 ms) in the game itself;
+those are the only segments whose std jumps (66 / 62 ms vs ~11 ms). p90/p99
+are not explained by the stalls and are worse in **every** B segment, so the
+gate "p90/p99 not worse" is **not met**.
+
+`[c690-screen] holes-progress` (cumulative over the B windows only; the
+counters are inert in A):
+
+| counter | value |
+|---|---:|
+| `holes_calls` | 627,712 |
+| `holes_runs` (sample stage ran) | 374,001 (59.6 %) |
+| `holes_added` triangles | **121,242** |
+| `holes_fallback` (no transform block) | 253,711 |
+| `holes_cap_skipped` | 175 |
+| `holes_skip_setup` | 0 |
+| `holes_ns` | 37.47 s |
+
+**Visual regression.** Arm B draws giant brown occluder polygons over the
+pitch view (they appear and change shape frame to frame); arm A does not.
+Thumbnail mean-abs differences (0-255): A/A **2.18** (n=18), B/B **30.01**
+(n=21), A/B cross **18.36**. Since B differs from A only by
+`PS3RECOMP_C690_HOLES_NATIVE`, this is the fused pass's added geometry. The
+128-pair offline corpus had **0** added triangles, so the add path was never
+exercised there; live it adds ~2.4 k triangles/s and some are bogus. The key
+is therefore **not shippable** and stays default off. The likely fix is to
+validate the sample-grid kept list/vertices before merging (or to run the
+sample grid on a context whose transform really is the one the command used).
+
+### 5.5 User command: flip the key while watching the pitcher (BYPASS off)
+
+From `recomp-work`. Open the pitch close-up used in `edge-native-step4.md` §6
+(pitcher's eyes visible), then flip the key with the live control file; the
+log prints `[live-ctl] flip=` for each change. Keep `MLB16_CULL_BYPASS` and
+the two other c690 keys named at 0 so nothing stale is left set.
+
+```sh
+cd /home/m/Documents/mlb16-online/recomp-work
+CTL=$PWD/e1eyes.ctl
+
+# boot everything off
+printf '%s\n' PS3RECOMP_C690_HOLES_NATIVE=0 PS3RECOMP_C690_NATIVE_SCREEN=0 \
+  PS3RECOMP_C690_CULL_FIX=0 MLB16_CULL_BYPASS=0 > "$CTL"
+PS3RECOMP_CTL="$CTL" ./play_windowed.sh
+
+# in the pitch close-up, turn the fused holes pass ON:
+printf '%s\n' PS3RECOMP_C690_HOLES_NATIVE=1 PS3RECOMP_C690_NATIVE_SCREEN=0 \
+  PS3RECOMP_C690_CULL_FIX=0 MLB16_CULL_BYPASS=0 > "$CTL"
+
+# and back OFF:
+printf '%s\n' PS3RECOMP_C690_HOLES_NATIVE=0 PS3RECOMP_C690_NATIVE_SCREEN=0 \
+  PS3RECOMP_C690_CULL_FIX=0 MLB16_CULL_BYPASS=0 > "$CTL"
+```
+
+One-shot form (no live flips), same result:
+
+```sh
+MLB16_CULL_BYPASS=0 PS3RECOMP_C690_CULL_FIX=0 \
+  PS3RECOMP_C690_NATIVE_SCREEN=0 PS3RECOMP_C690_HOLES_NATIVE=1 \
+  ./play_windowed.sh
+```
+
+With the key on, expect the eye pin-holes to be joined (the conservative
+rule) **and** the brown occluders from §5.4. Report both; do not leave the key
+on for normal play.
+
 ## 6. Deviations and caveats
 
-* **Zero game launches** (mission rule). There is no live fps number, no live
-  shadow soak and no user visual check in this mission; §5 is prepared for
-  the next one.
+* **The original E1 mission had zero game launches.** The follow-up merge
+  mission ran exactly one pitch-meter launch (§5.4); there is still no user
+  visual check and no shadow soak. The live run rules the key out for now
+  because of the occluder polygons, not because the eye rule is wrong.
 * **One command pass, two stage evaluations.** The fused pass removes the
   second 0x132E0 body run and the real-context snapshot/restore, but the
   `0xD080` subtree is still run once per grid (game on the real context,
