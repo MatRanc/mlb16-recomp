@@ -1,5 +1,46 @@
 # Progress log
 
+## 2026-11-05 (c690 GPU Edge): 0x2A live crash fixed, one clean A/B; overlay costs 5.96 ms/frame
+
+Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §7. Branch
+`exp/edge-gpu` in `ps3recomp-gpu`, build `recomp-work/build-gpu`. **One
+pitch-meter launch (the cap), no crash.** Code pushed to `fork` only;
+`PS3RECOMP_C690_GPU_2A` stays default 0.
+
+- **Root cause (from the run-2 core, still in `coredumpctl`).** The abort is on
+  the RSX FIFO thread in `vk_c690_prepare` -> `vk_c690_job_free`, freeing a
+  job buffer already freed. The lane key was `ctx->spu_id % 16`, but the c690
+  jobs run through `spu_workload_dispatch_job` -> `spu_run_spurs_job`, which
+  builds every lane's `spu_context` with `spu_context_init(&ctx, 0)`. Run 1's
+  log ends with `[c690-stats] worker=0..4 spu=0`, so all five concurrent lanes
+  shared `s_lane[0]`; one lane's exit/export could free or overwrite a buffer
+  another lane had already queued.
+- **Fix.** Lane state is thread-local (a lane is one host thread, which runs
+  the job and its submit epilogue PUT synchronously); `g_c690_gpu_2a_on` is
+  `_Atomic`; seed-fallback ranges now retain their buffers until the next
+  drain clear; requeued jobs hand ownership over explicitly; the release path
+  frees queued/retained jobs after clearing the ranges. Debug isolation values:
+  `PS3RECOMP_C690_GPU_2A_DBG=1` export-only, `=2` resolve-only (exact SPU seed,
+  no Vulkan).
+- **Harness.** `ps3recomp-gpu/tests/test_c690_gpu_2a_race.c` and
+  `tools/run_c690_gpu_2a_race.sh`: five lanes all with `spu_id 0` drive the
+  real export/PUT path over the 192 captured `fncap2b2w3` tail pairs while a
+  walker drains. The old source fails ASan with a heap-use-after-free in the
+  drain (the live crash); the fixed source is clean under ASan/UBSan and TSan.
+  Unit test, `test_video_fixtures` 30/30 and the ABI check pass.
+- **Live A/B** (`build-gpu`, 5 x 10 s, drop 2 s, one X): A 30.38 fps / p50
+  34.23 / p90 43.90 / p99 48.24; B 22.93 / 34.16 / 68.60 / 72.98. B is not a
+  win, as expected (the SPU still packs). The path's own cost is the number:
+  3,042 submits, 162,849 jobs, 61.2 M records, **2.41 ms submit+fence per
+  drain, 5.96 ms/frame** (~98 % queue/fence serialisation; GPU compute is
+  ~0.08 ms/frame scaled from the phase-2b burst). p50 is unmoved; p90/p99 rise.
+- **Next.** Replace `0x10C70`/`0x109C0` so the SPU stops packing **and**
+  pipeline the fence (timeline semaphore, walker waits only at a draw that
+  reads the range). Estimated saving: ~1.07 ms at the current 31.2 % class
+  coverage, ~2.3 ms at the 68.2 % now classified, 3.43 ms at full 0x2A;
+  0x21 sel7 (4.74 ms) and the culls (3.03 ms) need the same async binding to
+  reach the 5-7 ms Edge target.
+
 ## 2026-11-05 (c690 GPU Edge): 0x2A record-class decode + per-class kernels, 68.2 % coverage
 
 Full details in [`docs/edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md). **Offline

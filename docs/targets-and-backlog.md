@@ -144,6 +144,22 @@ on the user.
   isolate the live crash, then replace `0x10C70`/`0x109C0`, then 0x21 sel7
   (4.74 ms) and the culls (3.03 ms).
   Details: [`edge-gpu-binding.md`](edge-gpu-binding.md).
+- 2026-11-05 (later, crash fix): **the live heap corruption is fixed.** The
+  lane key was `ctx->spu_id % 16`, but the c690 jobs run through
+  `spu_run_spurs_job`, which builds every lane's context with `spu_id 0`; all
+  five lanes shared one export slot (run-1 log: `worker=0..4 spu=0`). The core
+  shows the abort in `vk_c690_prepare` freeing an already-freed job buffer.
+  Lane state is now `SPU_THREAD_LOCAL`; the live key is `_Atomic`; the
+  seed-fallback and requeue lifetimes are fixed. A new 5-lane/1-drain corpus
+  harness (`tests/test_c690_gpu_2a_race.c`) reproduces the old bug under ASan
+  and is clean under ASan/UBSan and TSan. **One live pitch-meter A/B, no
+  crash:** A 30.38 fps / p50 34.23 / p90 43.90 / p99 48.24; B 22.93 / 34.16 /
+  68.60 / 72.98. The overlay costs **5.96 ms/frame** (submit+fence, 2.41 ms
+  per drain) and cannot gain while the SPU packs. Next: replace
+  `0x10C70`/`0x109C0` **and** pipeline the fence (timeline semaphore); the
+  0x2A saving is ~1.07 ms at 31.2 % coverage, ~2.3 ms at the 68.2 % now
+  classified.
+  Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §7.
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test

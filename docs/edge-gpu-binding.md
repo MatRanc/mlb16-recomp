@@ -1,4 +1,4 @@
-# c690 0x2A GPU ring binding and live key: offline gates pass, the live A/B crashes
+# c690 0x2A GPU ring binding and live key: heap crash found and fixed; overlay measured
 
 Date: 2026-11-05. Branch `exp/edge-gpu` in the `ps3recomp-gpu` worktree (merged
 `exp/live-ab` first), build `recomp-work/build-gpu`. **Two pitch-meter launches
@@ -11,6 +11,16 @@ This implements the §4 binding from [`edge-gpu-2a-wiring.md`](edge-gpu-2a-wirin
 for the class decoded in [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md), following
 [`edge-gpu-plumbing.md`](edge-gpu-plumbing.md) and the policy in
 [`edge-exactness.md`](edge-exactness.md).
+
+> **Update 2026-11-05 (later): the live crash is found and fixed.** The lane
+> key was `ctx->spu_id % 16`, but the c690 jobs run through
+> `spu_run_spurs_job`, which creates every lane's context with `spu_id 0`; all
+> five lanes shared one export slot. Lane state is now thread-local, the live
+> key is atomic, and the seed-fallback/queue lifetimes are fixed. A new
+> concurrent corpus harness reproduces the old heap corruption under ASan and
+> is clean under ASan/UBSan and TSan after the fix. **One live pitch-meter A/B
+> ran without a crash; no speed gain, as designed (the SPU still packs).** The
+> path's own cost is ~6.0 ms/frame (submit+fence). See §7.
 
 ## TL;DR
 
@@ -281,7 +291,145 @@ First isolate the crash with the compute disabled but the export on (a debug
 key that makes the sink drop the job and leaves the resolver empty), then with
 the resolve-only path. Only then re-time.
 
-## 7. Clean room
+## 7. Live crash isolated and fixed (2026-11-05, later)
+
+### 7.1 The aborting thread and the failing free
+
+The run-2 core (`1471362`, still in `coredumpctl`) is the RSX FIFO thread, not
+an SPU lane:
+
+```
+frame_clock
+ cellGcm_rsx_process_fifo
+  rsx_draw_engine_methods -> sink_end -> sink_end_work
+   rsx_vertex_fetch_plan_prepare -> eng_guest_ptr -> eng_guest_ptr_raw
+    eng_gpu_range_probe -> vk_c690_prepare
+     vk_c690_job_free   (0xc666577 = the instruction after free(j->offs))
+```
+
+So the `double free or corruption` is prepare freeing a job buffer that had
+already been freed or written after free. It is not a Vulkan lifetime problem:
+the compute pipeline was created on this same drain.
+
+### 7.2 Why: every lane had `spu_id = 0`
+
+The export state was keyed on `ctx->spu_id % 16`. The c690 mesh jobs do **not**
+run as lv2 SPU threads on this port: `spurs_pm_worker` calls
+`spu_workload_dispatch_job` -> `spu_run_spurs_job`, which builds a stack-local
+`spu_context` with `spu_context_init(&ctx, 0)`. The run-1 log ends with:
+
+```
+[c690-stats] worker=0 spu=0 jobs=104427
+[c690-stats] worker=1 spu=0 jobs=103668
+...
+[c690-stats] worker=4 spu=0 jobs=104503
+```
+
+All five concurrent lanes therefore shared `s_lane[0]`. `enter`/`exit`/`put`
+(r3, cursor, `exp_next`) and `export_push`'s free ran from five threads on one
+slot: one lane could overwrite or free a buffer another lane had already
+queued, and prepare then freed it a second time. That is exactly the live
+symptom, and it explains why the ASan stress of the module path was clean: it
+did not model five contexts with the same id.
+
+### 7.3 The fix
+
+1. **Lane state is per host thread** (`SPU_THREAD_LOCAL` in
+   `runtime/spu/c690_gpu_2a.c`). A lane is one host thread here: the job
+   runner and the lifted thread run the whole job, including the submit
+   epilogue PUT, synchronously on the caller. No id dependence, no lock.
+2. `g_c690_gpu_2a_on` is `_Atomic int` (TSan flagged the atomic store vs the
+   plain reads in `exit`/`put`/`spu_dma.h`).
+3. **Seed-fallback lifetime.** The init-failure / resolve-only paths installed
+   `j->seed` in the resolver and freed it immediately, leaving the range
+   pointing at freed heap. Seeds are now retained until the next
+   `gpu_range_clear()` (the drain that replaces the map); past the retain cap
+   the range is not installed and the draw reads the identical guest copy.
+4. **Queue ownership.** A job requeued by prepare clears its pointers in the
+   detached array; the EndCommandBuffer failure path sweeps the jobs it did
+   not reach; release frees queued/retained jobs after clearing the ranges.
+5. **Debug isolation values** (env, default 0) for the next crash hunt:
+   `PS3RECOMP_C690_GPU_2A_DBG=1` export on / GPU off (sink queues, prepare
+   drops, resolver empty -> guest bytes), `=2` resolve only (exact SPU seed
+   installed as a resolver range, no Vulkan object is created).
+
+### 7.4 Concurrent corpus harness
+
+`ps3recomp-gpu/tests/test_c690_gpu_2a_race.c`,
+`tools/run_c690_gpu_2a_race.sh`: five lane threads, **all with `spu_id 0`**,
+drive the real `runtime/spu/c690_gpu_2a.c` over the captured
+`fncap2b2w3` C69STG01 tail pairs (192 pairs; synthetic 32-byte A jobs when the
+spool is absent), while a walker thread drains a mirror of
+`vk_c690_sink`/`vk_c690_prepare`'s ownership and reads every installed range.
+
+| build | result |
+|---|---|
+| old `c690_gpu_2a.c` (HEAD) + ASan | **heap-use-after-free**, drain `memcpy` of a seed another lane's export still owned — the live bug |
+| fixed + ASan/UBSan | PASS (`sunk=2040`, `leftover=0`) |
+| fixed + TSan | PASS, no race reports |
+| `test_c690_gpu_2a` | PASS (format A/B/fallback) |
+| `tools/test_video_fixtures.py` | **30/30** |
+| `check_spu_context_abi.sh` | shared offsets agree (no `spu_context` change) |
+
+### 7.5 Live pitch-meter A/B (one launch, cap respected)
+
+`BUILD=build-gpu`, `METER=1 SKIP_CINE=1 WCB=2 PIN=0`, `VIDEODRIVER=x11`,
+`PITCH_THRESH=35`, `N=5 SEG=10 DROP=2`, one X, governor `performance`,
+`PS3RECOMP_C690_GPU_2A=0` until the first switch. **No crash**, normal exit;
+the key switched 9 times (`[live-ctl] ... PS3RECOMP_C690_GPU_2A=1/0`). Log
+`ab_live_c690gpufix_20261105_035535.log`.
+
+| arm | frames | fps | p50 | p90 | p99 | std | walker ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A (key off) | 1215 | 30.38 | 34.23 | 43.90 | 48.24 | 10.91 | 13.78 |
+| B (key on) | 917 | 22.93 | 34.16 | 68.60 | 72.98 | 22.55 | 25.89 |
+
+The B arm is **not** a win, and is not supposed to be: the SPU still packs,
+and the overlay adds a submit + blocking fence per drain. The number that
+matters is the path's own cost, from `[c690-gpu2a-gpu]` and `[c690-gpu2a]`:
+
+| quantity | value |
+|---|---|
+| prepares / jobs / records (B) | 3,042 / 162,849 / 61.2 M |
+| jobs, records per prepare | 53.5, 20,132 |
+| prepares, records per B-active frame | 2.47, 49,779 |
+| submit+fence per prepare | **2.41 ms** |
+| submit+fence per frame | **5.96 ms** over all B-active frames (8.0 ms over the post-drop windows) |
+| GPU compute per prepare (estimated) | ~0.03 ms (phase-2b: 0.23-0.27 ms per 429-job burst, same kernel shape) |
+| GPU compute per frame (estimated) | ~0.08 ms |
+
+So ~98 % of the measured cost is queue submit/fence serialisation: every drain
+submits on the render queue and then blocks the walker on a fence, behind the
+frame's own graphics work. During B, `class/enter` = 162,342/586,050 = 27.7 %
+of all 0x2A entries (the same order as the 31.2 % of sampled 0x2A pairs); the
+remaining entries are the unclassified classes and the early-reject cursor
+cases.
+
+### 7.6 What a real gain requires, and the estimate
+
+The doc's next stage is unchanged: **replace the per-stream pack
+(`0x10C70`/`0x109C0`) so the SPU stops writing the records**, then the GPU
+output is the only source and the packing time disappears. The measurement
+above adds a second requirement: **the per-drain blocking fence has to go**.
+At 2.41 ms per submit+fence and ~2.5 drains/frame, the current overlay spends
+~6 ms/frame to save at most 1.07 ms (31.2 % of the 3.43 ms 0x2A lane slice).
+Even a perfect pack skip cannot beat that while the walker waits on the
+fence. The compute itself is cheap (~0.08 ms/frame); the binding should use
+one timeline semaphore per burst and let the walker wait only at a draw that
+actually reads the range, or run the compute after the SPU submit and before
+the walker drain.
+
+With the pack replaced and the fence pipelined, the honest saving is the
+0x2A lane slice at the covered share: ~1.07 ms at the current 31.2 %
+(51 pairs), ~2.3 ms at the 68.2 % now classified offline
+([`edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md)), and 3.43 ms at full 0x2A
+coverage. That is a p50 of ~34.15 -> ~32-33 ms at best, with the 0x21 sel7
+(4.74 ms) and the culls (3.03 ms) needed on the same asynchronous binding to
+reach the 5-7 ms Edge target. The overlay's measured cost is the reason to do
+the pack replacement and the async hand-off **together**, not as separate
+stages.
+
+## 8. Clean room
 
 Own static analysis of the EBOOT (Ghidra), the lifted c690 module, our own
 runtime/walker code, our own captures and Vulkan kernel. The stage/corpus/
