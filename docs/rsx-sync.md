@@ -18,6 +18,8 @@ The fix is behind `PS3RECOMP_RSX_SYNC_FIX` (**default 0**); see §5.
 
 ## TL;DR
 
+> **2026-11-05 evening:** this fix did not remove the green flash (live). The real cause was `UI_Movie_Close` clearing the planes with no GPU wait; see [bink-video.md §8](bink-video.md). The ordering analysis below still holds for other write-after-pending-draw cases.
+
 | question | answer |
 |---|---|
 | the game's GPU-done wait | `Gfx_WaitFrameRef` (`0x00063b98`), called by `UI_Movie_Open` (`0x0097fff0`) via `Gfx_WaitLastFrameRef` (`0x00062e0c`) **on the first-open path only** |

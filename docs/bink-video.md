@@ -330,3 +330,27 @@ Run once more without `PS3RECOMP_BINK_GREEN_FIX=1` to confirm the A/B.
 **Follow-up (2026-11-05):** the RSX-side ordering is now analysed separately,
 with the guest's `SET_REFERENCE` reuse fence and the write-vs-pending-draw
 window: [`rsx-sync.md`](rsx-sync.md) (fix `PS3RECOMP_RSX_SYNC_FIX`, default 0).
+
+## 8. 2026-11-05 evening: the real cause and the fix (verified live)
+
+**Cause:** the green flash comes from `UI_Movie_Close` (`0x0097fd18`), not from the open path. On a team switch it:
+1. stops the Bink thread;
+2. clears all eight planes with `Texture_ClearLevelById` (`0x004db4d4` → `Texture_FillLevel` `0x004f7a80`, a CPU fill, call at `0x0097fdd8`), with **no GPU wait** first;
+3. only then runs `Gfx_WaitLastFrameSubmit` / `Gfx_WaitLastFrameRef` and `Asset_Release`.
+
+The RSX has long sampled the planes by step 2. Our walker samples a pending draw about one frame (~17-19 ms) after `UI_Movie_GetTextureIfReady` handed the planes out, so about 1 switch in 4 it uploads the cleared planes. All planes read zero there, alpha included.
+
+**How it was found** (diagnostics, all opt-in):
+- `PS3RECOMP_BINK_LOG=1` (`[bink-open]`, `[bink-ready]` with ms and flip) and `PS3RECOMP_TEX_ZERO_LOG=1` (`[tex-zero]`, every logo-plane upload with ms) gave the timeline: good upload, Bink thread exit, blank upload, and only then the next open.
+- `PS3RECOMP_BINK_DMA_LOG=1` (`[bink-dma]`, SPU PUTs into the planes) showed the SPU decoder never writes zero Y data.
+- `PPU_WWATCH=1594BD80 PPU_WWATCH_LEN=0x10 PPU_WWATCH_MAX=0` caught `Texture_FillLevel` called from lr `0x004DB4E4` between the two uploads.
+
+**Fix:** `mlb16-recomp/tools/patch_bink_ready.py` (`patch_close`) skips the close-path clear. Key `PS3RECOMP_BINK_CLOSE_KEEP`, **default on**; set it to 0 to restore the clear. The planes are released right after, or cleared again by the next open, so nothing else depends on that clear.
+- Live, user run 16:45 (`play_20261105_164539.log`): 0 of 449 logo-plane uploads were blank, and the user saw no green. The three runs before it had ~30 blank uploads each and visible green.
+- The patch is applied to the generated code, so rerun `patch_bink_ready.py <recompiled>` after every regeneration.
+
+**Earlier attempts that did not help** (all still opt-in, default off):
+- `BINK_GREEN_FIX`: renderer same-frame revalidation.
+- `BINK_WAIT_DECODE`: decode was never late.
+- `BINK_KEEP_PLANES`: skipped only the open path's reuse clear; `reuse` was always 0.
+- `RSX_SYNC_FIX` ([rsx-sync.md](rsx-sync.md)): the close-path stores land on pages the SPU decode had already opened, so they never fault into the wait. Its "half a second of green" was the decoder being slowed down by the wait.
