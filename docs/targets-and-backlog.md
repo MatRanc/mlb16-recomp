@@ -82,6 +82,10 @@ checking if any geometry-only regression remains.
 ## Priority: speed and frame-time stability first
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
+- DONE 2026-11-04: menu flip fix PS3RECOMP_FLIP_TICK_OWN_STATE=1 is the play default (ca855f72 + dcdd6728; medium
+  review ok: FIFO fall-through keeps the old status gate, 17 ms bound never completes an abandoned frame, all under
+  FLIP_LOCK). User: menus hit 60 fps (recording 42.1 -> 59.4 fps). Meter A/B: fps 34.97 -> 36.22, p50 34.15 both.
+  Bound 2 (33.4 ms) measured worse (p50 36.05, -6 fps) — keep 1.
 **Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) Claude review of M2-M4 + crowded-capture
 fix (full mesh-ring spans) + walker-prof sampling fix; (3) user recapture + crowded replay test; (4) M5 hardening ->
 default if it wins (renderer track done); (5) then Edge E1, E2. E1 only jumps ahead if the renderer is blocked waiting

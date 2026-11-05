@@ -85,6 +85,8 @@ export SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1
 export SPURS_PM_FAST_RESCHED="${SPURS_PM_FAST_RESCHED:-64}"
 # native c690 dispatch for MeshJobs0/1 (wids 1,2); docs/c690-native-dispatch.md
 export SPURS_PM_NATIVE_DISPATCH="${SPURS_PM_NATIVE_DISPATCH:-6}"
+# menu flip fix: tick completes from our own request state (docs/menu-34ms.md, menu-flip-fix.md)
+export PS3RECOMP_FLIP_TICK_OWN_STATE="${PS3RECOMP_FLIP_TICK_OWN_STATE:-1}"
 export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 export PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W"
 export PS3RECOMP_C690_STATS=1
