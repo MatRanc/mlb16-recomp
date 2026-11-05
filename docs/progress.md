@@ -4391,3 +4391,11 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   pipeline create, WCB lock, MT spins) and prints one `[walker-waits]` line per `[walker-prof]` report.
   Offline crowded replay: steady frame blocks ~0.9 of 42.6 ms, so the live parse gap needs one live run
   ([walker-waits.md](walker-waits.md)). Fixtures 34/34. Branch pushed to `fork` only.
+
+## 2026-11-05: one-shot waits attribution + create batching (exp/oneshot)
+
+- Live finding: walker in-drain blocking is almost all `oneshot` (15-40 ms/frame, 16-165 one-shots/frame). Added
+  `[oneshot-by]` (per-caller, `flush:<why>` split) under `WALKER_WAITS=1`, and `PS3RECOMP_VK_BATCH_CREATES` (default 0,
+  live key) that records texture/target/snapshot creates into the open batch instead of submit+wait. Replay: cold
+  one-shots 815 -> 5, md5 unchanged, fixtures 34/34; live effect unmeasured ([oneshot-waits.md](oneshot-waits.md)).
+

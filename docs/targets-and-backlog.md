@@ -613,3 +613,4 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Loading hangs (~3 s) and start-menu hitches (these also hurt playability; may move up).
 - 1080p output + 300% resolution scale (downscale on the GPU before readback).
 - Walker waits (docs/walker-waits.md, exp/walker-waits): `PS3RECOMP_WALKER_WAITS=1` splits the live walker's in-drain blocking by site; user's crowded run decides which wait (readback, GPU fences, WCB lock, shader compile) to cut.
+- One-shot waits (docs/oneshot-waits.md, exp/oneshot): `[oneshot-by]` names the caller of each live one-shot; `PS3RECOMP_VK_BATCH_CREATES=1` (live) batches creates/snapshots. User's crowded run decides if the CPU-read callers (readback, depth_readback) are next.
