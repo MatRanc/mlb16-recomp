@@ -34,8 +34,10 @@ synchronous then), [`walker-per-draw.md`](walker-per-draw.md) and
   (`libs/video/vk_pipe_queue.c`, 256-job bounded FIFO) translates both stages
   and creates the two `VkShaderModule`s. The `VkPipeline` itself is built on
   the draw's own thread when the modules are ready (measured max 6.7 ms,
-  under one frame), because every attempt to build it on the worker returned
-  null in the key-on run below.
+  under one frame). **Correction: the key-on failure below was not a
+  worker-side driver null; the worker published every successful module job
+  as "translation failed" and no draw ever got as far as building the
+  pipeline. Fixed and verified live in [§7](#7-verification-the-key-on-path-live-2026-11-05).**
 * **Draw rule:** while a pipeline is pending, a draw waits until the frame's
   shared budget is spent (`PS3RECOMP_PIPE_ASYNC_WAIT_US`, default 2000 us,
   reset at each present) and is then skipped for that frame. Every skipped
@@ -48,13 +50,16 @@ synchronous then), [`walker-per-draw.md`](walker-per-draw.md) and
   prefetches the guest-keyed shader-cache files into the page cache
   (`rsx_hlsl_to_spirv_disk_prefetch`), so the first disk hits do not wait on
   the filesystem.
-* **The key-on launch did not complete.** Its worker translated modules
-  correctly (36 `[pipe-timing]` lines) but `vkCreateGraphicsPipelines` never
-  ran on the worker for any pipeline (0 `[pipe-create]` lines); every draw
-  using those pipelines was skipped, the game never reached the pitch, and
-  the 900 s `LIMIT` killed it. The code was changed afterwards to create the
-  `VkPipeline` on the draw thread (see §4). **The key-on path has not been
-  measured live since that change**; the morning user run is its first test.
+* **The first key-on launch did not complete.** Its worker translated
+  modules correctly (36 `[pipe-timing]` lines) but `vkCreateGraphicsPipelines`
+  never ran for any pipeline (0 `[pipe-create]` lines); every draw using
+  those pipelines was skipped, the game never reached the pitch, and the
+  900 s `LIMIT` killed it. **The cause was an inverted publish in
+  `vk_pa_run`: `vk_eng_pipe_modules` returns 0 on success, but the worker
+  stored `ok ? 2 : 3`, so every successful translation was published as
+  "failed" (state 3).** The draw thread never got a ready pipeline, which is
+  why no driver build ran. Fixed in §7 and verified live: the key-on cold
+  run now reaches the meter at 185 s with 0 `reason=failed`.
 * **Gates:** key-off replay digests unchanged (meter last frame
   `a6fcc849341eba9b`, gate `ff2a220c28750bc3`; walker last frame
   `416abee2c5bff47d`); `test_vk_pipe_queue` passes under clang TSan; video
@@ -199,15 +204,17 @@ every draw of those pipelines logged `reason=failed`. Over the 900 s
 `vkCreateGraphicsPipelines` for every pipeline. The screen never reached the
 pitch (`nav3 failed` when the timeout killed the process).
 
-The first version built the `VkPipeline` on the worker as well (it took a
-second job kind with the topology). Whatever the early return was (render
-pass, split descriptor layout, or pipeline layout created in the worker's
-scratch context), it made the whole path unusable, and the 2-launch cap
-does not allow another live A/B after changing it. The final code keeps only
-the translation/modules on the worker and builds the `VkPipeline` on the
-draw's thread, which is exactly the proven synchronous path and measured at
-at most 6.7 ms. **The live key-on numbers (drains, skips, thumbnails) are
-therefore not available for this note.**
+The guessed early return above (render pass, split descriptor layout, or
+pipeline layout created in the worker's scratch context) was **wrong**. A
+later cold key-on run with the final draw-thread code reproduced the exact
+same 0 `[pipe-create]` / `reason=failed` symptom, which ruled out the driver
+build entirely. The worker was publishing a successful module job as state 3
+(`ok ? 2 : 3` where `vk_eng_pipe_modules` returns 0 on success); the draw
+thread then skipped the pipeline forever without ever trying to build it.
+The fix and the verified live numbers are in [§7](#7-verification-the-key-on-path-live-2026-11-05).
+The final code still keeps only the translation/modules on the worker and
+builds the `VkPipeline` on the draw's thread, which is exactly the proven
+synchronous path.
 
 The shader cache and the `VkPipelineCache` were moved to
 `recomp-work/captures/pipeasync_20261105/` for the two runs and the original
@@ -261,6 +268,107 @@ Credit, with attribution:
   conclusion that faster compiles alone do not remove a burst of hundreds of
   new programs per match or arena, and that a skipped draw is the visible
   cost.
+
+## 7. Verification: the key-on path live (2026-11-05)
+
+Two cold-cache launches (the mission cap): one on the committed
+`ff6e5f02` binary, which reproduced the failure, and one after the one-line
+fix. Code: `recomp-work/build-play` at `ff6e5f02` + `f3311e68` on
+`exp/live-ab`, pushed to `fork` only. Caches were moved to
+`recomp-work/captures/pipeverify_20261105_064907/` and the originals restored
+afterwards (2,684 files / 48 MiB and the 3.7 MB driver cache; the caches the
+two runs generated are kept there too).
+
+### 7.1 Root cause
+
+`vk_eng_pipe_modules` returns **0 on success** and -1 on failure, but
+`vk_pa_run` published `ok ? 2 : 3`. Every successful module job therefore
+became `async_state = 3` ("translation failed") and every draw of that
+pipeline was skipped forever; the draw thread never reached
+`vkCreateGraphicsPipelines`. The pre-fix run
+(`ab_live_pipeasync_on2_20261105_064915`, cold) shows it directly: 18 module
+jobs (36 `[pipe-timing]` lines, all stages translated and modules made),
+**0 `[pipe-create]`**, 448,360 skipped draws, 448,309 `reason=failed`, 51
+`reason=modules`, pitch never reached. The original note's "worker-side
+driver pipeline returned null" diagnosis (§4) was wrong.
+
+The fix is `rc == 0 ? 2 : 3` plus a `[RSX vulkan] ... vkCreateShaderModule
+failed (VkResult N)` log so a genuine module failure is no longer silent.
+Nothing else changed; the key stays **default off**.
+
+### 7.2 The new path cannot hit the old worker-context failure
+
+The worker now only calls `rsx_hlsl_to_spirv_keyed` (its disk/memory caches
+are under one global mutex and glslang is initialised once) and
+`vkCreateShaderModule`. The `VkPipeline` is created by `vk_eng_variant` on
+the thread that records the draw, under `s_pipe_create_mu`, with that
+thread's `s_e2` context and the `s_g.pipe_layout` built at guest init - the
+exact call the synchronous path has always made. No render pass, descriptor
+set/layout or pipeline layout is created on the worker.
+
+### 7.3 Key-on cold run
+
+`ab_live_pipeasync_on3_20261105_070746`, same environment as the key-off run
+(`N=1 SEG=10 DROP=0 SETTLE=10 LIMIT=900 METER=1 SKIP_CINE=1 PIN=0 WCB=2
+VIDEODRIVER=x11 PS3RECOMP_VK_PIPELINE_CACHE=1 PS3RECOMP_WALKER_PROF2=1`) plus
+`PS3RECOMP_PIPE_ASYNC=1`; cold shader and driver caches.
+
+| metric | key off (`061224`) | key on (`070746`) |
+|---|---:|---:|
+| pitch reached / X press / meter confirmed | 214 / 216 / 217 s | **185 / 186 / 187 s** |
+| walker drains > 50 ms | 427 | **218** |
+| > 200 ms | 9 | **3** |
+| > 1 s | 1 | **0** |
+| largest drain | 4,324.1 ms (`pipe=3,440.9`, `pipecrt=178`, `pipe_decompile=22.1`) | **560.2 ms** (`tex_upload=273.4`, `tex_bind=292.3`, `surface=99.0`, `pipe=36.4`, `pipe_decompile=22.4`, `pipecrt=9`) |
+| `reason=failed` | n/a (key off) | **0** |
+| skipped draws | 0 | **10,662** (all `reason=modules`, 351 pipelines) |
+| max pending | n/a | **15 consecutive frames, 3.39 s** (pipelines 213/220-229, 136.2-139.6 s) |
+| fps at the meter (mean frametime) | 32.80 (30.49 ms, p50 37.11, p99 48.05) | **32.25** (31.01 ms, p50 37.21, p99 49.62) |
+
+The 4.3 s match-load drain is gone: its remaining 560 ms is the title's own
+texture/surface work (`tex_upload`/`tex_bind`/`surface`), with the pipeline
+part down to 36.4 ms. The worker did 366 pipelines / **732 stage
+translations in 5,206.5 ms** (7.1 ms mean, 106.3 ms max; 208 glslang, 524
+memory hits, cold cache). The draw threads built **251 driver pipelines in
+914.3 ms** (3.6 ms mean); one build at 51.7 s took **542.8 ms** (a single
+0.57 s frame on a record thread; the next largest is 14.1 ms) - worth
+knowing, not a persistent cost.
+
+The 3.39 s pending window is the longest a pipeline stayed in the worker
+queue. It falls entirely on the black match-load transition (the 136.6 s and
+138.7 s thumbnails are black frames), so no geometry was visibly missing; the
+next-longest windows are 0.55 s at 144.9-145.5 s. The pitch scene is complete
+in the meter screenshot and both A/B segments, with no persistent holes; the
+crowd close-ups before it are normal sprite crowd. (The pitch-select overlay
+that appears in the key-off meter screenshot is also absent from the key-off
+scene thumbnails - it is a transient at the X press, not a hole.)
+
+The cold run wrote 1,112 shader-cache files / 20 MiB and a 3.47 MB driver
+pipeline cache. Gates rerun on the fixed build, key off: meter last
+`a6fcc849341eba9b`, gate `ff2a220c28750bc3`; walker last `416abee2c5bff47d`,
+gate `0bdb6c112e64e643`; `test_vk_pipe_queue` PASS under clang TSan.
+
+### 7.4 USER command (verified)
+
+The verified run used the same `build-play` binary and key/cache variables
+through `ab_live.sh`; the interactive launcher differs only in how it parks
+the screen. Cold caches are not needed once the dialog has been seen: a warm
+shader cache removes the worker translation too, and the persistent driver
+cache removes most of the 251 driver builds.
+
+```sh
+cd /home/m/Documents/mlb16-online
+PS3RECOMP_PIPE_ASYNC=1 \
+PS3RECOMP_SHADER_DISK_CACHE=1 \
+PS3RECOMP_VK_PIPELINE_CACHE=1 \
+recomp-work/play_windowed.sh
+```
+
+Start a match and let the pregame play. Expected: the match load no longer
+freezes for ~1-2 s; instead a few frames of missing objects (mostly hidden by
+the black load transition here), `[pipe-async] skip draw ... reason=modules`
+in the terminal, never `reason=failed`, and the meter at ~32 fps. The key is
+not enabled by any script; nothing else is default-on.
 
 No RPCS3 or other GPL emulator source was read or cited. Everything here is
 this tree's own code, logs, captures and EBOOT.

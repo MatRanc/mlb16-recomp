@@ -1,5 +1,75 @@
 # Progress log
 
+## 2026-11-05 (c690 extra host lanes): the guest's maxContention is the ceiling; no burst win
+
+Full details in [`docs/c690-extra-lanes.md`](c690-extra-lanes.md). Branch
+`exp/c690-lanes` in the new worktree `ps3recomp-lanes` (from `exp/live-ab`,
+with the parked WIP `27f49913` cherry-picked and fixed), build
+`recomp-work/build-lanes`. Code pushed to `fork` only;
+`PS3RECOMP_C690_EXTRA_LANES` stays **default 0**. One pitch-meter launch (the
+cap), arms 0 / 2 / 4 hidden host lanes, 4 x 12 s each, plus a 24 s timeline.
+
+- **Why lane 6 wedges:** `WwsJobList_SpinUntilDone` waits for a completed
+  prefix of the job list, the minimum of six 16-bit per-lane cursors
+  (`+0x42..+0x4c`) and the list counter (`+0x4e`). MeshJobs0/1 publish
+  `maxContention=5` and `priority[5]=0`; only lane 0's cursor starts live.
+  `SPURS_LANE6` made a sixth stream active and the guest deadlocked (flip
+  stop, PPU parked, FIFO bad word). The safe invariant is total mesh
+  instances <= maxContention, one PM context per `(wid, spu_num)`.
+- **Design:** dormant helper workers run the same lifted PM on a physical row
+  whose same wid is not already running; one ready unit / signal consumed
+  under the same lock line; guest `active`/`curcont`/`ready` untouched; live
+  key 0-4, helpers retire when the key drops. WIP fixes: u16 `lane_wid`,
+  normal-dispatch row ownership, per-slot live retirement, stop joins
+  helpers.
+- **Gates:** scheduler fixture (hidden-slot + N-worker 5-instances/unique-row
+  cases) PASS; ASan/UBSan 0 errors/0 leaks; TSan only the fixture's own
+  guest-store races; video fixtures 33/33; ABI PASS.
+- **Live A/B:** fps 36.60 / 36.25 / 36.45, p50 **34.15 ms in all arms**, p90
+  38.46 / 38.35 / 38.25, p99 42.24 / 42.10 / 41.88. Timeline last c690 job
+  p50 32.59 / 32.29 / 32.99 ms, lanes 4.04 / 4.05 / 4.25. The helper runs
+  (~2.5 k jobs/s) but steals the jobs w0 stops doing (w0 3,028 -> 1,945);
+  aggregate is flat. Thumbnails show no Edge divergence; 12 segments / ~146 s,
+  no hang.
+- **Conclusion:** more host workers behind the guest's 5-lane contract cannot
+  shrink the burst. The remaining levers are per-job compute/codegen or a
+  host-side job stealer that fills intra-lane gaps; going >5 is the lane-6
+  wedge.
+
+## 2026-11-05 (pipeline async, verified): the key-on failure was an inverted publish; fixed, cold run reaches the meter with 0 failures
+
+Full details in [`docs/pipeline-async.md`](pipeline-async.md) §7. Branch
+`exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play` at
+`ff6e5f02` + `f3311e68`; code pushed to `fork` only. `PS3RECOMP_PIPE_ASYNC`
+stays **default off**. Two cold-cache pitch-meter launches (the cap); caches
+moved to `recomp-work/captures/pipeverify_20261105_064907/` and restored,
+never deleted.
+
+- **Root cause of the failed key-on launch: an inverted publish, not the
+  driver.** `vk_eng_pipe_modules` returns 0 on success, but `vk_pa_run`
+  stored `ok ? 2 : 3`, so every successful module job was published as
+  state 3 ("translation failed"). The draw thread never built a pipeline;
+  the pre-fix cold run reproduced it exactly (18 module jobs / 36
+  `[pipe-timing]`, **0 `[pipe-create]`**, 448,360 skipped draws, 448,309
+  `reason=failed`, pitch never reached). The old "worker-side
+  `vkCreateGraphicsPipelines` returned null" diagnosis is corrected.
+- **Fix:** `rc == 0 ? 2 : 3`, plus a log on `vkCreateShaderModule` failure.
+  The worker still only translates and creates modules; the `VkPipeline` is
+  built on the draw's thread with its own `s_e2` and `s_g.pipe_layout`, the
+  proven synchronous path.
+- **Live cold key-on run** (`ab_live_pipeasync_on3_20261105_070746`): meter
+  at **185 s** (key off 214-217 s); drains **218 / 3 / 0** (>50 / >200 /
+  >1 s) vs 427 / 9 / 1; largest **560.2 ms** (texture/surface work, pipe
+  36.4 ms) vs the 4,324.1 ms load. **0 `reason=failed`**; **10,662** skipped
+  draws, all `reason=modules`; max pending **15 consecutive frames (3.39 s)**
+  during the black match-load transition; no persistent holes. Meter fps
+  **32.25** vs 32.80 (mean frametime 31.01 vs 30.49 ms, within noise).
+- **Gates:** key-off replay meter `a6fcc849341eba9b` / gate
+  `ff2a220c28750bc3`, walker `416abee2c5bff47d` / gate
+  `0bdb6c112e64e643`; `test_vk_pipe_queue` PASS under clang TSan. Verified
+  user command: `PS3RECOMP_PIPE_ASYNC=1 PS3RECOMP_SHADER_DISK_CACHE=1
+  PS3RECOMP_VK_PIPELINE_CACHE=1 recomp-work/play_windowed.sh`.
+
 ## 2026-11-05 (pipeline async): translation is 93 % of the first-use stall; worker path added, key-on launch still to verify
 
 Full details in [`docs/pipeline-async.md`](pipeline-async.md). Branch
