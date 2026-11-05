@@ -261,6 +261,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
    orphaned .tmp files and no pruning (dir grows across versions), key includes render state (duplicate files),
    static s_eng_pipe_key handoff, mutex held across file I/O. Remaining ~2 s load = walker drain (3,484 draws) +
    texture uploads. Hitch recorder on in play tests (hitches.pstl + tools/hitch_table.py).
+6a. First-use pipeline/shader stalls: MEASURED 2026-11-05 (docs/pipeline-async.md). A cold run's 918 HLSL -> SPIR-V
+   translations are 5,600.8 ms (93 % of the first-use work); decompile 53.7 ms, shader modules 25.3 ms,
+   `vkCreateGraphicsPipelines` 448.8 ms (max 6.7 ms). `PS3RECOMP_PIPE_ASYNC` (default off) translates on a bounded
+   worker, waits at most 2 ms per frame and logs each skipped draw; the driver pipeline stays on the draw thread.
+   Key-off digests/Tsan/fixtures pass. The key-on live A/B is still pending: the first version's worker-side
+   `VkPipeline` creation returned null for every pipeline and the cold key-on run had to be abandoned (459,673 skips,
+   never reached the pitch); the final code uses the synchronous driver call. Next: user run (command in the doc),
+   then a meter A/B if the key is kept.
 6b. Boot 0.35-0.6 s stalls: SPU asset jobs on the spurs pm lanes while the main thread usleeps; not yet explained.
 6c. Warm census run "stuck in cinematics": user watched it; it was the idle b-roll after a nav miss (X landed on
    the pitch view, not the meter). Harness nav issue, not a game loop.

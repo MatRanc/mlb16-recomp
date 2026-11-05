@@ -1,5 +1,43 @@
 # Progress log
 
+## 2026-11-05 (pipeline async): translation is 93 % of the first-use stall; worker path added, key-on launch still to verify
+
+Full details in [`docs/pipeline-async.md`](pipeline-async.md). Branch
+`exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Code pushed
+to `fork` only; `PS3RECOMP_PIPE_ASYNC` stays **default 0**. Two cold-cache
+pitch-meter launches (the cap); shader/pipeline caches moved to
+`recomp-work/captures/pipeasync_20261105/` and restored, never deleted.
+
+- **Where the cold drain goes (key off, meter at 217 s):** 918 translations
+  = **5,600.8 ms** (6.1 ms mean), `vkCreateShaderModule` 25.3 ms,
+  fp/vp decompile 53.7 ms, `vkCreateGraphicsPipelines` 448.8 ms (460 builds,
+  0.98 ms mean, 6.7 ms max). 216 ran glslang, 702 were memory hits; 918 cold
+  disk misses wrote 16 MiB. Drains before the meter: 427 > 50 ms, 9 > 200 ms,
+  1 > 1 s (4,324.1 ms load, `pipe=3,440.9 pipecrt=178`, `pipe_decompile`
+  22.1 ms). The async work is therefore the HLSL -> SPIR-V step, not the
+  driver pipeline and not the decompilers.
+- **Implemented** `PS3RECOMP_PIPE_ASYNC` (live key): `pipeline_create` copies
+  the HLSL and returns a slot; a bounded 256-job worker
+  (`libs/video/vk_pipe_queue.c`) translates both stages and creates the
+  modules. Draws wait up to a shared **2 ms per frame** budget
+  (`PS3RECOMP_PIPE_ASYNC_WAIT_US`) and are then skipped; every skip is
+  logged. The `VkPipeline` is built on the draw's thread (max 6.7 ms, under
+  one frame). The async key also turns on the existing persistent
+  `VkPipelineCache` and the worker prefetches the shader-cache files at boot.
+- **Gates:** key-off replay last-frame digests unchanged (meter
+  `a6fcc849341eba9b`, walker `416abee2c5bff47d`); `test_vk_pipe_queue` under
+  clang TSan clean; video fixtures 34/34 (`test_gcm_tick_in_drain` is
+  pre-existing flaky).
+- **The key-on launch failed, and is why the design changed.** The first
+  version also built `VkPipeline`s on the worker; the cold key-on run logged
+  459,673 skipped draws and **zero** `[pipe-create]` lines, never reached the
+  pitch, and was killed at the 900 s limit. The final code keeps only
+  translation/modules on the worker and uses the proven synchronous driver
+  call on the draw thread. The key-on live numbers are still missing; the
+  morning user run (command in the doc) is the first test. Watch for brief
+  missing objects (skip side effect) and for `reason=failed` (translation
+  failure, pipeline will never appear).
+
 ## 2026-11-05 (native 0x21): whole-command rewrite is bit-exact offline but at parity; the one live A/B attempt wedged (pre-fix)
 
 Full details in [`docs/edge-native-21.md`](edge-native-21.md). Branch
