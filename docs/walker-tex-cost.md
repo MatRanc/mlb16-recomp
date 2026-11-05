@@ -211,7 +211,9 @@ rewritten entry is revalidated.
 format)` view. A 512-entry direct-mapped memo now answers it in O(1),
 validated against the object table (kind, surface, remap, format), so a
 released or reused handle misses. A crowded capture asks for 53 views/frame;
-the old scan is 53 x 2,048 object visits.
+the old scan is 53 x 2,048 object visits. The scan now stops at the highest
+handle handed out (`s_eobj_hi`), so raising the table for the 4,096 cache does
+not slow the memo-off path.
 
 ## 4. Exactness and tests
 
@@ -259,7 +261,10 @@ applied control state:
 per-bind renderer cut cannot move it. The mechanism moves the right way
 (walker -0.72 ms, `tex` -0.054 ms) but the meter has no crowded binds, no
 uploads and no cache pressure; this A/B is a "no regression" gate, not the
-win. The A/B thumbnails are animated-scene differences at the A/A level
+win. One caveat: the A/B predates the object-table high-water bound
+(section 3.4), so arm A scanned the enlarged 8,192-slot table for its ~31
+views/frame while B answered from the memo; the measured `tex` delta is
+therefore an upper bound on the key's meter value and is expected to be ~0. The A/B thumbnails are animated-scene differences at the A/A level
 (the old MT arms were ~39); no missing, stale or flickering texture.
 
 ## 6. User command: crowded replay A/B
