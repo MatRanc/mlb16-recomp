@@ -3,6 +3,50 @@
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 
+## 2026-11-04 (walker texture cost): crowded `tex` is per-bind work, not the rehash
+
+Full analysis in [`docs/walker-tex-cost.md`](walker-tex-cost.md). Branch
+`exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. **Two game
+launches**: the first A/B was killed by the system for low memory after two
+segments, the second completed 12 segments at the pitch meter. Offline: the
+crowded capture `walker_replay`, the user's 40 ms hitch recordings, and the
+crowded play logs. No RPCS3 or other GPL emulator source was read or cited.
+
+- **The crowded `tex` phase is the crowded frames' own population.** In the
+  real crowded reports of `play_20261104_173326.log` / `165634.log`, `tex` is
+  **13-31 ms for 2,300-3,400 unit binds (6.8-8.3 us/bind)**. The low-`tex`
+  lines are the frame-sampled profiler timing an idle drain (phases on 1
+  drain in 8, draws counted every frame). The same engine on the crowded
+  capture costs **2.4-3.0 ms** (1.9 us per cache slot, null backend).
+- **Uploads are the tail.** `tex.upload` in the 40 ms recording is 3/frame
+  median (0.03 ms), **p90 6.6 ms**, max 290 ms; the bad cases are whole 8 MB
+  images decoded and uploaded (20-33 ms spans). The median crowded frame
+  uploads nothing.
+- **Targets:** a crowded capture frame answers 647 depth-target binds from
+  the per-serial snapshot and 53 colour targets through the backend view;
+  the view lookup scanned all 2,048 objects. The meter keeps 1,024 texture
+  entries (full) with ~0 evictions.
+- **Fixes, all live keys default off:** `PS3RECOMP_ENG_TARGET_BLOOM` (a
+  plain bind skips both target-table scans; inFAMOUS 2 MIT bloom),
+  `PS3RECOMP_ENG_TEXCACHE` (4,096 entries + 64K lookup index + backend
+  object table 8,192), `PS3RECOMP_ENG_TEXMEMO_LOCAL` (per-entry validation,
+  survives target/upload churn elsewhere), `PS3RECOMP_VK_VIEW_MEMO` (O(1)
+  view lookup). Offline the bloom cuts the non-slot part of `tex_bind`
+  **0.326 -> 0.222 ms** and target-table scans **3,506 -> 1,024** per
+  crowded frame (2,482 skipped).
+- **Exactness:** `meter_frame` 64 and `walker_replay` 10 give the same hash
+  and gate with every key off and on; `test_tex_memo` 17/17;
+  `tools/test_video_fixtures.py` **30/30**. TEX_DIRTY is untouched (its
+  44,656-pair/0-stale check still applies). No `spu_context` fields.
+- **Meter A/B (12 segments, N=6 x 10 s):** fps **36.72 -> 36.53** (paired
+  +0.19, CI [-2.23, +2.61]), p50 **34.15 -> 34.15 ms**, walker
+  **9.56 -> 8.84 ms**, `tex` **0.346 -> 0.292 ms**; A/B thumbnails 1.98 vs
+  A/A 1.70. The meter is c690-bound, has no uploads and no cache pressure,
+  so this is a no-regression gate; the crowded replay is the test.
+- **Nothing is default-on.** The user's keys-off/keys-on zoomed-out replay
+  command (40 ms hitches, live-ctl fallback, what to look for) is section 6
+  of the doc.
+
 ## 2026-11-04 (Edge E1): fused native 0x25/0x26 holes pass, caller modelled, one command pass (offline only)
 
 Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md). Worktree
