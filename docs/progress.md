@@ -1,5 +1,35 @@
 # Progress log
 
+## 2026-11-05 (c690 GPU Edge): 0x2A binding + live key; offline gates pass, live A/B crashes
+
+Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md). Branch
+`exp/edge-gpu` in `ps3recomp-gpu` (merged `exp/live-ab`), build
+`recomp-work/build-gpu`. **Two pitch-meter launches (the cap), both crashed on
+the key-on arm; no A/B numbers.** Key `PS3RECOMP_C690_GPU_2A` is default 0.
+
+- **Binding built.** The 0x10F78 wrapper exports the four source arrays and
+  the A/B offset list; the renderer runs the proven 32-byte Vulkan kernel
+  (one command buffer, one submit, one fence per drain); the draw engine's
+  guest resolver serves the GPU-written mesh-ring range. Any other class is
+  not exported. Guest memory and the lifted output are unchanged (overlay).
+- **Why the pack is not skipped yet.** The first store-suppression design was
+  exact on a synthetic body but the real handler reads back the record it
+  writes (it stored the pre-body bytes over the correct record once the store
+  was suppressed). The safe stage is the overlay; the skip needs a native
+  per-stream pack (`0x10C70`/`0x109C0`).
+- **Offline gates pass.** Kernel 51/51 (20,312 records, positions 0, packed
+  <= 1 LSB, attr 0); compact-arena mirror PASS for A and B; resolver
+  transparency through `replay_rsx_engine` gives the same hash as the guest
+  lifted bytes (`44f962cef2a40ae3`, gate `7463a05e53fffdb7`) and differs only
+  by the approved packed drift for the GPU bytes; unit test, 30/30 video
+  fixtures, ABI check; ASan stress 1.2 M jobs clean.
+- **Live blocker.** Both launches (03:11, 03:17) aborted with glibc
+  `double free or corruption` within ~0.1 s of the first B switch, after the
+  compute pipeline was created. Coredumps are truncated; the aborting thread's
+  stack is unreadable. Per the repeat-failure rule and the cap, no third
+  launch. Next: isolate with compute off / resolver only, fix, then replace the
+  pack and re-run §6.
+
 Newest first. Numbers are from one Linux PC (Ryzen 5 2600X, 12 threads, 32 GB, Fedora 44, clang 21) unless noted.
 ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentation-thread`, and `feat/gpu-vertex-offload`.
 

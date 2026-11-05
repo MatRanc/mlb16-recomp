@@ -139,6 +139,8 @@ def main():
     ap.add_argument('--spool', action='append', default=[])
     ap.add_argument('--limit', type=int, default=0)
     ap.add_argument('--work', default=str(Path('/tmp/opencode') / 'gpu2a_32b'))
+    ap.add_argument('--seq', type=int, default=0,
+                    help='only this captured 0x2A seq (0 = all accepted)')
     ap.add_argument('--no-vk', action='store_true', help='only classify/export jobs')
     args = ap.parse_args()
 
@@ -164,6 +166,11 @@ def main():
         accepted.append((p, c))
     print('32-byte class: A(offset list)=%d B(identity)=%d, unclassified 32B=%d'
           % (stats['A'], stats['B'], stats['none']))
+    if args.seq:
+        accepted = [a for a in accepted if a[0]['in']['seq'] == args.seq]
+        if not accepted:
+            print('no accepted 32-byte pair with seq %d' % args.seq)
+            return 1
     if args.limit:
         accepted = accepted[:args.limit]
 

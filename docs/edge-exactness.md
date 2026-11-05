@@ -23,6 +23,7 @@ Gameplay is not at risk from any of these: no CPU code reads Edge output (edge-g
 |---|---|---|---|---|---|---|---|
 | 0x2A assembler (0x10F78), **36-byte record class** | GPU kernel `tools/replay/c690_2a_assembler.comp` / `c690_2a_batch.comp`; plumbing harness `test_c690_2a_plumbing.c` | offline only, not wired | exact | exact | n/a | 2 real captures + synthetic colour stress, 0 differing bytes; ring bytes and replay hash match (edge-gpu-plumbing.md); **0/128 old phase-2b meter pairs; 1/192 regenerated meter pairs (0.52 %)** | edge-gpu-phase2a.md, -phase2b-step1.md |
 | 0x2A assembler (0x10F78), **position-first 32-byte record class** (pos f32x3, normal 11:11:10, 4x s16, 2x f16, 4-byte SPU index pair) | GPU kernel `tools/replay/c690_2a_32b.comp`; gate `test_c690_2a_32b.c/.py` | offline only, not wired | **exact** (0 differing position bytes) | **<= 1 LSB** (normal/tangent/UV max 1; SPU attr +28..31 exact) | n/a | **51/51 clean pairs, 20,312 records** on the regenerated meter spool (`fncap2b2w3`); ring position/attr bytes exact, packed fields <= 1 LSB; 9 further 32-byte sub-variant pairs unclassified; **60/192 meter 0x2A pairs** (31.2 %) | edge-gpu-2a-32b.md |
+| 0x2A assembler (0x10F78), **32-byte GPU ring binding** (live key; SPU export + Vulkan compute + walker resolver) | `PS3RECOMP_C690_GPU_2A` (default **0**); `runtime/spu/c690_gpu_2a.c`, `libs/video/rsx_vulkan_backend.c`, resolver in `rsx_draw_engine.c`; gate `tools/replay/test_c690_2a_binding.py` + `test_c690_2a_compact.c` | **off (default 0)** | **exact** (positions; the resolver arm with the lifted bytes has an identical draw/state hash) | **<= 1 LSB** (GPU kernel; SPU attr +28..31 exact) | n/a | offline: resolver transparency MATCH (`44f9...`), GPU bytes policy-exact, compact packing A/B PASS; **live A/B blocked: 2/2 launches SIGABRT heap corruption at the key-on switch** | edge-gpu-binding.md |
 | 0x2A assembler (0x10F78), **32-byte index-pre-pass contract** | SPU keeps the pre-pass; exports the u16 byte-offset list (`cmd[0]`, or identity `k*16`) and the 4-byte attribute word | none (offline) | exact | n/a | n/a | 15 format-A + 36 format-B pairs; all 20,312 records gather all four arrays at the same offset | edge-gpu-2a-32b.md §3 |
 | 0x2A assembler (0x10F78), **20-byte / 48-byte / other classes** | no kernel | none | - | - | n/a | stride classifier on the regenerated 192-pair meter spool: 20-byte 17, 48-byte 16, other 98; fallback with 36+32 kernels = **68.75 % of 0x2A** (> 5 % gate) | edge-gpu-2a-wiring.md §2, edge-gpu-2a-32b.md §2 |
 | 0x21 sel1 A730 leaf (0xB830) | GPU kernel `tools/replay/c690_b830_batch.comp` | offline only, not wired | exact | exact | n/a | 64/64 meter pairs, 0 ULP, 9 live GPRs exact | edge-gpu-phase2b-step4.md |
@@ -54,8 +55,9 @@ key until a live capture isolates the bogus sample-only triangles
 ([`edge-e1-holes.md`](edge-e1-holes.md) §5.4).
 
 **Parked:** GPU 0x2A record classes (36-byte exact offline; the 32-byte
-position-first class now has an exact kernel on 51/51 clean pairs but covers
-60/192 meter pairs and the rest of the family is not decoded), GPU 0x21 sel7 /
+position-first class has an exact kernel on 51/51 clean pairs and a live
+binding + resolver, but 2/2 live A/B launches aborted on a heap corruption at
+the key-on switch, and the SPU pack is not skipped yet), GPU 0x21 sel7 /
 0x25/0x26 cull, the 0x22 whole-body native body, and
 the extra host lanes (`wip/c690-extra-lanes`, unfinished; `SPURS_LANE6` wedges
 in ~10 s). They are parked because each is a large mission, not because they
