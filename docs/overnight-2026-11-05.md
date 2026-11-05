@@ -31,6 +31,6 @@ burst passes ~16.7 ms. Decision for the user: which of these to pursue, or wheth
 47.5 us/draw) is now the better use of the week.
 
 ## Not ready / pending the user
-- Async pipeline compile (`PS3RECOMP_PIPE_ASYNC`): first live run skipped every draw; redesign under verification.
+- Async pipeline compile (`PS3RECOMP_PIPE_ASYNC`, default off): VERIFIED live after a fix (inverted success code). Cold boot: the 4.3 s match-load translation drain is gone, pitch reached 29 s sooner, 0 failed pipelines, brief skipped draws hidden by the load fade (pipeline-async.md §7). User check, then default on.
 - Uniform moire: not fixed (mipmaps/sampler/LOD/2x1 derivative ruled out); next: anisotropy + texture dump.
 - User checks: intro video + team-select logo (Bink), lighting drift (note times), crowded-replay capture.
