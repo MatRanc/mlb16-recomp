@@ -66,6 +66,9 @@ runtime overhead ~21 %. Of that, ~8.3 % is the WWS PM between jobs: memmove 3.3 
 lookup 0.7 %, drain_call 0.6 %. Inside the c690 jobs, dispatch is ~2.3 % (lookup 1.45 %, drain 0.8 %), so bigger
 lifted regions ("block size") can remove at most ~2.3 %; the per-job PM switch is the larger lever.
 
+**Walker phases at the meter, live (flip-weighted, 761 flips, wake + approx on):** walker 25.7 ms per flip = engine 22.6
+(fetch 7.4, other 5.5, draw 5.3, pipe 2.8, tex 1.2, bind 0.4) + parse 3.1.
+
 **Meter critical chain (approx trace, 408 frames, every frame sums to the flip interval within 1 us;
 `captures/meter_analysis2/chain/chain.md`):** main runs from the ref release to its put 6.22 + MainMultiTask
 semaphore 1.24 + walker wake 0.63 + **walker drain 21.73** + **walker resume lag 3.85** (4 ms idle quantum) + PUT
@@ -227,6 +230,7 @@ undercounts, prefer `real=`). **All fps numbers above this line are flip rates a
 | `PS3RECOMP_SPU_FLOAT_APPROX` 0 -> 1 (opt-in approximate SPU float, `exp/spu-approx` 72269fce), meter live 2026-11-06 11:25, build-sync, play keys + TICK_IN_DRAIN + FTZ, 6+6 x 10 s | 29.30 -> 30.93 | **29.30 -> 30.93** | **+1.63 +/- 0.22** |
 | `PS3RECOMP_WALKER_WAKE` 0 -> 1 (resume the walker at the covering PUT), meter live 2026-11-06 12:51, build-sync, approx on, 6+6 x 10 s | 30.73 -> 31.55 | **30.73 -> 31.55** | **+0.82 +/- 0.25** |
 | `REMAP_CACHE`+`REMAP_SHIFT` 0 -> 1 with walker wake on, meter live 2026-11-06 12:57 | 31.37 -> 30.78 | 31.37 -> 30.78 | -0.58 +/- 0.43 (small loss; keep off) |
+| `PS3RECOMP_REMAP_DIRECT` 0 -> 1 with walker wake on, meter live 2026-11-06 13:04 | 31.77 -> 32.02 | 31.77 -> 32.02 | +0.25 +/- 0.54 (neutral) |
 | `SPU_CODE_DMA_MEMO` 0 -> 1 (skip unchanged per-job code GETs), meter live 2026-11-06 12:27, approx on; prior live audit (`SPU_CODE_DMA_MEMO_AUDIT=1`, `exp/pm-overhead`): 7.11 M O(1) skips, 0 mismatches | 30.80 -> 30.50 | 30.80 -> 30.50 | -0.30 +/- 0.32 (neutral) |
 | same approx switch, **mound visit** live 2026-11-06 11:36, build-sync, 4 players, 6+6 x 10 s | 21.20 -> 22.27 | **21.20 -> 22.27** | **+1.07 +/- 0.16** |
 | same, **mound visit** live 2026-11-06 10:03, build-depth, ~7 players, 6+6 x 10 s | 23.72 -> 16.26 | 15.52 -> 16.26 | +0.74 +/- 1.14 (neutral) |
