@@ -16,3 +16,6 @@ recompiled/
 *.log
 # built from the tracked tools/replay/test_vk_sync.c
 tools/replay/test_vk_sync
+# measurement references are game screenshots; keep them out of git
+tools/ab/ref/
+__pycache__/

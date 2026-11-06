@@ -1,5 +1,26 @@
 # Progress log
 
+## 2026-11-05: reproducibility pass -- tools and SETUP.md, known-good branch `port/stable`
+
+- The uncommitted helpers the build, play and measurement flows call are now in `tools/ab/`
+  (`play.sh`, `start.sh`, `measure_fast.sh`, `ab_live.sh`, `meter_lib.sh`, `nav3.py`, `shot.sh`, `same.py`,
+  `scene_sheet.py`, `ab_live_report.py`, `check_spu_context_abi.sh`, plus `common.sh` for the shared defaults).
+  `tools/play_windowed.sh` gained the spu_context ABI guard the user's copy already had. Hard-coded
+  `/home/m/...` paths were replaced by `MLB16_WORK`, `MLB16_ROOT`, `MLB16_EBOOT`, `MLB16_ISO_MOUNT`,
+  `MLB16_PS3RECOMP`, `MLB16_BUILD` and `REF_DIR`; the defaults still resolve to the user's layout.
+- New `tools/apply_patches.sh` re-applies the generated-code patches after a fresh lift, in order:
+  `tools/c690_ref/patch_cull_hooks.py` -> `patch_native_screen.py` -> `patch_bink_ready.py`. The
+  WWS-native (`exp/wws-native`, `wws_native_pm.h` required), FTZ twin (`exp/spu-v4`, variant registry
+  required), native-21/2a and gpu2a patches are opt-in, because each needs another ps3recomp branch;
+  the default set matches `port/stable` and never needs `wws_native_pm.h`.
+- New `SETUP.md` is the start-to-finish path from a disc/ISO (prerequisites, mount, EBOOT decrypt, vfs,
+  PPU/SPU lift, patches, CMake/Ninja, play, measure), linked from `README.md`. Reference menu screenshots
+  used by the automated measurement stay out of git; `REF_DIR` documents where to put them.
+- Known-good source recorded as ps3recomp `port/stable` = `1c2bfd8a` (fork only; the two later commits
+  on `exp/live-ab` are opt-in diagnostics and test-only stubs). **No cmake, build or game launch in this
+  pass**; static checks only (`bash -n`, `py_compile`, `apply_patches.sh --dry-run`, ABI probe).
+  From-scratch clone/build/launch is the next mission.
+
 ## 2026-11-05: SPU v4 -- SPU is not on main's critical path; lazy -0 is an exact dead end (exp/spu-v4)
 
 - New opt-in counter `PS3RECOMP_SPU_CRIT` (default 0) splits the PPU main thread's guest frame into run / RSX ref /

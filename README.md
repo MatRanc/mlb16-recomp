@@ -14,6 +14,11 @@ still. See [docs/progress.md](docs/progress.md) for the current issue list.**
 **This repo contains no game code or data.** Like other ps3recomp ports, everything game-derived (the decrypted
 EBOOT, the lifted C++, the build) is produced on your own machine from your own copy of the game.
 
+## Building from your own disc
+
+[SETUP.md](SETUP.md) is the full walkthrough: prerequisites, ISO mount, EBOOT decrypt, game file
+extraction, PPU/SPU lift, generated-code patches, CMake/Ninja build, play and measurement.
+
 ## Trying the probe
 
 You need your own decrypted v01.10 EBOOT (RPCS3: **Utilities → Decrypt PS3 Binaries** on
