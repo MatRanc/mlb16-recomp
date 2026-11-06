@@ -104,12 +104,30 @@ draws, replay 31.8 ms/frame offline).
 Read: the walker is the chain main waits on (main blocked 31 of 47 ms), and the walker itself is idle 18 ms a frame,
 11.4 of it *after* its work was already PUT. At the pitch meter that resume lag was ~2.8 ms and the wake fix
 (`PS3RECOMP_WALKER_WAKE`, docs/notes/walker-wake.md) only moved the wait onto the SPU producer; here the SPU
-producer costs 0.9 ms, so the wake fix is retested live in this scene (below). SPU stays off the path.
+producer costs 0.9 ms, so the wake fix is retested live in this scene (below). ~~SPU stays off the path.~~
+**Corrected the same night (see next paragraph): in this scene SPU c690 production sets the pace.**
 
 **Walker wake, live A/B in the mound visit (2026-11-06 04:41-04:44, build-sync, 6+6 paired 10 s segments,
 `ab_live_mound_wake_20261106_043853`):** off 26.0 / on 26.0 fps, paired diff -0.03 +/- 0.41 fps, CI [-0.43, 0.38].
 No gain here either: removing the post-PUT resume lag does not shorten the frame, so something else paces the walker.
-Under investigation offline (trace dependency analysis + replay CPU profile of `m2_cap`).
+
+**Dependency analysis of the same trace (2026-11-06, `captures/mound/analysis/resume_lag.md`, 297 frames):**
+the 11.4 ms "resume lag" is real waiting but harmless: 100 % of it overlaps c690 SPU jobs still running (66 % ends on
+the 4 ms idle timeout, 31 % on a game-thread gcm_finish kick). The analyser's "c690 0.9 ms" counts only the time
+before the covering PUT; the jobs for the next slots are already running behind it. **The frame is bounded by c690
+SPU production:** frame = 4.27 + 0.258 x c690 lane-ms (r = 0.95), 165 ms of c690 work per frame on 5 lanes that
+average 4.06 busy. Accounting: 40.03 ms with >= 1 lane busy + 6.72 ms walker tail with no lane busy = 46.75 vs
+46.83 ms measured. Frames are bimodal: 168 light (32.4 ms, lanes saturated) and 129 heavy (65.7 ms, 233 ms of c690
+work, 61 % of wall time). Levers, ranked: c690 job cost (-10 % ~ -4.3 ms/frame); lane occupancy 4.06 -> 5 (upper
+bound ~7.5 ms; why lanes idle not yet shown); walker drain CPU (-20 % ~ -1.3 ms tail only).
+**So the direction differs by scene:** crowded replay view = walker (3a); pitch meter = walker and SPU back to back
+(2); mound visit = SPU c690. A walker-only change cannot show here; an SPU change can.
+
+Replay CPU profile of `m2_cap` (`captures/mound/analysis/drain/drain_profile.md`; offline replay is ~16-17 ms warm,
+cache hits higher than live): top walker hot spots are rsx_vertex_remap_build ~4.9 ms/frame (per-draw remap of
+134k refs through a hash table; cache on index-buffer address+generation est. -3 to -4.5 ms), big-endian f32 vertex
+decode ~2.0 ms (SIMD byte swap est. -1 to -1.9 ms), texture-content and pipeline-key hashing ~3 ms (est. -0.8 to
+-1.4 ms). These shorten the crowded view and the meter, not the mound visit.
 
 ## 3. Crowded scenes (driven by the user)
 
