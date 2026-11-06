@@ -333,3 +333,7 @@ twin-generator `--fast-cfl` / `--rcp-est` (untested live). The table below preda
 
 Dead ends (measured, do not retry): SPU register tweaks, inlining callees, cheaper `frsqest`, exact lazy sign-of-zero,
 WWS native ticket claim alone, RSX_SYNC_FIX, frames-in-flight (design shelved).
+`--rcp-est` approx twins (2026-11-06 16:xx, build-sync, 4 alternating meter launches x 2 arms): 34.44 vs 34.42 real fps,
+neutral, although offline whole c690 jobs ran ~12 % faster. So **the meter is no longer c690-bound** after approx +
+stats off: faster job code does not show there. Twins restored to plain approx. Mound untested (compile-time switch,
+cross-launch mound is unreliable).
