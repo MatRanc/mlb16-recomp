@@ -171,6 +171,23 @@ FAST_RESCHED=64.
 - *C690_STATS off in the mound visit: no gain* (2 launches x 4+4 x 10 s, same keys + FTZ): on 27.8 / 28.9 fps,
   off 27.2 / 27.7 fps; same-config arms differ by ~1 fps. The 13 % lane CPU is not on the frame's path.
 
+**Real frames vs flips (2026-11-06, review finding confirmed live).** The title re-flips the buffer already on
+screen when its flip handler has not fired within two vblanks (~34.1 ms); MangoHud and `[flip]` count those as
+frames. `[flip]` lines now carry `buf=` and `real=` (buffer changes; ps3recomp `exp/realframes` d74346b5) and
+`recomp-work/ab-tools/real_fps.py <log>` scores an A/B on real frames (34 ms timing classifier for older logs; it
+undercounts, prefer `real=`). **All fps numbers above this line are flip rates and overstate real frames.**
+
+| A/B (meter unless noted) | flips/s A -> B | real fps A -> B | real diff |
+|---|---|---|---|
+| `PS3RECOMP_TICK_IN_DRAIN` 0 -> 1, live 2026-11-06 09:48, build-sync = port/stable + counter, play keys, 6+6 x 10 s | 36.98 -> 29.08 | **25.11 -> 29.06** | **+3.95 +/- 0.26** |
+| same, re-scored 2026-11-04 `pacingfloor` (timing classifier, 4 pairs) | 33.4 -> 25.5 | 21.7 -> 24.7 | +3.0 +/- 2.6 |
+| SPU FTZ, mound (timing classifier) | 25.5 -> 27.8 | 17.9 -> 18.9 | +1.0 +/- 2.0 |
+| REMAP_SHIFT (timing classifier) | 39.4 -> 39.8 | 22.3 -> 22.8 | +0.5 +/- 0.6 |
+| walker wake, mound (timing classifier) | 26.2 -> 26.1 | 16.7 -> 17.1 | +0.4 +/- 0.7 |
+
+With TICK_IN_DRAIN=1 every flip is a new buffer (real = flips): the drain fires the flip tick, so the handler is no
+longer late and the title stops sitting out the 34 ms timeout. It was rejected 2026-11-04 on the flip rate (-8 fps).
+
 ## 4. Open conflicts (must be explained, not ignored)
 
 1. **Guest flips vs screen frames (explained 2026-11-05):** in 22:54:50-22:55:10 the game issued **400 flips** but the
@@ -218,6 +235,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | "Walker counters cover only ~5 of 20 s" | orchestrator, summed per-flip averages | flip-weighted they match the trace (35.5 vs 35.3 ms) |
 | "Crowd runs at ~20 fps / 50 ms" | orchestrator, from guest `[flip]` | the screen shows 12-18 fps, 65-91 ms typical (MangoHud) |
 | "SPU codegen is 99 % of the work" | direction set 2026-11-05 evening on the first claim above | on hold until section 5 is measured |
+| "TICK_IN_DRAIN loses 8 fps" | meter A/B 2026-11-04, MangoHud | the lost flips were timeout re-flips; real frames +3.95 fps (above) |
 | "Vertex f32 decode is scalar; SIMD byte swap saves 1-1.9 ms" | drain_profile.md, 2026-11-06 | it is already SSE (`vpshufb`), see 3c follow-ups |
 | "C690_STATS costs fps (13 % of SPU lane CPU)" | perf, 2026-11-06 | mound A/B: no fps change |
 | "Lifted SPU is slow because of register spills" | spu-regs / audits | float-semantics emulation is ~2/3 of hot SPU time; spills ~19 % ([`notes/spu-codegen-v2.md`](notes/spu-codegen-v2.md)) |
