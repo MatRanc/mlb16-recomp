@@ -157,6 +157,20 @@ FAST_RESCHED=64.
 | walker CPU hotspots | NVIDIA driver 25 %, `rsx_vertex_remap_build` 12.6 %, memmove 6.7 %, `eng_pipeline_get` 6.3 % | perf, crowded, earlier 2026-11-05 |
 | depth-as-texture fix | walker 149 -> 82 ms per heavy frame | live, 2026-11-05 |
 
+**Follow-ups 2026-11-06 morning (build-sync, exp/remapkey):**
+- *Vertex byte swap is already SIMD.* The drain profile's "scalar BE f32 decode" was wrong: `rsx_loop_f32_all` compiles
+  to one `vpshufb` per attribute (objdump). ~2 ns per attribute slot, bound by the random source loads; no cheap lever.
+- *Remap memo hit rate, live at the meter* (`PS3RECOMP_REMAP_DIAG=1`, 1 run, 117 reports of 20k draws): the
+  content-keyed memo hits **46 %** of refs; another **21 %** miss only because the pattern is shifted by a constant
+  vertex/base offset; 33 % are new each time. `PS3RECOMP_REMAP_SHIFT=1` keys the memo relative to the first ref:
+  offline m2_cap byte-identical (off / cache / shift), fetch_plan 5.08 / 2.2 / 2.56 ms on an all-hit replay.
+  **Live meter A/B (6+6 paired 10 s, REMAP_CACHE=1 + FTZ + diet/WCB keys): off 39.45 / on 39.84 fps, diff +0.39,
+  95 % CI [-0.58, +1.36]: neutral.** Parked default-off (`exp/remapkey` 0e1ebc92, fork).
+- *SPU lane profile at the meter* (perf, 8 s, 6 `spurs pm` threads): c690 job code 46 %, `PS3RECOMP_C690_STATS`
+  instrumentation **13 %**, indirect-branch lookups 7.6 % (dispatch cache already on), memcpy 3.8 %.
+- *C690_STATS off in the mound visit: no gain* (2 launches x 4+4 x 10 s, same keys + FTZ): on 27.8 / 28.9 fps,
+  off 27.2 / 27.7 fps; same-config arms differ by ~1 fps. The 13 % lane CPU is not on the frame's path.
+
 ## 4. Open conflicts (must be explained, not ignored)
 
 1. **Guest flips vs screen frames (explained 2026-11-05):** in 22:54:50-22:55:10 the game issued **400 flips** but the
@@ -204,6 +218,8 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | "Walker counters cover only ~5 of 20 s" | orchestrator, summed per-flip averages | flip-weighted they match the trace (35.5 vs 35.3 ms) |
 | "Crowd runs at ~20 fps / 50 ms" | orchestrator, from guest `[flip]` | the screen shows 12-18 fps, 65-91 ms typical (MangoHud) |
 | "SPU codegen is 99 % of the work" | direction set 2026-11-05 evening on the first claim above | on hold until section 5 is measured |
+| "Vertex f32 decode is scalar; SIMD byte swap saves 1-1.9 ms" | drain_profile.md, 2026-11-06 | it is already SSE (`vpshufb`), see 3c follow-ups |
+| "C690_STATS costs fps (13 % of SPU lane CPU)" | perf, 2026-11-06 | mound A/B: no fps change |
 | "Lifted SPU is slow because of register spills" | spu-regs / audits | float-semantics emulation is ~2/3 of hot SPU time; spills ~19 % ([`notes/spu-codegen-v2.md`](notes/spu-codegen-v2.md)) |
 
 ## 7. Built and parked (switch, default, measured effect)
@@ -217,6 +233,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | `PS3RECOMP_BINK_CLOSE_KEEP` | 1 | fixes the green box (shipped) |
 | `PS3RECOMP_C690_STATS` | 1 in play_windowed | ~5 % of SPU-thread CPU; set 0 for A/B |
 | `PS3RECOMP_CROWD_FIX` | 0 | crowds: split a BEGIN/END at each draw-type/vertex-state change (2,170-batch group -> 268 runs in the offline crowded replay); non-crowd captures byte-identical, key off byte-identical ([`notes/crowd.md`](notes/crowd.md)); **user-verified live 2026-11-06 00:2x: crowd looks right**, +2.6 ms walker offline (+267 draws) |
+| `PS3RECOMP_REMAP_SHIFT` (+ `REMAP_CACHE`) | 0 | remap memo keyed relative to the first ref; byte-identical offline; live meter +0.39 fps, CI [-0.58, +1.36] |
 | `PS3RECOMP_WIPE_FIX` | 0 | tiled logo wipe: the wipe draw samples a 512x256 Morton-format A8R8G8B8 render target whose guest bytes are our linear readback; probe both layouts on 8-texel neighbours and read the bytes as stored. Wipe replay checkerboard -> correct card; crowd and meter captures byte-identical on and off ([`notes/tiled-wipe.md`](notes/tiled-wipe.md)) |
 
 Dead ends (measured, do not retry): SPU register tweaks, inlining callees, cheaper `frsqest`, exact lazy sign-of-zero,
