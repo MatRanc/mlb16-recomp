@@ -104,6 +104,12 @@ checking if any geometry-only regression remains.
 
 **PLAN (2026-11-05 roundtable, docs/roundtable-2026-11-05.md):** 1 live walker profile, 2 native WWS head/tail, 3 walker diet (barriers/render passes/dirty bits/shadow const), 4 SPU register pressure + PGO, 5 ring/record thread/native runner last.
 - Item 2 Stage A (2026-11-05, exp/wws-native): contract + native ticket claim only (1.12-1.21x on ~160 ns, ~0.02 lane-ms/frame); the head staging/dispatch and job submit/exit tail are still lifted, so the -50 % gate is not met and Stage B must not start. Key `PS3RECOMP_WWS_NATIVE_PM` default 0. [`wws-native-pm.md`](wws-native-pm.md).
+- Item 4 / SPU codegen v4 (2026-11-05, exp/spu-v4): direct SPU wait on the PPU main thread is **0 ms/frame** at
+  the pitch meter (`PS3RECOMP_SPU_CRIT`: run 13.0 / RSX ref 15.2 / SPU 0.0 / other 0.8 of a 29.0 ms frame); FTZ
+  reproduces live at 204.7 -> 184.8 us/job (1.108x) with flat fps. Exact lazy -0 canonicalisation is neutral
+  (0.94-1.04x): every live result is stored/written back, and dead ones are already DCE'd. Stop trying to reach
+  the unsafe 1.54x exactly; the remaining SPU lever is the producer wait or a register-mapped backend.
+  [`spu-codegen-v2.md`](spu-codegen-v2.md).
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
 - DONE 2026-11-04: 30-fps-cap investigation (docs/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.

@@ -1,5 +1,23 @@
 # Progress log
 
+## 2026-11-05: SPU v4 -- SPU is not on main's critical path; lazy -0 is an exact dead end (exp/spu-v4)
+
+- New opt-in counter `PS3RECOMP_SPU_CRIT` (default 0) splits the PPU main thread's guest frame into run / RSX ref /
+  flip / SPU / other. At the pitch meter (one launch, FTZ off vs on): **29.04 ms = 13.03 run + 15.22 RSX + 0.00 SPU +
+  0.00 flip + 0.79 other** (FTZ off) and 29.73 = 13.86 + 15.05 + 0.00 + 0.00 + 0.82 (FTZ on). The guest enters the ref
+  wait twice per frame, so the raw 2 s window doubles. The only main-thread SPU-fed wait (`Mesh_WaitPrevJobList`,
+  `0x0006ed24`, Ghidra) is not hit at the meter; c690 reaches main only through the walker's ~2.7 ms producer wait.
+- The v3 FTZ twin reproduces live: c690 job **204.7 -> 184.8 us/job (1.108x)**, lane time **3095 -> 2868 ms/s
+  (-7.3 %)**; fps flat (35.60 vs 35.74, paired -0.14 +/- 3.91, CI covers 0).
+- Phase B item 1 (lazy sign-of-zero canonicalisation) is implemented in `tools/spu_ftz_twin.py --lazy-zero`
+  (default off): exact on 20/20 replay cases but **0.94-1.04x**, i.e. neutral. Every live float result is observed at
+  an LS store or GPR write-back (the sign is architectural); dead results are already DCE'd by clang, so the unsafe
+  1.54x bound is not reachable exactly. Item 2 (preferred-slot scalarisation) has the same write-back/lane exactness
+  wall and was not written. The shipped twin is byte-identical to v3.
+- Gates: 20/20 replay cases bit-identical, WWS PM claim 5/5, `run_tests.sh` 11/11, local-regs/ib-known/context-ABI
+  pass, video fixtures 34/34 (known `test_gcm_tick_in_drain` flake once in nine runs), build-sync 0 PPU recompiles,
+  build-play untouched. Details: [`v4 in spu-codegen-v2.md`](spu-codegen-v2.md).
+
 ## 2026-11-05: SPU lifter register pressure; the 30 % spill target is not reachable this way (exp/spu-regs)
 
 - Roundtable item 4. `--local-regs` already does the per-function write/read bookkeeping (dirty-only write-back,
