@@ -106,6 +106,11 @@ Read: the walker is the chain main waits on (main blocked 31 of 47 ms), and the 
 (`PS3RECOMP_WALKER_WAKE`, docs/notes/walker-wake.md) only moved the wait onto the SPU producer; here the SPU
 producer costs 0.9 ms, so the wake fix is retested live in this scene (below). SPU stays off the path.
 
+**Walker wake, live A/B in the mound visit (2026-11-06 04:41-04:44, build-sync, 6+6 paired 10 s segments,
+`ab_live_mound_wake_20261106_043853`):** off 26.0 / on 26.0 fps, paired diff -0.03 +/- 0.41 fps, CI [-0.43, 0.38].
+No gain here either: removing the post-PUT resume lag does not shorten the frame, so something else paces the walker.
+Under investigation offline (trace dependency analysis + replay CPU profile of `m2_cap`).
+
 ## 3. Crowded scenes (driven by the user)
 
 | fact | value | source |
