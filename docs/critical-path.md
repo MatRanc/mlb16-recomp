@@ -85,6 +85,14 @@ main running to put 6.34 + MainMultiTask semaphore 1.34 + **walker drain 20.55**
 exposes SPU mesh production behind it, which is why REMAP_FLAT (-2.8 ms walker) gave only +0.5 fps and the memo
 (SPU) alone gave 0: drain and c690 production have to shrink together.
 
+**Stats counter and SPU headers (2026-11-06 14:00-14:45, meter, approx + wake + REMAP_FLAT, 4 alternating launches x 2 x
+15 s each, real fps):** with `PS3RECOMP_C690_STATS=1` the play-build headers give 32.2-32.5 and the current
+ps3recomp headers 29.9-30.6; with stats **off**, both give **34.5-35.0**. So the diagnostic stats counter costs ~2.3
+real fps (much more with the current headers, whose `SPU_DIRECT` calls `c690_stats_on_direct`); it is now default 0
+in play_windowed.sh and ab_live.sh. The header difference itself is neutral live (offline -24 % on 0xFDA0 does not
+show), so the lifted code keeps including the `recomp-work/runtime` (ps3recomp-native) copy;
+`ab-tools/spu_include_fix.sh apply|revert` switches it.
+
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
 
 Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
@@ -300,7 +308,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | "SPU codegen is 99 % of the work" | direction set 2026-11-05 evening on the first claim above | on hold until section 5 is measured |
 | "TICK_IN_DRAIN loses 8 fps" | meter A/B 2026-11-04, MangoHud | the lost flips were timeout re-flips; real frames +3.95 fps (above) |
 | "Vertex f32 decode is scalar; SIMD byte swap saves 1-1.9 ms" | drain_profile.md, 2026-11-06 | it is already SSE (`vpshufb`), see 3c follow-ups |
-| "C690_STATS costs fps (13 % of SPU lane CPU)" | perf, 2026-11-06 | mound A/B: no fps change |
+| "C690_STATS costs no fps" | mound A/B, 2 launches, 2026-11-06 morning | weak test (mound varies per launch); at the meter it costs ~2.3 real fps (4+4 launches) |
 | "Lifted SPU is slow because of register spills" | spu-regs / audits | float-semantics emulation is ~2/3 of hot SPU time; spills ~19 % ([`notes/spu-codegen-v2.md`](notes/spu-codegen-v2.md)) |
 
 ## 7. Built and parked (switch, default, measured effect)
