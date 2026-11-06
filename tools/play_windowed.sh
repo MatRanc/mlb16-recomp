@@ -24,10 +24,11 @@
 
 set -o pipefail
 
-W=/home/m/Documents/mlb16-online/recomp-work
-ELF=/home/m/Documents/mlb16-online/EBOOT.elf
-BUILD=${BUILD:-build-play}
-EXE="$W/$BUILD/MyGameRecomp"
+S=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+. "$S/ab/common.sh"
+BUILD=$MLB16_BUILD
+ELF=$MLB16_EBOOT
+EXE="$W/$BUILD/$MLB16_BIN"
 DUMP_EVERY=${PLAY_DUMP_EVERY:-30}
 
 HUD=1
@@ -51,6 +52,16 @@ fi
 if [ ! -e "$ELF" ]; then
     echo "play_windowed.sh: $ELF not found" >&2
     exit 1
+fi
+# Guard: the lifted SPU modules include a second spu_context.h through
+# recomp-work/runtime. A field inserted in the middle there silently breaks the
+# c690 jobs a couple of minutes into the boot (see docs/notes/freeze-20261103.md).
+# SPU_ABI_CHECK=0 overrides.
+if [ -x "$S/check_spu_context_abi.sh" ]; then
+    if ! BUILD_CACHE="$W/$BUILD/CMakeCache.txt" "$S/check_spu_context_abi.sh"; then
+        echo "play_windowed.sh: spu_context ABI mismatch; refusing to start (SPU_ABI_CHECK=0 to override)" >&2
+        exit 1
+    fi
 fi
 
 TS=$(date +%Y%m%d_%H%M%S)

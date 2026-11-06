@@ -67,10 +67,12 @@ once in a crowd, nothing else changed:
 
 ```
 cd ~/Documents/mlb16-online/recomp-work
-BUILD=build-sync PS3RECOMP_SPU_CRIT=1 PS3RECOMP_C690_STATS=1 \
+BUILD=build-sync PS3RECOMP_TIMELINE=0 PS3RECOMP_SPU_CRIT=1 PS3RECOMP_C690_STATS=1 \
 PS3RECOMP_TRACE=$PWD/captures/crowd_trace.json PS3RECOMP_TRACE_TRIGGER=$PWD/captures/crowd_go \
-PS3RECOMP_TRACE_SECS=14 PS3RECOMP_TRACE_RING_MB=16 PS3RECOMP_TRACE_FLUSH_MB=8 ./play_windowed.sh
+PS3RECOMP_TRACE_SECS=14 PS3RECOMP_TRACE_RING_MB=32 PS3RECOMP_TRACE_FLUSH_MB=8 ./play_windowed.sh
 # in a second terminal, once you are in the crowd:  touch ~/Documents/mlb16-online/recomp-work/captures/crowd_go
+# PS3RECOMP_TIMELINE=0 matters: play_windowed.sh otherwise turns on the hitch recorder, which takes precedence over
+# PS3RECOMP_TRACE and keeps only windows around >= 250 ms hitches (2026-11-05 23:14 run lost this way).
 ```
 
 Analysis (offline): `tools/analyse_ppu_path.py` and `tools/analyse_walker_wait.py` on `captures/crowd_trace.json`,
