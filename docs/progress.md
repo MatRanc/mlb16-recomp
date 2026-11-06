@@ -1,5 +1,22 @@
 # Progress log
 
+## 2026-11-06: tiled logo wipe -- still present, short; wipe frame not captured (exp/wipe)
+
+- Phase 0 (one pitch-meter route, `build-sync`): the batter intro still starts with the tiled/mosaic
+  transition. Dense frame dumps show it as an expanding rectangle over the stadium flyover from
+  `f_186` (00:37:42.12) to `f_196` (00:37:44.85), then the clean batter close-up at `f_198`
+  (00:37:45.02), i.e. ~2.7 s, not a persistent overlay. The 2026-11-02 sample is the same transition
+  caught mid-animation.
+- Captured the raw transition FIFO (`captures/wipe/wipe1.bin`, 723 MB, 1,679 flip frames) and 427
+  dense frame PPMs. The one-shot walker capture fired on the "DEFENSIVE LINEUP" banner (orange-bar
+  detector false positive), so there is no `.state`/`.mem` for the wipe frame and no replayed
+  before/after image. Multi-frame synthetic replay parks at the first inter-frame sync; a state
+  snapshot alone lacks the engine's pipelines/surfaces.
+- Root cause not proven. The existing candidate in [`notes/rsx-sync.md`](notes/rsx-sync.md) (a tiled
+  surface written between bind and sample) fits the frame sequence and needs the live wipe capture.
+  No key added; no critical-path section 7 row. Two launches (the cap). Details:
+  [`notes/tiled-wipe.md`](notes/tiled-wipe.md).
+
 ## 2026-11-06: crowd draws -- sub-draw vertex state (exp/crowd, PS3RECOMP_CROWD_FIX)
 
 - The crowded replay capture holds one `SET_BEGIN_END(QUADS)` group with 2,170 draw batches (392 arrays,
