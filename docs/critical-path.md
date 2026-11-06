@@ -67,6 +67,13 @@ mode on), memmove 7.7 % (~1.6, callers unknown), `sink_end_work` self 7.2 % (~1.
 (`rsx_fp_program_size` + `rsx_vp_analyze_inputs` + `rsx_fp_structural_hash` + `eng_vp_hash`) ~4.9 % (~1.0),
 method dispatch 4.2 % (~0.9), `write_topology_indices` 2.4 % (~0.5). Offline replay of `meter_cap` does not match live
 (other 2.5 vs 5.06, draw 9.0 vs 4.77): use live profiles for walker attribution.
+**Same, with call stacks (2026-11-06 17:20, `captures/walker_dwarf.data`, perf dwarf, 6 s, 3,943 samples):** memmove 8.4 %
+is mostly `vk_eng_draw_from` (6.7 %): the raw vertex upload `memcpy(raw_vb, gpu->raw_data, raw_bytes)` ~63 % of it
+(~0.7 ms), VS constants ~0.4 ms, indices ~0.1 ms. `eng_pipeline_get` 6.6 % self (~1.35 ms): `PIPE_MEMO`'s key
+(`eng_pipe_fingerprint`) FNV-hashes the whole VP microcode and FP bytes on every draw before the memo lookup; with
+`rsx_fp_program_size` (from `eng_guest_programs`), `rsx_vp_analyze_inputs` and the structural hash, per-draw program
+walking is ~2 ms/frame. Exact cut: keep the last programs' bytes and hash, memcmp to reuse (memcmp is far cheaper than a
+byte-wise FNV). `rsx_vertex_remap_build` 13.7 % (~2.8 ms) remains the largest single item.
 Walker MT (M3, `PS3RECOMP_WALKER_MT=1` + `WALKER_MT_WORKERS=N`, live key, in build-depth, exact) moves remap/plan/convert
 to workers; offline -12 % at N=3 (notes/walker-mt-m3.md). **Live A/B 2026-11-06 16:48 (build-depth, play settings,
 paired, 6 pairs per launch): W=3 -9.00 +/- 1.45 real fps (31.3 -> 22.3), W=2 -9.11 +/- 0.78.** No resyncs or hangs.
