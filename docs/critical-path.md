@@ -33,6 +33,31 @@ back on the path, so speeding up *only one* of them shows ~0 fps. That is the ro
 "SPU won't help" back-and-forth: both statements were measured, and both are true *for one change alone*. The meter
 is a poor scene for judging single changes.
 
+## 2a. 60 fps budget, pitch meter, play settings (2026-11-06 16:14, build-depth, `captures/meter_trace4.json`)
+
+One 14 s trace, play_windowed.sh defaults (approx, wake, flat, stats off) plus ab_live's usual diagnostics; main = tid 7.
+Traced 30.41 ms (32.9 fps; untraced ~34.7). Chain sums to the frame for 459/459 frames
+(`captures/meter_analysis4/chain/`).
+
+| on the chain | ms/frame | for 60 fps (16.7) |
+|---|---:|---|
+| walker drain (our RSX -> Vulkan CPU work) | 19.96 | **alone over budget**; must roughly halve |
+| main running before the put (PPU game code) | 7.46 | ~1:1 to the frame |
+| main on semaphore id 6 = MainMultiTask workers' work (wake lag 0.04 ms) | 1.20 | worker PPU code |
+| walker wake -> drain (present/flip work after put) | 1.00 | p50 0.06, p90 3.81 |
+| walker resume lag after c690 PUT | 0.40 | was 3.85; WALKER_WAKE fixed it |
+| flip + gaps + c690 wait + misc | 0.39 | |
+
+Hand-offs are no longer a lever: main's semaphore wake lag 0.04 ms, walker kick wake lag 0.02 ms, only 24 of 1195
+walker idle waits hit the 4 ms timeout. RPCS3 behaviour reading is not needed for this.
+Main runs 20.8 ms/frame in total, 12.35 of it after the put, hidden under the drain.
+Replays (levers.txt, baseline error 0.02 ms): drain x0.9 -1.82, x0.8 -3.62, x0.5 -9.02 ms; main 2 / 4 ms less before
+the put -1.92 / -3.80. **With the resume lag gone, drain cuts now reach the frame ~1:1** (the 2026-11-05 REMAP_FLAT
+result, 2.8 ms walker -> 0.4 ms frame, was absorbed by the lag that no longer exists).
+To reach 16.7 ms traced (-13.7): drain x0.5 (-9.0) plus main ~-4.5 before the put, or overlap main's pre-put work with
+the previous drain (frames in flight, shelved) so the bound becomes max(main 20.8, drain 20.0), both still over 16.7.
+SPU c690 is not on the chain (0.12 ms) at this frame time; at 16.7 ms lanes would need ~30 % less work.
+
 ## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
 
 `captures/meter_trace.json`; `analyse_ppu_path.py --main-tid 8` (main is unnamed in a triggered trace) and
