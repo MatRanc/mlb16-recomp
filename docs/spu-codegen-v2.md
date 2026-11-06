@@ -267,7 +267,7 @@ Lifted-old vs lifted-twin, bit-identical in all 256 KiB of LS and all 128 GPRs
 | 0xFDA0 stage corpus (`corpus_edge1_20261103_012604/stage`) | 4 pairs | identical, and equal to the captured output |
 | `fncap21` captures (0x0A730, 0x0B830, 0x0BED0, 0x0C018, 0x10F78, 0x13140, 0x131A0, 0x13518, 0x13520) | 9 | identical |
 | DXT job entries (`dxt_capA`/`dxt_capB`, entry 0x4030) | 6 | identical |
-| WWS PM claim cases (base vs twin module) | 5 | all PASS, native/lifted agreement unchanged |
+| WWS PM claim cases (run on the twin module) | 5 | all PASS; the PM is float-light, this is the native-claim differential, not a full old-vs-twin state diff |
 | 0x6D68 (new entry capture, `captures/fncap_v3`) | 1 | identical |
 | `runtime/spu/tests/run_tests.sh` | 11 | 11/11 |
 | `tools/test_spu_local_regs.py`, `tools/test_spu_ib_known_targets.py` | | pass |
@@ -276,6 +276,9 @@ Lifted-old vs lifted-twin, bit-identical in all 256 KiB of LS and all 128 GPRs
 
 The differential harness is committed: `tools/spu_ftz_diff.py` +
 `tools/spu_ftz_diff_main.c` (one executable per arm; the twin arm sets MXCSR).
+The 5 workload images and the 6 jobmods with no real entry corpus are the same
+mechanical twin (same instruction stream, helper selection only) and are
+compile/registration-checked, not dynamically differential-tested.
 
 ## Live A/B at the pitch meter (one launch)
 
