@@ -55,6 +55,17 @@ code speed and 5 c690 lanes the meter cannot pass ~31.8 ms (~31.4 fps) whatever 
 protocol, not a runtime limit (`notes/c690-dispatch-cuts.md`), (3) main 20.9 ms running (PPU code)
 and main/walker serialization (each waits on the other ~7-15 ms).
 
+**Meter trace with approximate float on (2026-11-06 11:42, build-sync, `captures/meter_trace2.json`, main tid 7):**
+frame 34.26 ms (29.2 fps) = main running 20.61 + blocked 13.65; walker drain 22.26 + put_wait 12.04 (caught up with
+PPU 7.79, resume lag 3.91, c690 0.26). c690 lane time 126.9 -> 116.9 lane-ms/frame (-8 %); lanes 0-4 still 87-90 %
+busy, of which "other" ~19 % is mostly the PM between jobs, not other workloads.
+
+**SPU lane CPU with approx on** (perf 10 s, 6 `spurs pm` threads, C690_STATS=0; call graph 5 s): c690 job code 50 %,
+runtime overhead ~21 %. Of that, ~8.3 % is the WWS PM between jobs: memmove 3.3 % (two per-job DMA GETs at PM
+0x1F6C / 0x2030 via mfc_do_transfer_fast), `spu_indirect_branch_slow` 2.25 % (PM 0x0A60 / 0x2CD0), lockline 1.4 %,
+lookup 0.7 %, drain_call 0.6 %. Inside the c690 jobs, dispatch is ~2.3 % (lookup 1.45 %, drain 0.8 %), so bigger
+lifted regions ("block size") can remove at most ~2.3 %; the per-job PM switch is the larger lever.
+
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
 
 Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
