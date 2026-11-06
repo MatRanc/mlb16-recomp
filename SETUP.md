@@ -76,8 +76,10 @@ The game needs a writable `/dev_hdd0` beside the read-only disc. `PS3_GAME`
 points at the mounted disc; `game/BCUS01089` is the installed v01.10 update; the
 game writes its data install to `game/BCUS01089_R` on first boot.
 
+From the `mlb16-recomp` checkout (`~/Documents/mlb16-online/mlb16-recomp`):
+
 ```sh
-WORK=$PWD/recomp-work
+WORK=$(cd .. && pwd)/recomp-work
 mkdir -p "$WORK/vfs/game"
 ln -s "$MLB16_ISO_MOUNT" "$WORK/vfs/PS3_GAME"
 cp -a "/path/to/rpcs3/dev_hdd0/game/BCUS01089" "$WORK/vfs/game/"
