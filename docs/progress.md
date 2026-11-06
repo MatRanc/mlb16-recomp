@@ -1,5 +1,25 @@
 # Progress log
 
+## 2026-11-06: tiled logo wipe -- root cause and PS3RECOMP_WIPE_FIX (exp/wipe)
+
+- Offline only (no game launch): replayed the user's `captures/wipe2_cap`
+  walker capture. The wipe is one full-screen blended draw (`pass 022`) into
+  `0x01110000` sampling a single 512x256 A8R8G8B8 texture at local
+  `0x0B836000` (`SET_TEXTURE_FORMAT=0x00018529`, no LN bit -> Morton).
+- Root cause: the captured guest bytes at that address are the **linear** image
+  of the Mets/Royals card (the game renders it as a colour target there; FIFO
+  methods `0x0210/0x0214/0x0218` name the address, clip 512x256, inside
+  `SetTile(index=6, offset=0xB610000, size=0x800000)`). Our readback
+  (`eng_surface_to_guest`) wrote it row by row, so sampling the Morton format
+  turns it into the reported checkerboard.
+- Fix: `PS3RECOMP_WIPE_FIX` (live key, default 0) probes both decodes on
+  8-texel-spaced neighbours for 32-bit pow2 A8R8G8B8 2-D textures whose format
+  says Morton and reads the bytes as stored. Wipe replay: checkerboard ->
+  correct card (`captures/wipe/w2/replay.png` vs `wipefix_1.png`); key off
+  byte-identical. Crowd and `meter_frame` null gate and Vulkan dump
+  byte-identical on and off; video fixtures 33/34 (known
+  `test_gcm_tick_in_drain` flake). Details: [`notes/tiled-wipe.md`](notes/tiled-wipe.md).
+
 ## 2026-11-06: tiled logo wipe -- still present, short; wipe frame not captured (exp/wipe)
 
 - Phase 0 (one pitch-meter route, `build-sync`): the batter intro still starts with the tiled/mosaic
