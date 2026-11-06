@@ -68,7 +68,11 @@ mode on), memmove 7.7 % (~1.6, callers unknown), `sink_end_work` self 7.2 % (~1.
 method dispatch 4.2 % (~0.9), `write_topology_indices` 2.4 % (~0.5). Offline replay of `meter_cap` does not match live
 (other 2.5 vs 5.06, draw 9.0 vs 4.77): use live profiles for walker attribution.
 Walker MT (M3, `PS3RECOMP_WALKER_MT=1` + `WALKER_MT_WORKERS=N`, live key, in build-depth, exact) moves remap/plan/convert
-to workers; offline -12 % at N=3 (notes/walker-mt-m3.md), never A/B'd live.
+to workers; offline -12 % at N=3 (notes/walker-mt-m3.md). **Live A/B 2026-11-06 16:48 (build-depth, play settings,
+paired, 6 pairs per launch): W=3 -9.00 +/- 1.45 real fps (31.3 -> 22.3), W=2 -9.11 +/- 0.78.** No resyncs or hangs.
+Walker phases A -> B (W=3): fetch 7.3 -> 2.8 (the work does leave the state thread) but tex 1.7 -> 42.7 ms: every
+texture create/upload/snapshot drains the worker pipeline, as the M3 note predicted. Dead as is; the prerequisite is
+texture resolution that does not sync the workers (M4).
 
 ## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
 
