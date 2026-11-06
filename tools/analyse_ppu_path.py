@@ -8,7 +8,7 @@ trace and reports, per inter-flip frame:
 * frame time (flip_request to flip_request);
 * ppu main: time blocked, split by wait site (the ref-cond wait in
   FUN_000655cc is the PPU waiting for the walker; the lwcond EAs are resolved
-  from the guest code, see docs/ppu-critical-path.md);
+  from the guest code, see docs/notes/ppu-critical-path.md);
 * rsx walker: drain (its own CPU) and put_wait, split into slot-filled-by-SPU
   (c690 production, before the PUT) and walker resume lag (after the PUT), and
   the no-SPU-PUT classes (park patched by the PPU vs caught up with put);

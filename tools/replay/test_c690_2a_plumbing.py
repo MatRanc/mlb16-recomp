@@ -10,7 +10,7 @@ through replay_rsx_engine, comparing the output hash for the SPU-produced and
 GPU-produced bytes.
 
 This is research tooling: the capture and the lifted module are game data and
-are never committed.  See docs/edge-gpu-plumbing.md.
+are never committed.  See docs/notes/edge-gpu-plumbing.md.
 
 Usage:
   tools/replay/test_c690_2a_plumbing.py [--capture DIR] [--spool DIR]

@@ -14,7 +14,7 @@ Usage:
 
 With PS3RECOMP_TIMELINE_HITCH_US=40000, the 40-80 ms frames of a play
 session are captured too.  --bins prints the frame-time histogram used in
-docs/long-frames.md (<36, 36-40, 40-50, 50-80, 80-250, >250 ms) and
+docs/notes/long-frames.md (<36, 36-40, 40-50, 50-80, 80-250, >250 ms) and
 --classify labels each hitch:
   MORE WORK          c690 job count >= 1.15x the file median and c690 work
                      covers at least half the frame;
@@ -23,7 +23,7 @@ docs/long-frames.md (<36, 36-40, 40-50, 50-80, 80-250, >250 ms) and
   SAME WORK SLOWER   c690 work covers at least half the frame but the job
                      count is not above the median;
   OTHER:<cause>      the dominant work is not c690 (named).
-The rules are the ones used for the meter timelines in docs/long-frames.md;
+The rules are the ones used for the meter timelines in docs/notes/long-frames.md;
 a 40 ms capture has no fast-frame baseline, so inspect the per-hitch rows.
 
 The timestamps are CLOCK_MONOTONIC ns; the PSTL header carries the recording
