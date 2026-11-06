@@ -337,3 +337,30 @@ notice:
 > contributors, MIT.
 
 No RPCS3 or other GPL emulator source was read or cited.
+
+## 2026-11-06: live retest on port/stable, and why MT does not work (stopped)
+
+Build-depth (port/stable c1048ac9, includes the M4 and repair commits), play settings, pitch meter, paired
+within-launch A/B of `PS3RECOMP_WALKER_MT` 0/1 (worker count is fixed at init, so one launch per count).
+
+| run | MT off | MT on | real fps B-A |
+|---|---:|---:|---:|
+| W=3, 6 pairs | 31.30 | 22.30 | -9.00 +/- 1.45 |
+| W=2, 6 pairs | 32.53 | 23.42 | -9.11 +/- 0.78 |
+| W=3, two worst barriers skipped (unsafe ceiling), 3 pairs | 32.41 | 26.57 | -5.84 +/- 2.35 |
+
+No hangs or FIFO resyncs. Walker phases off -> on (W=3): fetch 7.3 -> 2.8 ms (the work does leave the state thread),
+tex 1.7 -> 42.7 ms.
+
+**Where the 42.7 ms goes** (`PS3RECOMP_WALKER_MT_SYNC_PROF=1`, branch `exp/mt-sync-prof`): ~520 ms/s of state-thread
+wait in `eng_mt_sync`, 90 % at two full barriers added after the Nov 4 repair: `eng_zdepth_snapshot` (depth-as-texture
+copy, ~220 calls/frame) and `eng_cube_collect` (cube-RT assembly, ~220/frame). Both sync on entry, before their early
+outs. That is why Nov 4's 7.85 ms became 42.7 ms.
+
+**Why removing them does not fix it:** with both skipped (`PS3RECOMP_WALKER_MT_SYNC_SKIP=<lines>`, diagnostic, not
+exact) MT still loses 5.8 fps and ~380 ms/s of wait remains, now at the next barriers (mostly the state-thread packet
+path for immediate/inline draws, ~1,000/s). The workers do not keep up with the state thread that feeds them, so
+whichever barrier comes next pays their whole backlog. Removing barriers only relocates the wait (the same shape as the
+2026-11-02 walker-wake test and the M3/M4/repair gates). Making MT pay would need a different work split (workers
+faster than the producer, or no full barriers at all: ordered upload/copy records in the worker streams), not barrier
+removal. MT stays default off; this is the fourth attempt and it is stopped.
