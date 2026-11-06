@@ -70,6 +70,25 @@ The walker-diet trio carries most of the gain; WCB adds ~3 fps on top; REMAP add
 WCB_PREFETCH/STREAM) are default-on in play_windowed.sh (mlb16-recomp d0afeac) on build-depth; the user played with
 them and saw no visual regression. Not yet re-checked with them on: team select (green box).
 
+## 3c. Mound visit, renderer keys on (2026-11-06 02:15, build-depth, automated route)
+
+Route (Claude-driven, user-authorized): ab_live.sh METER=0 parks on the first-pitch screen; then START, RIGHT
+(Bullpen panel), X, DOWN (Mound Visit), X. Env = play_windowed's five renderer keys on, PS3RECOMP_TIMELINE=0.
+Log: recomp-work/ab_live_mound_20261106_021158.{log,csv}.
+
+| Measure (02:15:12 onward, ~40 s, 1 run) | value |
+|---|---|
+| MangoHud screen frames | 29.8 fps; median 35.4 ms, p90 49.8, p99 60.5, max 108 ms; 16 % of time in frames > 50 ms |
+| walker per guest flip (flip-weighted, 369 reports / 1,086 flips) | busy 25.0 ms + waiting on main 18.3 ms |
+| inside the busy 25.0 | engine 20.9 (fetch 6.8, draw 4.8, other 4.2, pipe 2.9, tex 1.9, bind 0.3) + parse 4.2 |
+| draws per flip | 796 |
+
+Read: the user's ~80 ms mound-visit frames (before the keys) are ~35 ms median now. Unlike the crowded replay view
+(3a), the walker here waits on the PPU main thread for 42 % of each flip, so main is on the path too; a trace is
+needed to split it. Texture work, the crowd view's top row, is small here; vertex fetch is the top engine row.
+The one-shot walker capture taken at 02:15:11 recorded only a frame tail (65 words): capture arms at the next drain
+after a flip, and one drain can cover a whole frame when the walker is behind. Needs a fix before the next capture.
+
 ## 3. Crowded scenes (driven by the user)
 
 | fact | value | source |
