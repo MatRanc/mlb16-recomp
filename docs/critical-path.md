@@ -51,7 +51,8 @@ is a poor scene for judging single changes.
 Reading: main, walker and the SPU lanes are all near the frame. The c690 lanes are 89 % busy, so with today's SPU
 code speed and 5 c690 lanes the meter cannot pass ~31.8 ms (~31.4 fps) whatever the PPU or walker do: at most
 ~3.5 fps is left outside the SPU. Levers: (1) lifted SPU code speed (c690 bodies; FTZ was the first step),
-(2) the sixth lane, idle 67 %, which the guest's MAXCONT 5 keeps c690 off, (3) main 20.9 ms running (PPU code)
+(2) ~~the sixth lane~~ already tried: `SPURS_LANE6=1` wedged the guest in ~10 s; five mesh instances are a guest
+protocol, not a runtime limit (`notes/c690-dispatch-cuts.md`), (3) main 20.9 ms running (PPU code)
 and main/walker serialization (each waits on the other ~7-15 ms).
 
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
