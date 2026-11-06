@@ -66,8 +66,9 @@ each window dropped). Visuals: no difference seen by the user at any switch poin
 | all seven (6) | **30.5-33.9** | 15-21 ms |
 
 The walker-diet trio carries most of the gain; WCB adds ~3 fps on top; REMAP adds nothing here. p90 frames stay
-~60 ms with everything on: the remaining spikes are the next target. Pending before default-on: menus, team select
-(green box), pitch meter, gameplay with diet + WCB on.
+~60 ms with everything on: the remaining spikes are the next target. Since 2026-11-05 the five keys (diet trio +
+WCB_PREFETCH/STREAM) are default-on in play_windowed.sh (mlb16-recomp d0afeac) on build-depth; the user played with
+them and saw no visual regression. Not yet re-checked with them on: team select (green box).
 
 ## 3. Crowded scenes (driven by the user)
 
