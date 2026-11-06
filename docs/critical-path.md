@@ -135,6 +135,15 @@ all 6 pairs. First live gain from an SPU change, as predicted by the SPU-bound r
 corpus (docs/notes/spu-codegen-v2.md, 4/4 pairs, LS+GPR diff 0). Not in build-depth (play build): it needs the
 port/stable merge.
 
+**Why the SPU lanes idle (same trace, `captures/mound/analysis/lanes/lane_idle.md`):** 36.6 lane-ms idle per frame
+(4.12 of 5 lanes busy). 79 % (28.9 lane-ms) is the fixed per-job head/tail of the lifted policy module, ~35 us x
+~820 jobs/frame, the same cost c690-lane-gaps.md found at the meter. Starvation, wake latency, end-of-frame tail and
+ramp-up together are 6 %; dependency waits 7.7 %. No lane/SMT contention signal (inter-job gaps get shorter with
+more busy lanes); pinning was neutral before. Heavy frames idle more only because they run 2x the jobs. So both
+SPU levers are the speed of lifted SPU code: c690 job bodies (FTZ +2.5 fps live) and the PM's per-job code
+(halving it est. -2.9 ms/frame). Already tried and neutral: SPURS_READY_WAKE; already on: native dispatch +
+FAST_RESCHED=64.
+
 ## 3. Crowded scenes (driven by the user)
 
 | fact | value | source |
