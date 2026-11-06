@@ -129,6 +129,12 @@ cache hits higher than live): top walker hot spots are rsx_vertex_remap_build ~4
 decode ~2.0 ms (SIMD byte swap est. -1 to -1.9 ms), texture-content and pipeline-key hashing ~3 ms (est. -0.8 to
 -1.4 ms). These shorten the crowded view and the meter, not the mound visit.
 
+**SPU FTZ, live A/B in the mound visit (2026-11-06 04:58-05:01, build-sync, 6+6 paired 10 s segments,
+`ab_live_mound_ftz_*`):** off 25.4 / on **27.8 fps**, paired diff +2.47 +/- 1.50 fps, 95 % CI [+0.96, +3.97]; on won
+all 6 pairs. First live gain from an SPU change, as predicted by the SPU-bound reading above. FTZ is exact on the
+corpus (docs/notes/spu-codegen-v2.md, 4/4 pairs, LS+GPR diff 0). Not in build-depth (play build): it needs the
+port/stable merge.
+
 ## 3. Crowded scenes (driven by the user)
 
 | fact | value | source |
@@ -195,7 +201,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 
 | switch | default | effect |
 |---|---|---|
-| `PS3RECOMP_SPU_FTZ` | 0 | c690 job 1.11x, lane time -7 %, fps flat at meter; bit-exact |
+| `PS3RECOMP_SPU_FTZ` | 0 | c690 job 1.11x, lane time -7 %, fps flat at meter; **mound visit +2.5 fps (25.4 -> 27.8, CI +1.0..+4.0)**; bit-exact |
 | `PS3RECOMP_RSX_WCB_PREFETCH` + `STREAM` | 0 | crowd one-shot waits 23 -> 15 ms (rough) |
 | `PS3RECOMP_VK_PASS_KEEP` / `VK_VTX_PRE` / `VK_DRAW_STATE` | 0 | offline walker 43-46 -> 38 ms, byte-identical frame |
 | `PS3RECOMP_REMAP_DIRECT` + `REMAP_FAST` | 0 | offline walker -4 ms |
