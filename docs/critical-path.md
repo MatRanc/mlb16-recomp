@@ -66,6 +66,15 @@ runtime overhead ~21 %. Of that, ~8.3 % is the WWS PM between jobs: memmove 3.3 
 lookup 0.7 %, drain_call 0.6 %. Inside the c690 jobs, dispatch is ~2.3 % (lookup 1.45 %, drain 0.8 %), so bigger
 lifted regions ("block size") can remove at most ~2.3 %; the per-job PM switch is the larger lever.
 
+**Meter critical chain (approx trace, 408 frames, every frame sums to the flip interval within 1 us;
+`captures/meter_analysis2/chain/chain.md`):** main runs from the ref release to its put 6.22 + MainMultiTask
+semaphore 1.24 + walker wake 0.63 + **walker drain 21.73** + **walker resume lag 3.85** (4 ms idle quantum) + PUT
+wait 0.25 + small 0.34 = 34.26 ms. c690 production (0.25), DisplayFlip (0.06) and main's post-put running (hidden
+under the drain, then 11.9 ms slack) are off the chain. Replayed upper bounds: lag removed -2.33 ms; drain -10 %
+alone -1.05 (half absorbed by lag), with lag removed -3.37; main 2 ms less before the put ~-1.9. The +1.6 fps of
+approx float cannot come through the chain (c690 -8 %); likely host-core contention relief (untested). Gap: the
+FIFO put time is not traced (main/walker handoff bounded 0-4 ms).
+
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
 
 Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
