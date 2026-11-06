@@ -14,10 +14,14 @@ import time
 
 
 def game_pid() -> int:
-    out = subprocess.run(["pgrep", "-of", "build-.*/MyGameRecomp"], capture_output=True, text=True).stdout.split()
-    if not out:
-        sys.exit("no game running")
-    return int(out[0])
+    out = subprocess.run(["pgrep", "-f", "build-.*/MyGameRecomp"], capture_output=True, text=True).stdout.split()
+    for pid in out:  # skip wrappers (timeout, bash) whose command line also names the binary
+        try:
+            if os.readlink(f"/proc/{pid}/exe").endswith("/MyGameRecomp"):
+                return int(pid)
+        except OSError:
+            continue
+    sys.exit("no game running")
 
 
 def sample(pid: int) -> dict:
