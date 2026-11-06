@@ -216,6 +216,7 @@ undercounts, prefer `real=`). **All fps numbers above this line are flip rates a
 |---|---|---|---|
 | `PS3RECOMP_TICK_IN_DRAIN` 0 -> 1, live 2026-11-06 09:48, build-sync = port/stable + counter, play keys, 6+6 x 10 s | 36.98 -> 29.08 | **25.11 -> 29.06** | **+3.95 +/- 0.26** |
 | `PS3RECOMP_SPU_FLOAT_APPROX` 0 -> 1 (opt-in approximate SPU float, `exp/spu-approx` 72269fce), meter live 2026-11-06 11:25, build-sync, play keys + TICK_IN_DRAIN + FTZ, 6+6 x 10 s | 29.30 -> 30.93 | **29.30 -> 30.93** | **+1.63 +/- 0.22** |
+| `SPU_CODE_DMA_MEMO` 0 -> 1 (skip unchanged per-job code GETs), meter live 2026-11-06 12:27, approx on; prior live audit (`SPU_CODE_DMA_MEMO_AUDIT=1`, `exp/pm-overhead`): 7.11 M O(1) skips, 0 mismatches | 30.80 -> 30.50 | 30.80 -> 30.50 | -0.30 +/- 0.32 (neutral) |
 | same approx switch, **mound visit** live 2026-11-06 11:36, build-sync, 4 players, 6+6 x 10 s | 21.20 -> 22.27 | **21.20 -> 22.27** | **+1.07 +/- 0.16** |
 | same, **mound visit** live 2026-11-06 10:03, build-depth, ~7 players, 6+6 x 10 s | 23.72 -> 16.26 | 15.52 -> 16.26 | +0.74 +/- 1.14 (neutral) |
 | same, re-scored 2026-11-04 `pacingfloor` (timing classifier, 4 pairs) | 33.4 -> 25.5 | 21.7 -> 24.7 | +3.0 +/- 2.6 |
