@@ -73,6 +73,12 @@ paired, 6 pairs per launch): W=3 -9.00 +/- 1.45 real fps (31.3 -> 22.3), W=2 -9.
 Walker phases A -> B (W=3): fetch 7.3 -> 2.8 (the work does leave the state thread) but tex 1.7 -> 42.7 ms: every
 texture create/upload/snapshot drains the worker pipeline, as the M3 note predicted. Dead as is; the prerequisite is
 texture resolution that does not sync the workers (M4).
+**Barrier profile (exp/mt-sync-prof 2026-11-06 17:05, build-sync, W=3, `PS3RECOMP_WALKER_MT_SYNC_PROF=1`):** ~520 ms/s of
+state-thread wait; 90 % at two full barriers added after Nov 4: `eng_zdepth_snapshot` (~220/frame) and
+`eng_cube_collect` (~220/frame). **Ceiling with both skipped (unsafe, `WALKER_MT_SYNC_SKIP`):** still -5.84 +/- 2.35 real
+fps (32.4 -> 26.6, 3 pairs); the wait moves to the next barriers (state-thread packet path for immediate/inline draws
+~1000/s, and others), ~380 ms/s total. The workers fall behind the state thread, so any barrier pays their backlog:
+removing barriers relocates the wait. **Walker MT stopped** (4th attempt; the M3/M4/repair notes saw the same shape).
 
 ## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
 
