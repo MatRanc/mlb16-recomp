@@ -33,6 +33,27 @@ back on the path, so speeding up *only one* of them shows ~0 fps. That is the ro
 "SPU won't help" back-and-forth: both statements were measured, and both are true *for one change alone*. The meter
 is a poor scene for judging single changes.
 
+## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
+
+`captures/meter_trace.json`; `analyse_ppu_path.py --main-tid 8` (main is unnamed in a triggered trace) and
+`analyse_walker_wait.py`, outputs in `captures/meter_analysis/`. 391 frames, 27.96 fps; real frames = flips
+(`real_fps.py`: 28.6 / 28.9 real fps in the two 20 s arms), so per-flip numbers are per real frame here.
+
+| per frame (mean ms) | | check |
+|---|---:|---|
+| frame (flip to flip) | **35.76** (p50 35.54, p90 38.62) | |
+| ppu main running / blocked on the walker ref | **20.86** / 14.90 | sums to 35.76 |
+| walker drain / put_wait | **22.38** / 13.44 | sums to 35.82 |
+| put_wait split: caught up with PPU 7.15, resume lag 5.77, c690 before PUT 0.46, park 0.06 | 13.44 | 100 % |
+| SPU lanes 0-4 (c690 allowed, MAXCONT 5) | **89 % busy** (c690 71 %, other 18 %) | c690 126.9 lane-ms/frame |
+| SPU lane 5 (no c690) | 33 % busy | |
+
+Reading: main, walker and the SPU lanes are all near the frame. The c690 lanes are 89 % busy, so with today's SPU
+code speed and 5 c690 lanes the meter cannot pass ~31.8 ms (~31.4 fps) whatever the PPU or walker do: at most
+~3.5 fps is left outside the SPU. Levers: (1) lifted SPU code speed (c690 bodies; FTZ was the first step),
+(2) the sixth lane, idle 67 %, which the guest's MAXCONT 5 keeps c690 off, (3) main 20.9 ms running (PPU code)
+and main/walker serialization (each waits on the other ~7-15 ms).
+
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
 
 Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
