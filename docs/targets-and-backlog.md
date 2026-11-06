@@ -557,6 +557,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 
 ## Visual backlog (parked)
 
+- **Transitions, partly fixed (user, 2026-11-06, build-sync, `PS3RECOMP_WIPE_FIX=1`).** Fade-to-black and the
+  crossfade now look right; a third transition (seen entering Mound Visit, maybe about half of all transitions) still
+  shows the tiled look. Likely another swizzled render target the WIPE_FIX adjacency probe misses; a deterministic
+  check (sample our own Morton render target by `eng_surface_at_exact`) is the noted follow-up. Parked by the user.
+- **Rare full-screen black flash (user, 2026-11-06).** Single frames, rare; not yet captured. Parked by the user.
+
 - **Bink video / team logo ROOT CAUSE FOUND 2026-11-05 (offline-tested, live
   verification pending).** The intro `.BIK` opened on fd 12 with `cellFsOpen`,
   but the Bink SDK's default PS3 IO reads it with raw `sys_fs_read/lseek`; the
