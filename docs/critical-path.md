@@ -91,6 +91,35 @@ fps (32.4 -> 26.6, 3 pairs); the wait moves to the next barriers (state-thread p
 ~1000/s, and others), ~380 ms/s total. The workers fall behind the state thread, so any barrier pays their backlog:
 removing barriers relocates the wait. **Walker MT stopped** (4th attempt; the M3/M4/repair notes saw the same shape).
 
+## 2a-bis. Ceiling study: is 60 fps reachable with this design? (2026-11-06 evening)
+
+Sources: `captures/meter_trace4.json` (play settings, 459 frames, traced 30.41 ms), `captures/proc_meter.data` (perf,
+all threads, 8 s, build-depth f8bff427, untraced ~34.5 fps), walker-prof lines of the same runs.
+
+| producer, per frame | busy | notes |
+|---|---:|---|
+| SPU lanes 0-4 (`spu.run`, image 6 = c690) | 24.2-25.6 ms each (80-84 % of wall) | lane 5 (tid 8) 9.1 ms |
+| main PPU thread | 20.8 running + 1.2 on the MainMultiTask semaphore | 7.5 ms of it before the put = on the chain |
+| walker | 20.1 drain | mesh-ring sourced draws ~9.4-12 ms, main-memory sourced ~4.2-4.8 ms |
+| GPU | present fence wait 3.7 ms mean (p90 8.3) on the present thread | off the chain; GPU time per frame not measured |
+
+**Main thread, perf (19.4 ms/frame untraced):** game code (`func_*`, flat: no function above ~2 %) 12.5 ms (64 %);
+kernel (syscalls, futex, scheduling) 2.3; atomics + SPU coherence 2.1 (`spu_coh_notify_write` ~1.0 alone, then
+`ppu_resv_break_line`, `ppu_stdcx64`, `spu_lockline_lock`); HLE call / indirect-call dispatch / syscall entry 1.4; VMX
+helpers 0.5; libc + other 0.6. Runtime overhead is ~7 ms, ~35 % of the thread; only its pre-put share (~40 %) reaches
+the frame today.
+
+**Verdict.** The three producers are near-equal (SPU ~25, main ~22, walker ~21 ms, traced). Perfect overlap of main and
+walker (frames in flight) is bounded by the slowest producer: ~25 ms traced, ~+19 %, ~41 fps untraced, with all three
+saturated. **60 fps needs every producer ~30-35 % faster *and* overlap.** No single item left in any producer is above
+~2.8 ms (walker remap), ~1 ms (main coherence notify) or the c690 job body itself. Per-item trimming (this week:
++0.2 to +0.8 fps each) cannot close a ~12 ms gap. What could change the picture, all large: (1) SPU code generation
+quality for c690 (it is 50 % of lane CPU and sets the ceiling once overlap exists); (2) PPU code generation / runtime
+overhead on the main thread (~7 ms runtime, coherence and atomics first); (3) a walker that does far less per draw
+(cross-frame reuse is limited: ~60 % of draws read SPU-rewritten mesh data each frame); (4) frames in flight, only after
+(1)-(3), and only to ~max(producer). Cross-frame draw repetition is still unmeasured (the WALKER_PROF2 parse in this
+study was wrong; do not cite it).
+
 ## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
 
 `captures/meter_trace.json`; `analyse_ppu_path.py --main-tid 8` (main is unnamed in a triggered trace) and
