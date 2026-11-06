@@ -27,7 +27,8 @@ CC=${CC:-cc}
 # build used (PS3RECOMP_DIR), and the check only applies when that build uses
 # the shared lifted modules in recomp-work/spu_lifted.
 if [ -n "${BUILD_CACHE:-}" ] && [ -f "$BUILD_CACHE" ]; then
-    [ -z "${SDK:-}" ] && SDK=$(sed -n 's/^PS3RECOMP_DIR:[^=]*=//p' "$BUILD_CACHE" | head -1)
+    sdk_cache=$(sed -n 's/^PS3RECOMP_DIR:[^=]*=//p' "$BUILD_CACHE" | head -1)
+    [ -n "$sdk_cache" ] && SDK=$sdk_cache
     spu_dir=$(sed -n 's/^SPU_DIR:[^=]*=//p' "$BUILD_CACHE" | head -1)
     if [ "$spu_dir" != "$W/spu_lifted" ]; then
         echo "spu-context ABI check: skip (build uses SPU_DIR=${spu_dir:-none}, not the shared lifted modules)"
