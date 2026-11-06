@@ -58,6 +58,18 @@ To reach 16.7 ms traced (-13.7): drain x0.5 (-9.0) plus main ~-4.5 before the pu
 the previous drain (frames in flight, shelved) so the bound becomes max(main 20.8, drain 20.0), both still over 16.7.
 SPU c690 is not on the chain (0.12 ms) at this frame time; at 16.7 ms lanes would need ~30 % less work.
 
+**Walker phases, same run (flip-weighted, 3,014 flips, 160-250 s):** walker 20.58 ms = engine 18.07 (other 5.06, draw
+4.77, fetch 4.26, pipe 2.57, tex 1.09, bind 0.32) + parse 2.51; 830 draws/frame, ~25 us/draw.
+**Walker CPU, live perf (2026-11-06 16:40, `captures/walker_meter.data`, 10 s, 4 kHz, 96 % on the state thread; no call
+stacks, the binary has no frame pointers):** ms/frame ~ share x 20.7: `rsx_vertex_remap_build` 13.5 % (~2.8 ms, flat
+mode on), memmove 7.7 % (~1.6, callers unknown), `sink_end_work` self 7.2 % (~1.5, inlined helpers),
+`gcm_rsx_process_fifo_unlocked` 7.0 % (~1.45, parse), `eng_pipeline_get` 5.6 % (~1.16), shader-program analysis
+(`rsx_fp_program_size` + `rsx_vp_analyze_inputs` + `rsx_fp_structural_hash` + `eng_vp_hash`) ~4.9 % (~1.0),
+method dispatch 4.2 % (~0.9), `write_topology_indices` 2.4 % (~0.5). Offline replay of `meter_cap` does not match live
+(other 2.5 vs 5.06, draw 9.0 vs 4.77): use live profiles for walker attribution.
+Walker MT (M3, `PS3RECOMP_WALKER_MT=1` + `WALKER_MT_WORKERS=N`, live key, in build-depth, exact) moves remap/plan/convert
+to workers; offline -12 % at N=3 (notes/walker-mt-m3.md), never A/B'd live.
+
 ## 2b. Pitch meter, real frames, TICK_IN_DRAIN on (2026-11-06 10:12, build-depth = play build, one 14 s trace)
 
 `captures/meter_trace.json`; `analyse_ppu_path.py --main-tid 8` (main is unnamed in a triggered trace) and
