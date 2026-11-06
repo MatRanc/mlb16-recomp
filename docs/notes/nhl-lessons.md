@@ -5,7 +5,7 @@ Sources: the NHL Legacy native port at
 `/tmp/claude-1000/-home-m/2e3f6ceb-7458-4679-bca1-76ef8ef8c2df/scratchpad/nhl/repo`
 (MIT, `docs/notes/LOCAL_PATCHES.md`, `NEXT_STEPS.md`, `SPU_RECON.md`, `README.md`,
 `nhl/port/nhl_edge_native.c`, `edge/edge_ref.{c,h}`), and this repo's
-`docs/meter-pacing.md`, `meter-scene-baseline.md`, `frame-pacing.md`,
+`docs/notes/meter-pacing.md`, `meter-scene-baseline.md`, `frame-pacing.md`,
 `readback-cost.md`, `tick-and-resync.md`, `ppu-critical-path.md`,
 `walker-spu-wait.md`, `walker-wake.md`, `c690-offload-decision.md`,
 `c690_function_map.md`, `targets-and-backlog.md`.
@@ -18,7 +18,7 @@ meter" below is an estimate from our own profile until an A/B says otherwise.
 
 ## The shape of our meter, in one table
 
-From `docs/meter-pacing.md`, `meter-scene-baseline.md`, `ppu-critical-path.md`,
+From `docs/notes/meter-pacing.md`, `meter-scene-baseline.md`, `ppu-critical-path.md`,
 `walker-spu-wait.md`, `readback-cost.md` (WCB=2 unless noted, 29-30 fps,
 ~34 ms frames, 12-60 ms spread):
 
@@ -44,7 +44,7 @@ NHL list is passed through below.
 | NHL | What it does | Their measured gain | Ours | Applies to MLB? | Meter estimate |
 |---|---|---|---|---|---|
 | **#45** SPU idle cost | (a) per-host-thread `mfc_for` engine cache, avoiding a shared SRW lock on every MFC op; (b) GETLLAR back-off: an unchanged reservation-held line waits up to 1 ms on the channel CV (`SPU_LLAR_BACKOFF`, 32); (c) plain-128-byte-GET poll back-off with a per-thread content-hash table (`SPU_POLL_LSA/N/US`, 64/100); (d) `spu_overlay_note_get` rejects GETs outside the registered span; thread-local depth guard; (e) host-thread priority/affinity knobs. | Movie 6.4 -> 24.7 fps (82 %); process CPU 730 % -> 220 %; idle SPUs 100 % -> 12-29 %. Shared SRW was ~40 % of SPU samples; poll back-off alone 19.6 -> 24.7. | `mfc_for` TLS memo is PRESENT but default **off** (`SPU_MFC_LOOKUP_CACHE=1`, `runtime/spu/spu_channels.c:428-455`; hit path `:471-479`; locked path `:488-520`). **No LLAR back-off, no plain-GET poll back-off** (`:739-806` spins; `spu_coh_reserve_fast` avoids the global lock on a repeated line, `runtime/spu/spu_coherency.c:337-352`). Overlay EA filter PRESENT (`spu_channels.c:2088-2095`). | Mechanism yes: EA Job Manager kernels poll a queue; c690 lanes are 33-88 % idle. Lock-line contention and idle spins steal SMT/memory from the walker/main even when cores are not saturated. | **0-2 ms, confidence low.** Probe idle CPU first. Enabling the existing `SPU_MFC_LOOKUP_CACHE` is free and could be the larger half. |
-| **#9** PPU affinity/priority | Pin guest PPU threads, map priorities; off by default after mask 3 was far slower. | None claimed (experiment). | Our `PS3RECOMP_PIN=1` already pins walker/main and leaves the rest to a pool (`docs/live-ab-and-ceilings.md:77-89`). | Same mechanism exists and is better tuned for our topology. | 0; skip. |
+| **#9** PPU affinity/priority | Pin guest PPU threads, map priorities; off by default after mask 3 was far slower. | None claimed (experiment). | Our `PS3RECOMP_PIN=1` already pins walker/main and leaves the rest to a pool (`docs/notes/live-ab-and-ceilings.md:77-89`). | Same mechanism exists and is better tuned for our topology. | 0; skip. |
 | **#154/#258/#259** SPU host-thread priority / one-core-each / auto by core count | Optional pinning of SPU threads and priority; auto only on >= 8 physical cores with SMT. | Smoke only, no in-match number. | Not present as SPU-specific pinning; we pin only named PPU/walker threads. | Plausible on 6C/12T: six SPU lanes + present + IMFE share cores 2-5,8-11. | 0-1 ms; cheap probe, but may starve the handler/present threads. |
 | **#270** sub-ms `usleep` | Windows: below 1 ms use a high-resolution waitable timer instead of QPC + `SwitchToThread`. | Render thread 99 % -> 2 % of a logical CPU; +6-11 % at 1.5 GHz. | **Different base:** Linux/`sys_timer_usleep` uses plain `nanosleep` for every `usec > 0` (`runtime/syscalls/sys_timer.c:283-289`). The Windows path has the timer/spin split (`:251-282`). | The Windows problem (spin burns a core) is inverted on Linux (nanosleep oversleeps by the timer slack, and in the worst case adds latency to a 200 us poll). The title's `usleep(200)` sites are *not hit at the meter* (`ppu-critical-path.md:63`), so this is a load/hitch lever, not a meter lever. | **~0 at the meter;** worth doing for loading/hitches. |
 | **#287** SPU context placement | 64 KB-aligned contexts plus `(slot % 7) * 9344`, so paired SPUs' same-LS lines do not share L1/L2 sets. | Not measured alone; part of #286-290 Deck work. | Absent: contexts are `calloc`-ed as a block. | Mechanism is generic x86 cache aliasing. | 0-1 ms; cheap to try (allocation change), but hard to attribute. |
@@ -70,12 +70,12 @@ NHL list is passed through below.
 
 | NHL | What it does | Their measured gain | Ours | Applies to MLB? | Meter estimate |
 |---|---|---|---|---|---|
-| **#61** `GCM_REF_IMMEDIATE` | Write `ctrl->ref` the moment the walker executes `SET_REFERENCE`, instead of one queued publish per tick. | Made a ~1 fps post-transition intro normal: EA's ring allocator reads `ref` before handing over the next 32 KB segment; one ref/tick capped dozens of segments/frame. | **Absent.** Refs are queued (`cellGcmSys.c:2023-2035`), published once at each drain tail (`:3548-3551`) and at most one per 200 us on the read-driven path (`:2197-2213`, `GCM_REFPOLL` default on). `gcm_ref_push_at` at `:2468-2473`. | Yes, but our cadence is already ~12 publishes/frame, not 1/tick. The meter's ref wait is ended by the GCM user handler (`.opd.FUN_00069138`), not by the ref write (`docs/overlap-analysis.md:96-100`), so immediate publication can only remove a sub-pass race, not the 19.7 ms block. | **0-1 ms, high variance.** Cheap A/B as a live switch; kill at <0.5 ms. |
+| **#61** `GCM_REF_IMMEDIATE` | Write `ctrl->ref` the moment the walker executes `SET_REFERENCE`, instead of one queued publish per tick. | Made a ~1 fps post-transition intro normal: EA's ring allocator reads `ref` before handing over the next 32 KB segment; one ref/tick capped dozens of segments/frame. | **Absent.** Refs are queued (`cellGcmSys.c:2023-2035`), published once at each drain tail (`:3548-3551`) and at most one per 200 us on the read-driven path (`:2197-2213`, `GCM_REFPOLL` default on). `gcm_ref_push_at` at `:2468-2473`. | Yes, but our cadence is already ~12 publishes/frame, not 1/tick. The meter's ref wait is ended by the GCM user handler (`.opd.FUN_00069138`), not by the ref write (`docs/notes/overlap-analysis.md:96-100`), so immediate publication can only remove a sub-pass race, not the 19.7 ms block. | **0-1 ms, high variance.** Cheap A/B as a live switch; kill at <0.5 ms. |
 | **#60** self-JUMP grace | A parked self-JUMP is not "stuck" for 10 s (`GCM_SELFJUMP_MS`). | Stopped a post-transition skip of ~600 KB and the label-64 freeze. | **Equivalent PRESENT:** self-JUMP park passes reset the stuck counter (`cellGcmSys.c:3425-3435`); the park grace is 10 s (`:1183-1189`). | Yes. | Already captured. |
-| **#64** jump-park grace 10 s | Configurable grace before the jump-park resync. | Prevents dropped commands when EA patches the park >50 ms later. | **PRESENT:** `GCM_PARK_GRACE_MS` default 10000 (`cellGcmSys.c:1174-1189`), re-reads the park before giving up (`:2946-2968`). Plus the opt-in walk-through fix `PS3RECOMP_WALKER_RESYNC_FIX` (`:1830-1875`, default off; measured inert at the pitch in `docs/tick-and-resync.md`). | Yes. | Already captured. |
-| **#46** flip marker on a title-owned ring | `_cellGcmSetFlipCommand` writes the flip marker when 8 bytes fit, else calls the buffer-full callback; 4 KB slack only for runtime recycle. | ~23 -> ~31 presents/s (every 4th flip used to fall back to an immediate flip and pair two flips on one present). | **Equivalent PRESENT:** `gcm_flip_into_fifo` with the 8-byte fit test and `GCM_RECYCLE_SLACK` (`cellGcmSys.c:3838-3845`, `:1193-1197`); our title's statically linked libgcm emits `0xFEAD` words instead (`req == fin`), and `PRESENT_NEW_ONLY` removes double presents (`docs/frame-pacing.md`). | Yes. | Already captured. |
-| **#48** VSYNC flip mode | At most one FIFO flip per vblank; catch-up threshold. | Unheld flips ran at ~165 fps with zero frame time and froze on load. | Our `s_flip_mode` is stored but **never read** (`cellGcmSys.c:79`, `:711-715`, no other reads); the tick still presents at most one pending flip per tick (`main.cpp:272`). | **N/A for this title:** it never calls `cellGcmSetFlipMode` (`docs/meter-pacing.md`). Do not implement a mode gate on spec. | 0. |
-| **#141** present each flip once | End-of-loop present consumes the pending-flip flag. | Stops double presentation. | **PRESENT:** `PRESENT_NEW_ONLY` edge (`docs/frame-pacing.md`) + `rsx_vulkan_backend.c` gate. | Yes. | Already captured. |
+| **#64** jump-park grace 10 s | Configurable grace before the jump-park resync. | Prevents dropped commands when EA patches the park >50 ms later. | **PRESENT:** `GCM_PARK_GRACE_MS` default 10000 (`cellGcmSys.c:1174-1189`), re-reads the park before giving up (`:2946-2968`). Plus the opt-in walk-through fix `PS3RECOMP_WALKER_RESYNC_FIX` (`:1830-1875`, default off; measured inert at the pitch in `docs/notes/tick-and-resync.md`). | Yes. | Already captured. |
+| **#46** flip marker on a title-owned ring | `_cellGcmSetFlipCommand` writes the flip marker when 8 bytes fit, else calls the buffer-full callback; 4 KB slack only for runtime recycle. | ~23 -> ~31 presents/s (every 4th flip used to fall back to an immediate flip and pair two flips on one present). | **Equivalent PRESENT:** `gcm_flip_into_fifo` with the 8-byte fit test and `GCM_RECYCLE_SLACK` (`cellGcmSys.c:3838-3845`, `:1193-1197`); our title's statically linked libgcm emits `0xFEAD` words instead (`req == fin`), and `PRESENT_NEW_ONLY` removes double presents (`docs/notes/frame-pacing.md`). | Yes. | Already captured. |
+| **#48** VSYNC flip mode | At most one FIFO flip per vblank; catch-up threshold. | Unheld flips ran at ~165 fps with zero frame time and froze on load. | Our `s_flip_mode` is stored but **never read** (`cellGcmSys.c:79`, `:711-715`, no other reads); the tick still presents at most one pending flip per tick (`main.cpp:272`). | **N/A for this title:** it never calls `cellGcmSetFlipMode` (`docs/notes/meter-pacing.md`). Do not implement a mode gate on spec. | 0. |
+| **#141** present each flip once | End-of-loop present consumes the pending-flip flag. | Stops double presentation. | **PRESENT:** `PRESENT_NEW_ONLY` edge (`docs/notes/frame-pacing.md`) + `rsx_vulkan_backend.c` gate. | Yes. | Already captured. |
 | **#230** NOP run skip | Skip the `NV4097_NO_OPERATION` (`0x0100`) words directly after the first of a run; the first still flushes a pending index/array draw. | NOPs were 41 % of all FIFO words; per-word loop leaf 8-9 % + `rsx_process_method` leaf 9-10 % of the RSX ticker. Title A/B identical (no NOP runs there). | **Partial:** runs of **zero** words are skipped (`cellGcmSys.c:2811-2833`), but `0x0100` is decoded as a normal method with count 0 (`:3005-3010`). | Very likely: same EA command builder; our `[words]` diagnostic exists for the same reason. | **0.5-2 ms** of walker CPU. Cheap and low risk; the replay gate must be identical. |
 | **#63** draw coalescing | Contiguous `DRAW_INDEX_ARRAY` words with `next.first == first + count` become one backend draw; flush before any other method. | 5.2 M of 6.6 M vertex conversions per 20 frames were "partial" fallbacks; removed by this. | **PRESENT:** per-`BEGIN_END` accumulation (`rsx_draw_engine.c:4549-4594`), one draw at group end (`:5885-5912`); unique-vertex remap (`:4498-4504`). | Yes. | Already captured. |
 | **#62** GPU-indexed VP draws | Convert each referenced vertex once, build a u32 index buffer, `DrawIndexed`. Other cases keep CPU expansion. | 3D intro ~1 game fps, 59 % in `read_vp_vertex` for ~2.2 M vertices/frame. | **PRESENT:** unique-vertex conversion + index buffer (`rsx_draw_engine.c:4276-4282`, `:5751-5762`); backend `draw_fill`/GPU vertex path (`:5885-5898`). | Yes. | Already captured. |
@@ -86,13 +86,13 @@ NHL list is passed through below.
 
 | NHL | What it does | Their measured gain | Ours | Applies to MLB? | Meter estimate |
 |---|---|---|---|---|---|
-| **#128** persistent PSO library | `ID3D12PipelineLibrary` in `pso_lib.bin`, pipelines named by a 64-bit desc hash; save after 3 s idle. | ~900 PSO builds x 2-16 ms = ~6 s of the puck-drop stall. | **Absent:** every Vulkan pipeline is created with `VK_NULL_HANDLE` (`rsx_vulkan_backend.c:74-77`, `:1175`, `:1518`); only in-memory tables (`rsx_draw_engine.c:60-61`, `:258`). A whole run makes 340-430 pipelines / 30-41 ms total (`docs/live-ab-and-ceilings.md`). | Mechanically yes (`VkPipelineCache` persisted to disk is the 1:1 analogue), but our pipeline creation is not a meter cost. | **~0 at the meter** (pipecrt=0, pipe 1.9 ms is memo/setup not creation). Worth it for load/first-use stutter only. |
+| **#128** persistent PSO library | `ID3D12PipelineLibrary` in `pso_lib.bin`, pipelines named by a 64-bit desc hash; save after 3 s idle. | ~900 PSO builds x 2-16 ms = ~6 s of the puck-drop stall. | **Absent:** every Vulkan pipeline is created with `VK_NULL_HANDLE` (`rsx_vulkan_backend.c:74-77`, `:1175`, `:1518`); only in-memory tables (`rsx_draw_engine.c:60-61`, `:258`). A whole run makes 340-430 pipelines / 30-41 ms total (`docs/notes/live-ab-and-ceilings.md`). | Mechanically yes (`VkPipelineCache` persisted to disk is the 1:1 analogue), but our pipeline creation is not a meter cost. | **~0 at the meter** (pipecrt=0, pipe 1.9 ms is memo/setup not creation). Worth it for load/first-use stutter only. |
 | **#136** texture victim choice | Empty slot first, else least-recently-bound, **never one bound this frame**; stale re-upload reuses its hash. | Puck drop 842 ms / 22k binds; a 4 s ~10 fps burst from re-creation cascades. | **Partial:** empty-first + global LRU is present (`rsx_draw_engine.c:2610-2625`), but there is **no "bound this frame" pin**; the content hash is full-span (`:2195-2210`) and revalidated sparsely each frame / fully every 8 (`:2212-2255`). | Yes; the backend already has `last_use_serial`, so the pin is a small change. | **0-1 ms** at the meter (tex is 9.8 ms but mostly steady); more during loading/hitches. |
 | **#239** hash every mip level | Texture change hash covers all uploaded mips, not level 0. | Fixes stale lower mips (Flyers kit). | **PRESENT:** full-span hash including the whole mip chain (`rsx_draw_engine.c:2156-2168`, `:2195-2210`, `:2536-2539`). | Yes. | Already captured (correctness). |
 | **#225/#227** async shader compile | Compile non-essential pipelines on a pool; skip draws until ready. | Removes first-use stalls. | Absent. A run makes 340-430 pipelines / 30-41 ms total. | Yes, for hitch scenes only. | ~0 at meter; consider for the loading/menu hitches on the backlog. |
 | **#162/#81/#82** FP key memo / narrower VS hash / FP copy at record | Avoid re-walking shader code and constants per draw. | Not quantified separately. | Our engine has a 512-entry pipeline memo and keys pipelines by the draw state (`rsx_draw_engine.c:258`, `:3826-3838`); no per-draw FP code walk is visible in the profile (pipe 1.9 ms). | Partly. | 0-0.5 ms; audit only if `pipe` grows. |
 | **#224** one big-endian load per vertex component | Replace a separate `vf_be32` load per component. | Part of the vertex-fetch work. | Unknown; our fetch is 4.0 ms/frame. | Possibly. | 0-0.5 ms. |
-| **#233/#243** per-frame surface history, one-off RT alias, LRU eviction | Stop readback/re-decode of transient targets. | Hitches. | Our WCB readback is a different design; `docs/readback-cost.md` already attributes the meter's copies. | Different mechanism. | See readback cuts, not NHL. |
+| **#233/#243** per-frame surface history, one-off RT alias, LRU eviction | Stop readback/re-decode of transient targets. | Hitches. | Our WCB readback is a different design; `docs/notes/readback-cost.md` already attributes the meter's copies. | Different mechanism. | See readback cuts, not NHL. |
 | **#228** hot-path `getenv` caching | Cache every gate in a static. | Not quantified. | Largely present in hot paths (e.g. `spu_channels.c:480-487`); an audit may find stragglers. | Yes. | 0-0.5 ms. |
 
 ### 1.5 Build flags and PGO
@@ -123,11 +123,11 @@ and the command hole lifted. Any other layout falls back and logs.
   rest 1 LSB, cull differs on 5 of 216 captured segments (one borderline
   triangle each). Their square roots are table estimates and `1/w` is an
   estimate, so bit-exactness is not achievable without emulating those too.
-- **Ours:** the c690 job (`docs/c690_function_map.md`) is the same Edge
+- **Ours:** the c690 job (`docs/notes/c690_function_map.md`) is the same Edge
   geometry family but a **different per-game layout**: 12/12/11 SNORM unpack
   `0x6D68`, 3x4 affine `0xA798`, `frsqest`+`fi` normalize `0xAF98`, snorm16/8
   pack `0x7C18`/`0x8160`, 36-byte assembler `0x10F78`, culls `0x132E0`/
-  `0x12C08`. There is no native path. `docs/c690-offload-decision.md` already
+  `0x12C08`. There is no native path. `docs/notes/c690-offload-decision.md` already
   rejected a GPU fenced design and priced a full native/GPU job at 2-4 months.
 
 **Can their C reference be reused?** Partly:
@@ -187,7 +187,7 @@ are already in our tree: 10 s grace, re-read the park before resyncing,
 self-JUMP park passes reset the stuck counter, and the opt-in
 `PS3RECOMP_WALKER_RESYNC_FIX` walks the skipped range instead of dropping it.
 The pitch-measured failure is different: `FAST_WAKE` lets the walker re-read an
-unpatched park and wedges (`docs/tick-and-resync.md`). Don't import #60/#64;
+unpatched park and wedges (`docs/notes/tick-and-resync.md`). Don't import #60/#64;
 they are already here.
 
 **Draw coalescing (#63)** — present (per-`BEGIN_END`, with unique-vertex
@@ -282,7 +282,7 @@ there and move the effort to PGO and the walker.
   existing engine/backend split.
 - **NHL's game-speed assumptions:** their 2-vblank swap interval, `GCM_FLIP_EVERY`,
   and the 30 fps cap are title policies. MLB never sets a flip mode and is not
-  vblank-capped in the same way (`docs/meter-pacing.md`).
+  vblank-capped in the same way (`docs/notes/meter-pacing.md`).
 - **Their PGO profile and lifted/game-derived code:** not reusable (different
   game; and the profile is tied to their binary).
 - **Their thread-affinity/priority experiments:** ours already pins the walker

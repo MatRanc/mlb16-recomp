@@ -61,7 +61,7 @@ guest flip; a wait that exists but does not block in this scene is marked no.
 | `sys_event_queue_receive` | `runtime/syscalls/sys_event.c:479-580` | host CV; sub-ms timeouts are a poll/yield | guest timeout | guest PPU | no |
 | `sys_event_flag_wait` | `runtime/syscalls/sys_event.c:1256-1336` | host CV / timed | guest timeout | guest PPU | no |
 | `sys_mutex_lock` | `runtime/syscalls/sys_mutex.c:278-291` | pthread mutex; `SwitchToThread` for <1 ms, `Sleep(1)` otherwise | guest timeout | guest PPU | no |
-| `sys_timer_usleep` | `runtime/syscalls/sys_timer.c:137`, `nanosleep` `:288` | Linux `nanosleep` for every `usec > 0`; Windows busy-yields below 1 ms | guest arg | guest PPU | not hit at the meter (`docs/ppu-critical-path.md:63`); loading/hitches |
+| `sys_timer_usleep` | `runtime/syscalls/sys_timer.c:137`, `nanosleep` `:288` | Linux `nanosleep` for every `usec > 0`; Windows busy-yields below 1 ms | guest arg | guest PPU | not hit at the meter (`docs/notes/ppu-critical-path.md:63`); loading/hitches |
 | `sys_timer_sleep` | `runtime/syscalls/sys_timer.c:301-309` | `sleep(sec)` | guest arg | guest PPU | no |
 | `sys_spinlock` | `ppu_sysprx.cpp:927` | CAS spin in a guest word | — | guest PPU | no |
 
@@ -113,7 +113,7 @@ lane is a 100 % lane until the scheduler runs something else.
 
 `PS3RECOMP_PIN=1` puts `rsx walker` on cpu 0 and `ppu main` on cpu 1 and
 leaves every other named thread on cpus 2-5 and 8-11
-(`docs/live-ab-and-ceilings.md`, pin banner). **CPU 10/11 are therefore
+(`docs/notes/live-ab-and-ceilings.md`, pin banner). **CPU 10/11 are therefore
 unpinned SPU threads: two `spurs pm` workers** (policy/idle poll loops, or
 back-to-back c690/mesh jobs during loading), not the walker or main. This is
 a static/deduction answer: the planned `top -H` sample at boot+60 s did not
@@ -275,7 +275,7 @@ between ~15-22 ms and ~45-60 ms (below).
 
 The present side is not the cause: with `PACE=1` the shown intervals are p50
 37.6 ms, p90 50.8, p99 59.3, and only **0.15 %** are below 8 ms (the pacer
-removed the pairs from `docs/frame-pacing.md`). The guest cadence itself
+removed the pairs from `docs/notes/frame-pacing.md`). The guest cadence itself
 alternates; the pacer only redistributes the display times.
 
 ### 3.4 Ranked list: wake-up lags and waits
@@ -295,7 +295,7 @@ is the critical chain.
 | 5 | DisplayFlip flip-queue `0x12450c8` (`ppu_sysprx.cpp:497`) | rarely blocks | 0.45 mean/frame | 0 / 0 | same |
 | 6 | SPU channel waits (`spu_channels.c:1275`) | 0 on the meter | — | 0 / 0; c690 lanes run jobs, they do not block on channels here | — |
 | 7 | `sys_cond` / `sys_semaphore` / `sys_event` (inventory 1.1) | 0 on main at the meter | — | 0 / 0 | — |
-| 8 | `sys_timer_usleep(200)` in `Gfx_FrameEnd` | not hit (`docs/ppu-critical-path.md:63`) | — | 0 / 0 | — |
+| 8 | `sys_timer_usleep(200)` in `Gfx_FrameEnd` | not hit (`docs/notes/ppu-critical-path.md:63`) | — | 0 / 0 | — |
 
 The real levers are therefore **work**: the 26.4 ms walker drain (which is
 78 % of the frame and 28.7 ms on the long frames), the c690 producer behind

@@ -56,8 +56,8 @@ pairs, `recomp-work/play_20261103_163747.log`, and the runtime sources in
 | scene target | **2560x720, 2x1 antialiased** | `[rsx engine] surface 0:0x01110000 2560x720 fmt 3`, log:861; the 2x1 AA comment in `libs/video/rsx_draw_engine.c:6065` |
 | viewport | guest viewport in **pixels**; default 1280x720 | `libs/video/rsx_commands.c:59-67`; `SET_VIEWPORT_*` methods `:591-609` |
 | scissor | guest scissor in pixels; default 4096x4096 | `libs/video/rsx_commands.c:65-67`, `:950-956` |
-| cull 0x25/0x26 | `0x13518`/`0x13520` -> `0x132E0` | `docs/c690_function_map.md:39`, generated `spu_recomp.c:30710` |
-| cull 0x2C | `0x12DC0` -> `0x12C08` -> `0x82C0` | `docs/c690_function_map.md:42`, generated `spu_recomp.c:29779`, `:8035` |
+| cull 0x25/0x26 | `0x13518`/`0x13520` -> `0x132E0` | `docs/notes/c690_function_map.md:39`, generated `spu_recomp.c:30710` |
+| cull 0x2C | `0x12DC0` -> `0x12C08` -> `0x82C0` | `docs/notes/c690_function_map.md:42`, generated `spu_recomp.c:29779`, `:8035` |
 | cull constants | `0x34000000` = FLT_EPSILON, `0x3F000000` = 0.5 | `spu_recomp.c:8041`, `:17746` |
 | viewport literal in job input | **none** | scanned LS `0x0000..0x1FFF` of the stage input for 1280/720/640/360/1920/1080 (u32 and f32): no hit |
 
@@ -108,11 +108,11 @@ result is resolved/presented.
   if the cull test is negative.
 * **Vertex quantisation decode — ruled out for the current build.** The c690
   unpack/transform/normalize path is the lifted code, and the offline reference
-  is bit-exact on the captured stage pairs (`docs/edge-native-step1.md:281-288`).
+  is bit-exact on the captured stage pairs (`docs/notes/edge-native-step1.md:281-288`).
   The native kernel's FTZ deviation is default-off and not in this build's live
   path. A decode difference would be a systematic shape change, not pinholes.
 * **Index/vertex fetch (the 36-byte c690 output) — still open.** The c690
-  assembler emits 36-byte records (`docs/c690_function_map.md:83`). Our engine
+  assembler emits 36-byte records (`docs/notes/c690_function_map.md:83`). Our engine
   handles generic attribute layouts, with a fast 24-byte "MLB 3D mesh" path and
   a generic descriptor path (`libs/video/rsx_draw_engine.c:6147-6185`). If the
   cull test is negative, log the actual attribute layout/stride for the
@@ -159,7 +159,7 @@ cannot.
 
 ### B.1 Why step 1/2 wedged
 
-The facts from `docs/edge-native-step2.md` and the run log
+The facts from `docs/notes/edge-native-step2.md` and the run log
 `recomp-work/ab_live_edge2ab3_20261103_055613.log`:
 
 * The native kernel is bit-identical (full 256 KiB LS + all 128 GPRs) on

@@ -4,7 +4,7 @@ Date: 2026-11-04. Offline only (no game launch). Branch `exp/live-ab` in
 `ps3recomp-play`, commit **16fc2d28**, build `recomp-work/build-play`.
 
 This closes the batch-1 review follow-ups and the shader disk cache nits from
-[`targets-and-backlog.md`](targets-and-backlog.md). Behaviour is unchanged
+[`targets-and-backlog.md`](../targets-and-backlog.md). Behaviour is unchanged
 except where a review item named it.
 
 ## 1. Sticky `ferror()` on a failed write

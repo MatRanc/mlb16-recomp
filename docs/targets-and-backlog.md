@@ -1,5 +1,7 @@
 # Targets and backlog (2026-11-02)
 
+**Start at [`critical-path.md`](critical-path.md)** (what limits the frame, open conflicts, next measurement). Detailed write-ups are in [`notes/`](notes/).
+
 ## Reference: RPCS3 on the same PC
 
 Ryzen 5 2600X + RTX 3060 Ti, the MLB16 Online launcher's settings, 720p, Resolution Scale 100% (measured by the
@@ -62,18 +64,18 @@ rendered alternately into buffers 0 and 1; a re-shown older buffer produced the
 backward step. Fixed behind `PS3RECOMP_PREPARE_FLIP_RET` (on in
 `play_windowed.sh`): 4.71 % -> 0.038 % stale-source presents and 219.9 -> 6.2
 backward frames per 1000 moving frames. See
-[`backward-frames.md`](backward-frames.md). The class-(b) leads are still worth
+[`backward-frames.md`](notes/backward-frames.md). The class-(b) leads are still worth
 checking if any geometry-only regression remains.
 
 
 **Review findings (2026-11-04, Claude):**
-- FIXED 2026-11-05 (exp/capture-tools, docs/capture-tools-fix.md): 73deaefd frame-sampled walker profiler
+- FIXED 2026-11-05 (exp/capture-tools, docs/notes/capture-tools-fix.md): 73deaefd frame-sampled walker profiler
   (DEFAULT ON) reported engine=0.000 on ~19 % of lines with real draws because it sampled whole frames from the flip
   counter while the timed work lives in a drain; an empty sampled drain could be paired with draws handled by
   unsampled ones. Sampling is now per drain, scaled by drains_total/drains_prof, and a report is deferred until a
   sampled drain carries draws (or the window is idle). Old log 322/1,698 bad lines; new live log 0/2,709.
   walker=/wait= semantics unchanged. New fixture test_walker_prof.
-- FIXED 2026-11-05 (exp/capture-tools, docs/capture-tools-fix.md): crowded capture dropped ~440 of 1,702 draws
+- FIXED 2026-11-05 (exp/capture-tools, docs/notes/capture-tools-fix.md): crowded capture dropped ~440 of 1,702 draws
   (1,261 backend, 4,547 misses/frame). Three faults: M3's cold-start notes ran before the capture was armed and were
   cleared; the `.mem` writer extrapolated one EA across a range although the IO table maps main memory per MB; and
   the live frame can name a narrower span than a cold replay resolves. The capture now arms before noting, images
@@ -82,13 +84,13 @@ checking if any geometry-only regression remains.
   draws (1,702 sink groups, the live count) / 0 misses. Live meter capture (one launch) replays 0 misses. New fixture
   test_walker_capture. USER still owes one crowded recapture with build-tools (command in the doc §5); gate
   draws/frame >= 1300, 0 misses, digest on. Nothing new is default-on.
-- WALKER DIET 2026-11-05 (exp/walker-diet, docs/walker-diet.md): `VK_PASS_KEEP`+`VK_VTX_PRE`+`VK_DRAW_STATE`
+- WALKER DIET 2026-11-05 (exp/walker-diet, docs/notes/walker-diet.md): `VK_PASS_KEEP`+`VK_VTX_PRE`+`VK_DRAW_STATE`
   (default 0, live keys) take the offline crowded walker 43-46 -> 38.3 ms (`draw` 13-14 -> 8.9), identical frame;
   `ENG_SHADOW_CONST` gains nothing. USER owes a live flip test (command in the doc).
-- DEPTH GPU 2026-11-05 (exp/depth-gpu, docs/depth-gpu.md): the 222 `dguest` binds are one cleared-never-drawn 2048x1024
+- DEPTH GPU 2026-11-05 (exp/depth-gpu, docs/notes/depth-gpu.md): the 222 `dguest` binds are one cleared-never-drawn 2048x1024
   Z24S8 shadow map; `PS3RECOMP_ENG_DEPTH_GPU=1` (live key, default 0) snapshots it on the GPU: offline Vulkan walker
   61.3 -> 42.2 ms, `tex` 23.6 -> 5.4, byte-identical frame. USER owes a ~3 min live fps/shadow check (command in the doc).
-- PROFILED 2026-11-05 (exp/crowd-prof, docs/crowded-walker-profile.md): the crowded capture replayed through the REAL
+- PROFILED 2026-11-05 (exp/crowd-prof, docs/notes/crowded-walker-profile.md): the crowded capture replayed through the REAL
   Vulkan backend (`PS3RECOMP_REPLAY_VK=1`, headless RTX 3060 Ti, guest programs + batching) gives walker 62.2 ms and
   `tex` 23.8 ms on the 1,694-draw frame, against 34.0 / 5.0 ms with the null backend; the null-replay "2.4-3.0 ms tex"
   is not a crowded Vulkan frame. Live `tex` 28.1 and `draw` 14.5 match the offline Vulkan 23.8 / 13.8; the live-only
@@ -102,17 +104,17 @@ checking if any geometry-only regression remains.
 
 ## Priority: speed and frame-time stability first
 
-**PLAN (2026-11-05 roundtable, docs/roundtable-2026-11-05.md):** 1 live walker profile, 2 native WWS head/tail, 3 walker diet (barriers/render passes/dirty bits/shadow const), 4 SPU register pressure + PGO, 5 ring/record thread/native runner last.
-- Item 2 Stage A (2026-11-05, exp/wws-native): contract + native ticket claim only (1.12-1.21x on ~160 ns, ~0.02 lane-ms/frame); the head staging/dispatch and job submit/exit tail are still lifted, so the -50 % gate is not met and Stage B must not start. Key `PS3RECOMP_WWS_NATIVE_PM` default 0. [`wws-native-pm.md`](wws-native-pm.md).
+**PLAN (2026-11-05 roundtable, docs/notes/roundtable-2026-11-05.md):** 1 live walker profile, 2 native WWS head/tail, 3 walker diet (barriers/render passes/dirty bits/shadow const), 4 SPU register pressure + PGO, 5 ring/record thread/native runner last.
+- Item 2 Stage A (2026-11-05, exp/wws-native): contract + native ticket claim only (1.12-1.21x on ~160 ns, ~0.02 lane-ms/frame); the head staging/dispatch and job submit/exit tail are still lifted, so the -50 % gate is not met and Stage B must not start. Key `PS3RECOMP_WWS_NATIVE_PM` default 0. [`wws-native-pm.md`](notes/wws-native-pm.md).
 - Item 4 / SPU codegen v4 (2026-11-05, exp/spu-v4): direct SPU wait on the PPU main thread is **0 ms/frame** at
   the pitch meter (`PS3RECOMP_SPU_CRIT`: run 13.0 / RSX ref 15.2 / SPU 0.0 / other 0.8 of a 29.0 ms frame); FTZ
   reproduces live at 204.7 -> 184.8 us/job (1.108x) with flat fps. Exact lazy -0 canonicalisation is neutral
   (0.94-1.04x): every live result is stored/written back, and dead ones are already DCE'd. Stop trying to reach
   the unsafe 1.54x exactly; the remaining SPU lever is the producer wait or a register-mapped backend.
-  [`spu-codegen-v2.md`](spu-codegen-v2.md).
+  [`spu-codegen-v2.md`](notes/spu-codegen-v2.md).
 
 **CURRENT FOCUS (user, 2026-11-04 evening): renderer first (walker multithread M4 running), then back to Edge.**
-- DONE 2026-11-04: 30-fps-cap investigation (docs/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.
+- DONE 2026-11-04: 30-fps-cap investigation (docs/notes/fps30-investigation.md) — no active cap; the sim dt is measured elapsed time (1/60 quanta + residual carry) and the title's own 30 fps mode stays off (Gfx flag 1, `cellPadGetInfo2.system_info` 0), so 60 fps is purely a speed problem. Do not set that pad bit.
 - DONE 2026-11-04: menu flip fix PS3RECOMP_FLIP_TICK_OWN_STATE=1 is the play default (ca855f72 + dcdd6728; medium
   review ok: FIFO fall-through keeps the old status gate, 17 ms bound never completes an abandoned frame, all under
   FLIP_LOCK). User: menus hit 60 fps (recording 42.1 -> 59.4 fps). Meter A/B: fps 34.97 -> 36.22, p50 34.15 both.
@@ -120,13 +122,13 @@ checking if any geometry-only regression remains.
 - E1 LIVE FAIL (2026-11-04 23:00, bba9787a merged, key default 0): HOLES_NATIVE=1 draws giant brown occluder
   polygons / flying skin-textured shards (user saw it toggle with the 10 s arms; thumbnails B/B 30 vs A/A 2.2);
   121,242 triangles added live vs 0 on the offline corpus; p90/p99 +2 ms. Needs a live capture of a bad pair and the
-  vertex/index mapping fixed before any eye check. Planning meeting prep: docs/plan-meeting-2026-11-05.md.
+  vertex/index mapping fixed before any eye check. Planning meeting prep: docs/notes/plan-meeting-2026-11-05.md.
 **User rule (2026-11-04 21:35): keep the ball rolling.** Walker MT paused after 4 failed rounds (repair: exact,
 no hang, black field fixed, but walker 9.5 -> 12.8 ms and thumbnails differ 38.8 vs A/A 3.4; code kept on exp/live-ab
 230acd9f). Now: single-thread texture cost (walker-tex-cost.md). IF IT FAILS: park the renderer track and move straight
 to Edge E1 (eye holes), then E2 — no further renderer rounds without the user.
 **Order agreed with the user (2026-11-04):** (1) walker MT M4 (running); (2) DONE 2026-11-05: Claude review of
-M2-M4 + crowded-capture fix (full guest imaging) + walker-prof sampling fix (docs/capture-tools-fix.md);
+M2-M4 + crowded-capture fix (full guest imaging) + walker-prof sampling fix (docs/notes/capture-tools-fix.md);
 (3) user recapture + crowded replay test (next); (4) M5 hardening ->
 default if it wins (renderer track done); (5) then Edge E1, E2. E1 only jumps ahead if the renderer is blocked waiting
 on the user.
@@ -149,7 +151,7 @@ on the user.
   `PS3RECOMP_C690_GPU_2A` key/walker binding on any branch. Next: walker
   binding + live key, then the 20/48/other 0x2A classes, 0x21 sel7 (4.74 ms),
   culls (3.03 ms); 0x22 (5.80 ms) is already CPU-native.
-  Details: [`edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md).
+  Details: [`edge-gpu-2a-32b.md`](notes/edge-gpu-2a-32b.md).
 - 2026-11-05: **0x2A record classes decoded and kerneled (offline).** Ten
   layouts; seven class kernels gate **131/131 classified meter pairs**
   (45,440 records, positions 0, packed <= 1 LSB, SPU bytes untouched, no
@@ -157,7 +159,7 @@ on the user.
   pairs are included. Fallback 31.8 %: 31 first-in-job pairs enter the low-LS
   SPURS runtime (16.1 %), 19 outputs write no positions (9.9 %), 11 rare
   64/40/16/4/112-byte layouts (5.7 %). `0x00A00004` is 26 %, not 51 %.
-  Details: [`edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md).
+  Details: [`edge-gpu-2a-classes.md`](notes/edge-gpu-2a-classes.md).
 - 2026-11-05 (later): **0x2A binding + live key delivered, default off.**
   `PS3RECOMP_C690_GPU_2A` exports the A/B class, runs the 32-byte Vulkan kernel
   on the renderer's device and serves the range through the draw-engine
@@ -167,7 +169,7 @@ on the user.
   The SPU pack is not skipped yet (the handler reads back its records). Next:
   isolate the live crash, then replace `0x10C70`/`0x109C0`, then 0x21 sel7
   (4.74 ms) and the culls (3.03 ms).
-  Details: [`edge-gpu-binding.md`](edge-gpu-binding.md).
+  Details: [`edge-gpu-binding.md`](notes/edge-gpu-binding.md).
 - 2026-11-05 (later): **native 0x2A field pack delivered, default off**
   (`PS3RECOMP_C690_NATIVE_2A`, `exp/native-2a`). It replaces the four
   lifted field passes (`0x7840`/`0x7FC0`/`0x7AC0`/`0x7540`), not
@@ -179,7 +181,7 @@ on the user.
   32-byte class is 11 % slower. Conclusion: a GPU pack replacement can
   save at most ~0.2-0.5 ms/frame while its hand-off costs 5.96 ms/frame;
   0x21 whole-command is the next lever. Details:
-  [`edge-native-2a.md`](edge-native-2a.md).
+  [`edge-native-2a.md`](notes/edge-native-2a.md).
 - 2026-11-05 (later, crash fix): **the live heap corruption is fixed.** The
   lane key was `ctx->spu_id % 16`, but the c690 jobs run through
   `spu_run_spurs_job`, which builds every lane's context with `spu_id 0`; all
@@ -195,7 +197,7 @@ on the user.
   `0x10C70`/`0x109C0` **and** pipeline the fence (timeline semaphore); the
   0x2A saving is ~1.07 ms at 31.2 % coverage, ~2.3 ms at the 68.2 % now
   classified.
-  Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §7.
+  Details: [`edge-gpu-binding.md`](notes/edge-gpu-binding.md) §7.
 - 2026-11-05 (later, async hand-off): **the c690 compute runs on a dedicated
   compute queue with a timeline semaphore; the walker never waits.** Submit is
   **0.061 ms/frame, wait 0** (target <= 0.5 ms), 4,525 batches over 1,104
@@ -206,7 +208,7 @@ on the user.
   into the frame's command buffer (no separate submit) and have the draw
   consume the GPU range after the pack replacement; then the other six classes
   (68.2 % offline), 0x21 sel7 (4.74 ms) and the culls (3.03 ms). Default stays
-  off. Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §8.
+  off. Details: [`edge-gpu-binding.md`](notes/edge-gpu-binding.md) §8.
 - 2026-11-05 (later, diagnosis): **the key-on loss is the GPU hand-off, not the
   submit call.** Four arms in one clean launch (A off / B export / C resolve /
   D full): walker +1.39 / +1.94 / +5.88 ms; D-A p50 +6.23 ms, fps -9.75.
@@ -215,7 +217,7 @@ on the user.
   (offline entries/probe 50-100 -> 0.02-1.7). The 0x2A slice is still
   1.07/2.3/3.43 ms (31.2/68.2/100 %), so the binding cannot win until the
   compute is recorded in-stream and the pack is replaced. Default off.
-  Details: [`edge-gpu-binding.md`](edge-gpu-binding.md) §9.
+  Details: [`edge-gpu-binding.md`](notes/edge-gpu-binding.md) §9.
 - 2026-11-05 (later): **native whole-command 0x21 delivered, default off**
   (`PS3RECOMP_C690_NATIVE_21`, `exp/native-21`). It replaces the 0x13080
   dispatcher and both selector bodies (including the format
@@ -227,7 +229,7 @@ on the user.
   re-run because of the 2-launch cap). **Do not send 0x21 to the GPU**: the
   hand-off costs ~5.96 ms/frame and there is nothing to save. The next 0x21
   lever is the codegen backend (registry-mapped SPU registers), per
-  `spu-codegen-audit.md`. Details: [`edge-native-21.md`](edge-native-21.md).
+  `spu-codegen-audit.md`. Details: [`edge-native-21.md`](notes/edge-native-21.md).
 - 2026-11-05 (later): **extra c690 host lanes answered speed option (d) in the
   negative, default off** (`PS3RECOMP_C690_EXTRA_LANES`, `exp/c690-lanes`).
   Hidden host workers run the same lifted PM on a physical row whose same wid
@@ -241,7 +243,7 @@ on the user.
   list counter; the title only accounts for 5), so going above
   `maxContention` is not a small change. Remaining levers: per-job
   compute/codegen or a host-side job stealer for intra-lane gaps. Details:
-  [`c690-extra-lanes.md`](c690-extra-lanes.md).
+  [`c690-extra-lanes.md`](notes/c690-extra-lanes.md).
 - 2026-11-05 (later): **the intra-lane gaps are 84 % the PM's own head/tail,
   not runtime; the "6 ms of runtime" premise is false** (`exp/live-ab`, two
   meter launches, 24 s timelines). A 29.16 ms burst keeps 4.05 of 5 lanes
@@ -255,13 +257,13 @@ on the user.
   34.15 both, lanes 4.05 -> 4.06, coordinator wait 0.215 -> 0.201
   lane-ms/frame. Even zeroing host + DMA copies (~0.34) + lock line cannot
   move 6 ms or the 34.15 p50; the lever is per-job lifted code
-  ([`spu-codegen-audit.md`](spu-codegen-audit.md)). Details:
-  [`c690-lane-gaps.md`](c690-lane-gaps.md).
+  ([`spu-codegen-audit.md`](notes/spu-codegen-audit.md)). Details:
+  [`c690-lane-gaps.md`](notes/c690-lane-gaps.md).
 - DONE 2026-11-04: native c690 dispatch SPURS_PM_NATIVE_DISPATCH=6 + FAST_RESCHED=64, play default (medium review ok:
   lock order si->lock -> registry, fairness yield to other workloads, 256/residency cap). Meter: fps 34.00 -> 35.33,
   p90 43.2 -> 39.2, p99 46.7 -> 42.7, 40-50 ms share 24.3 % -> 7.1 %, p50 34.15 unchanged. Needs user play test
   (audio, start screen, cinematics, in-play).
-- MEASURED 2026-11-04 (docs/meter-p50-pin.md): the 34.15 ms p50 is the **c690 producer, not flip/vblank**. With
+- MEASURED 2026-11-04 (docs/notes/meter-p50-pin.md): the 34.15 ms p50 is the **c690 producer, not flip/vblank**. With
   native on, a 25 s meter timeline gives frame p50 34.15, c690 union p50 32.01, last c690 job p50 32.97; the extra
   ~1.2 ms is the walker drain / ref-publication tail. Capping the flip-done wait to the guest's exact 2 x 16683 =
   33.366 ms (new live key PS3RECOMP_FLIP_DEADLINE_US, default 0) is **neutral**: A/B p50 34.15 vs 34.15, p90
@@ -270,15 +272,15 @@ on the user.
 - DECISION: if the meter p50 is the target, continue Edge compute (0x22 21.2 %, 0x21 emit 25.0 %, 0x2A 13.5 %; a 2x
   cut of those is ~5-7 ms of burst, p50 ~28-29 ms). If the real-play 40-80 ms frames are the target, the renderer/
   walker is the lever and the meter median stays 34 ms. The remaining Edge GPU/native items are parked below.
-- DONE 2026-11-05 (docs/present-stalls.md): the 0.5-0.9 s meter present/pump stalls are the **synchronous 2.7 MB
+- DONE 2026-11-05 (docs/notes/present-stalls.md): the 0.5-0.9 s meter present/pump stalls are the **synchronous 2.7 MB
   frame dump on the walker** (ab_live every 10 presents; `stalltrace dump=717.6 ms`, matching the 717 ms
   present/pump stall above). `PS3RECOMP_VK_DUMP_ASYNC=1` (default off) hands the write to a one-slot writer thread:
   meter-phase dump stalls 2 -> **0** in the same config, 0 dump lines in 132 s. Remaining: meter-start first-use
   pipeline/shader drains (0.25-2.1 s, before the measured segments) and the rare x11/FIFO `vkQueuePresentKHR`
   compositor stall; C5's 4.3 ms menu tail is a different (ref-publication) wait.
 Every mission ends with a meter A/B number; no mapping-only missions unless an A/B result makes no sense.
-Long frames (40-80+ ms): the replay/real-play long frames are walker-bound (docs/c690-serialisation.md); meter
-long frames are c690 (docs/long-frames.md).
+Long frames (40-80+ ms): the replay/real-play long frames are walker-bound (docs/notes/c690-serialisation.md); meter
+long frames are c690 (docs/notes/long-frames.md).
 Parked until the user says otherwise: team logo (offline follow-up done, user diagnostic run ready in
 team-logo.md §8.3), visuals, HLE batch 2, review nits.
 
@@ -296,7 +298,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 **Speed: steady frames (meter)**
 1. ~~The 33 ms deadline: per frame, did `Gfx_DisplayFlip` (0x000692dc) leave its wait by the flip handler or by the
    2x16683 us timeout, and what was still running then (walker, c690, present)?~~
-   **Done 2026-11-03** ([`flip-deadline.md`](flip-deadline.md)): 28.6 % of frames leave by the deadline, present
+   **Done 2026-11-03** ([`flip-deadline.md`](notes/flip-deadline.md)): 28.6 % of frames leave by the deadline, present
    queued p50 0.35 ms, completion beat delayed by the walker drain (tick and drain share a thread). Earlier
    completion (`FLIP_ON_DONE`) and the status-preserving candidate both lose; both default off. Follow-up: decouple
    the display tick from the walker drain (separate tick thread or a tick checkpoint) without exposing the
@@ -306,15 +308,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 4. Untested: PIN=0 vs PIN=1; SPU_CODE_DMA_MEMO measured neutral (off).
 
 **Hitches (100-160 ms frames, startup/cinematics/loading)**
-5. Hitch census: DONE (docs/hitch-census.md). Cold run: 824 frames > 50 ms. Cinematics 798 (c690, same lever as
+5. Hitch census: DONE (docs/notes/hitch-census.md). Cold run: 824 frames > 50 ms. Cinematics 798 (c690, same lever as
    the meter), boot 18 (353-589 ms, SPU asset jobs), load 1 (5.1 s: 2.9 s our shader translation, 0.25 s driver
    pipelines; file I/O is async and negligible), meter 7. Menus 0.
-6. Shader disk cache: DONE, default on (docs/shader-disk-cache.md). Load freeze 5.1 s -> 2.06 s warm. Review
+6. Shader disk cache: DONE, default on (docs/notes/shader-disk-cache.md). Load freeze 5.1 s -> 2.06 s warm. Review
    fix: hash seeded with the translator build stamp (stale entries after translator changes). Open review nits:
    orphaned .tmp files and no pruning (dir grows across versions), key includes render state (duplicate files),
    static s_eng_pipe_key handoff, mutex held across file I/O. Remaining ~2 s load = walker drain (3,484 draws) +
    texture uploads. Hitch recorder on in play tests (hitches.pstl + tools/hitch_table.py).
-6a. First-use pipeline/shader stalls: MEASURED 2026-11-05 (docs/pipeline-async.md). A cold run's 918 HLSL -> SPIR-V
+6a. First-use pipeline/shader stalls: MEASURED 2026-11-05 (docs/notes/pipeline-async.md). A cold run's 918 HLSL -> SPIR-V
    translations are 5,600.8 ms (93 % of the first-use work); decompile 53.7 ms, shader modules 25.3 ms,
    `vkCreateGraphicsPipelines` 448.8 ms (max 6.7 ms). `PS3RECOMP_PIPE_ASYNC` (default off) translates on a bounded
    worker, waits at most 2 ms per frame and logs each skipped draw; the driver pipeline stays on the draw thread.
@@ -340,7 +342,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - White pants on pitcher, catcher, batter, umpire (lighting/colour, known). Mesh holes around the pitcher's eyes,
   same as RPCS3 when upscaled (see 6d).
 
-**Next user play test: prepared probes (docs/edge-holes-native-plan-audio.md)**
+**Next user play test: prepared probes (docs/notes/edge-holes-native-plan-audio.md)**
 - Audio: `PS3RECOMP_AUDIO_DIAG=1 ./play_windowed.sh` (SDL device/spec + per-second mix line). The game does open
   cellAudio and our SDL backend opens a device, so the silence is downstream (sink routing or PCM/read index).
 - Mesh holes: `MLB16_CULL_BYPASS=1` (all Edge screen culls off; 2 = 0x2C only, 3 = 0x25/0x26). Holes gone => Edge
@@ -349,7 +351,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   Plan: prove the live class, then hand-write to ~5x or start with unpack/pack (23.5 %). Non-native levers: 1-3 ms
   each (AVX2/FAST_LS, PGO), more lanes 0-1 ms. Decision with the user.
 
-**Team select / logos / Start (docs/team-select-and-logos.md, static)**
+**Team select / logos / Start (docs/notes/team-select-and-logos.md, static)**
 - Team-switch ~1 s input lock: no stall in the run (max frame 41 ms, no I/O); likely the game's scripted wheel
   transition with the missing logo hiding the cue. Pad probe if it persists: `PAD_ALWAYS_CHANGE=1`.
 - Missing floating 3D logo: not a failed load; the FIFO jump-park resync drops its draw range. Probe:
@@ -371,8 +373,8 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Process: walker-cuts-2 mission hung at OpenCode startup 17:24-20:23 (no log); relaunch after native Edge.
   Check each launch is alive a few minutes in.
 
-**Boot SPU / replay / logo (docs/boot-spu-hitches.md, static)**
-- DONE 2026-11-05 (docs/boot-gaps.md): **C6 closed** — the 237-654 ms boot gaps were the interpreted DXT
+**Boot SPU / replay / logo (docs/notes/boot-spu-hitches.md, static)**
+- DONE 2026-11-05 (docs/notes/boot-gaps.md): **C6 closed** — the 237-654 ms boot gaps were the interpreted DXT
   kernel and are gone with the DXT lift (750cb5e9, default on); post-lift boot gaps are Bink intro decode
   (100-132 ms, one SPU task, not a runtime wait). The match-load gap was a shader-cache key bug: `__DATE__
   __TIME__` invalidated every file on every rebuild (0 hits / 856 rejected). `PS3RECOMP_SHADER_CACHE_STABLE_KEY=1`
@@ -386,14 +388,14 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   translations (the cache was cold that session).
 - Team logo: park/resync theory DISPROVED (0 resyncs in either run). Next: FIFO dump of team select +
   tools/replay_rsx, then state bisect (ENG_TEXMEMO=0, ENG_FSBIND_ALL=1, ENG_DEPTH_VIA_GUEST=1, GCM_SEMA_ACQUIRE=1).
-- Team logo capture (2026-11-04, docs/team-logo.md §5): the logo is NEVER SUBMITTED to the RSX (657 draws, all quads, 0
+- Team logo capture (2026-11-04, docs/notes/team-logo.md §5): the logo is NEVER SUBMITTED to the RSX (657 draws, all quads, 0
   triangles, no offscreen RT). Cause is guest-side: FUN_009d7b30 target-texture lookup FUN_009d4c68 returning 0, or
   the script never creating the ScriptUIElem. Next: USER diagnostic run (BOOT/CONFIG_MAIN.TXT with StressTestUIElem,
   grep 'Did not find target texture'; else PPU_WWATCH=0x013560d8). Reviewed 2b16133a (tool fixes): ok.
 - Throw/pitch meter fill is per guest frame (no wall-clock pacing): at ~30 fps it fills at about half the 60 fps
   rate. Fixed by raising fps; no separate fix.
 
-**Native Edge step 3 (docs/edge-native-step3.md)**
+**Native Edge step 3 (docs/notes/edge-native-step3.md)**
 - Wedge FIXED (native stage didn't publish the return PC): 130,304 live native calls, 0 mismatches, no wedge.
 - Speed: native 0xFDA0 stage NEUTRAL at the meter (-0.32 +/- 1.97 fps; p50 34.15 both). Off by default. Next speed
   stage per plan: unpack/pack (23.5 %), or hand-tune the cull to ~5x.
@@ -405,7 +407,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   transform (enter/leave order in c690_cull_fix.c:162 / patch_cull_hooks.py:38) -> fix before measuring the fix;
   cull_live_get ignores the env fallback when live-ctl is linked but unseeded (c690_cull_fix.c:38); cull pair cap
   can overshoot by the lane count, cull_f never closed (c690_corpus.c:464).
-- Holes fix (docs/edge-holes-fix.md, branch exp/edge-holes 1d3633aa, offline): the 0x25/0x26 cull tests in 1280x720
+- Holes fix (docs/notes/edge-holes-fix.md, branch exp/edge-holes 1d3633aa, offline): the 0x25/0x26 cull tests in 1280x720
   logical space with a fixed w/720p edge, the target is 2560x720 2x1 AA. Fix = UNION (original list untouched + the
   triangles a 2x run keeps). 400-pair gate: 0 removed, 7 added (meter corpus has no eye close-up). NOT in build-play
   yet: needs merge into exp/live-ab + re-patching the generated module wrapper + rebuild, after the DXT mission.
@@ -417,18 +419,18 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   silently drop the added triangles. Also count skipped unions (range/realloc fail) instead of silent skip.
 - 2.2 GB of stage pairs under recomp-work/ from run 2 (delete once no longer needed).
 
-**Native DXT (approved by the user 2026-11-03; docs/dxt-native-step1.md)**
+**Native DXT (approved by the user 2026-11-03; docs/notes/dxt-native-step1.md)**
 - Phase 1 (offline) found the PPU side (GpDxtCompressor FUN_00a566e8, 0x30-byte params, DXT1/3/5 formats) but could
   NOT tie the SPU kernel to a module offline: DXT spans load no registered jobmod; candidates are jobmod_96de, c566
   or an unlifted base-0 module at 0x010A1700. Next (needs the game, queued right after native Edge): one capture run
   (SPURS_PM_TRACE + a one-shot wid==0 hook dumping the job's code EA and input/output blocks), then the bit-exact
   native encoder + harness in worktree ps3recomp-dxt (branch exp/dxt-native).
-- Phase 2 capture (docs/dxt-native-step2.md, b96b2122): the DXT kernel is EBOOT 0x010A1700, UNLIFTED, running
+- Phase 2 capture (docs/notes/dxt-native-step2.md, b96b2122): the DXT kernel is EBOOT 0x010A1700, UNLIFTED, running
   through the SPU interpreter rejoin -> likely why boot/replay freezes are so long. 93 MiB corpus in
   recomp-work/dxt_cap1/ (841,340 blocks; DXT1 + DXT5). Review of b96b2122: inert when off; capture-only nits
   (first 0x4000 bytes scanned, soft run cap). Running: lift mission (lift 0x010A1700, bit-exact gate, start-screen
   A/B), then the native encoder.
-- DXT LIFTED (docs/dxt-native-step3.md, 750cb5e9, default on): start-screen freezes >250 ms 11 / 7.6 s -> 1 / 0.31 s;
+- DXT LIFTED (docs/notes/dxt-native-step3.md, 750cb5e9, default on): start-screen freezes >250 ms 11 / 7.6 s -> 1 / 0.31 s;
   DXT lane time 11.7 s -> 0.87 s; offline gate 890,688 blocks, 0 mismatches. Native encoder parked (lift covers it).
   Review (medium): fixed in ddbce4f3 (sig overlays had enabled = 0; a disabled gated region fell through to stale
   code). Open nits: lift_jobmods.py now accepts every base-0 module (a full regen would double-register DXT ungated
@@ -440,7 +442,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   PS3RECOMP_C690_CULL_FIX=1. If it fixes them, the cheaper version belongs in native Edge (cull once at 2x-aware
   rules) rather than running the lifted cull twice. Dispatch fix ddbce4f3 verified live (audio 187.5 blocks/s, no
   sig-overlay interpretation, start screen 0 frames >= 250 ms). SPU unit tests 11/11 again (stubs for DXT hooks).
-- walker-cuts-2 (docs/walker-cuts-2.md, ec4c75cf): REMAP_FAST memo on by default (offline -0.51 ms, live walker
+- walker-cuts-2 (docs/notes/walker-cuts-2.md, ec4c75cf): REMAP_FAST memo on by default (offline -0.51 ms, live walker
   -0.27 ms) but the frame does NOT move (p50 34.16 both, deadline frames 456 vs 455). The walker is not the p50 lever:
   frames end on the c690 producer burst (frame-timeline-2.md). Tick-in-drain checkpoint built, default off; the
   marker-side design (complete at the next frame's flip marker) needs one A/B. ab_live.sh PITCH_THRESH 25 misses the
@@ -450,11 +452,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   TICK_IN_DRAIN use: presented_seq is stamped at take time, not with the queued image's seq (cellGcmSys.c:204,
   :1789) -> can complete a flip that was never presented; completion logic copied 3x (share a helper); test misses
   the marker path. Minor: memo hash collides on swapped base/id; 16 KB memo in every remap struct.
-- Cull bypass A/B (docs/cull-bypass-ab.md): BYPASS=3 -7.56 fps (2.07x vertices, walker drain +6.1 ms), union
+- Cull bypass A/B (docs/notes/cull-bypass-ab.md): BYPASS=3 -7.56 fps (2.07x vertices, walker drain +6.1 ms), union
   -4.83 fps. Neither kept. Holes fix moves into the native cull (one pass, holes rule built in): Edge step 4 running.
   Note: baseline A ran at 35.35 fps with PIN=0 (ab_live default) vs ~32-33 in PIN=1 A/Bs -> PIN=0 vs 1 A/B is worth
   doing (Speed item 4).
-- Edge step 4 (docs/edge-native-step4.md, b14617a5, default off): native screen cull 0xD080, exact on 400/400,
+- Edge step 4 (docs/notes/edge-native-step4.md, b14617a5, default off): native screen cull 0xD080, exact on 400/400,
   884k shadow calls 0 mismatches, 1.53x per call; live neutral (B-A -0.04 / +0.21 fps). Union mode still ~-5 fps (the
   final count is written by the 0x132E0 caller, so a fused pass needs that modelled). c690 lane busy ~0.54 while the
   burst wall ~36 ms ~ frame: the burst looks latency-bound, so faster stages alone don't move the frame. Running:
@@ -463,12 +465,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   bracket (c690_native_screen.c:219); shadow PC check compares r0 with ctx->pc after spu_drain_call (false
   mismatches possible) and never compares the published pc (:286); non-atomic env/dump/progress statics (:84);
   native mode 2 enables the union for 0x25/0x26 but not 0x2C (c690_cull_fix.c:106).
-- PIN + burst path (docs/pin-and-burst-path.md): PIN=0 35.31 vs PIN=1 30.98 fps (+14 %); play_windowed was already
+- PIN + burst path (docs/notes/pin-and-burst-path.md): PIN=0 35.31 vs PIN=1 30.98 fps (+14 %); play_windowed was already
   effectively PIN=0, now explicit (Speed item 4 DONE). c690 burst (35 ms): ~70 % job compute, ~30 % per-job
   dispatch turnover (host 5.0, head 2.6, tail 3.0 ms), 5 lanes balanced, no serial chain. Levers: gaps -5..-10.6 ms,
   sixth lane -5.8 ms, native unpack/pack+skin+normalize at 1.4x -3.2 ms, native cull alone -0.3 ms. Running:
   dispatch cuts + sixth lane.
-- c690 dispatch cuts (docs/c690-dispatch-cuts.md, 84e5dd06, default off): host gap -61 %, burst wall 34.25 ->
+- c690 dispatch cuts (docs/notes/c690-dispatch-cuts.md, 84e5dd06, default off): host gap -61 %, burst wall 34.25 ->
   30.99 ms, occupancy +6 pts, but fps -2.0 (other workloads delayed) and p50 still 34.15. Sixth lane: guest
   nSpus=6, MeshJobs maxContention=5; SPURS_LANE6 wedges in ~10 s. Not kept.
   Review of 84e5dd06 (only matters if a key is ever turned on): FAST_GEN epoch race with cellSpursShutdownWorkload
@@ -477,32 +479,32 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - KEY FINDING: p50 is pinned at 34.15 ms (two 16.68 ms periods) no matter how much work we cut. The next lever is
   the flip/present pacing floor, not more work cuts. Running: frame-pacing-floor mission (present mode, tick
   marker-side completion with the presented_seq review bug fixed first).
-- Frame pacing (docs/frame-pacing-floor.md, d686e621): the 34.15 ms p50 is NOT a present/tick rounding grid. Hard
+- Frame pacing (docs/notes/frame-pacing-floor.md, d686e621): the 34.15 ms p50 is NOT a present/tick rounding grid. Hard
   frames = the c690 burst (lane union p50 32.8 ms) + ~3 ms, ending at the game's own flip deadline (~34.1 ms).
   Present runs on its own thread and never blocks the guest (present mode not a lever). TICK_IN_DRAIN -8.4 fps,
   FLIP_FENCE_DONE -9.4 fps (guest then waits on the buffer ref). Flip completion now one helper; presented_seq
   identity fixed. Title has no in-FIFO flip marker. Review: default tick path unchanged; fence-gate nits (marker seq
   slot order, req_ref 0 when toggled live, baseline mismatch with 2 requests) only matter if FENCE_DONE is used.
   => To move p50 the c690 burst must drop well below ~30 ms (cut compute), without delaying other workloads.
-- Edge step 5 (docs/edge-native-step5.md, 2638108b measurement only): at the meter the c690 wall is 42.9 % command
+- Edge step 5 (docs/notes/edge-native-step5.md, 2638108b measurement only): at the meter the c690 wall is 42.9 % command
   0x21 (handler 0x13080 "emit/ring", 102 us/call), 0x2A assembler 15.7 %, 0x13 copy 9.7 %, cull 12.7 %, 0x0A 7.5 %.
   The old stage shares were from another scene. Per-stage native SIMD tops out ~1.0-1.5x (compiler already emits the
   same AVX2). Running: is 0x21 compute or a WAIT (ring space / label / reservation / DMA)?
-- 0x21 emit/ring (docs/c690-emit-ring.md, 8043db5e): pure COMPUTE (0 DMA, 0 reservations, 0 waits). Two float
+- 0x21 emit/ring (docs/notes/c690-emit-ring.md, 8043db5e): pure COMPUTE (0 DMA, 0 reservations, 0 waits). Two float
   transform/pack kernels (sel 1: 390 us/call, sel 7: 52 us/call). Native at 1.3-2x would save ~3-5 ms of burst.
   8043db5e NOT pushed: GitHub returned HTTP 500 on `git push fork exp/live-ab` (3 tries 04:4x); retry later.
   Running: static SPU codegen audit (is lifted code slower than a real SPU, and why?).
-- SPU codegen audit (docs/spu-codegen-audit.md, static): lifted c690 runs ~1.03 ns per SPU instruction vs a real
+- SPU codegen audit (docs/notes/spu-codegen-audit.md, static): lifted c690 runs ~1.03 ns per SPU instruction vs a real
   SPU's 0.31 ns (~3.3x slower); 8.4-12.7 x86 per SPU instruction, 26-37 % of it GPR/stack spills. Realistic codegen
   gain 1.2-1.4x (spills 15-25 %, call dispatch 5-10 %, byteperm/masks 3-6 %). port-local-regs, port-spu-int-simd,
   port-spu-runtime-cuts are already merged; port-lockline-stripes is neutral.
-- SPU regs spike (docs/spu-regs.md, exp/spu-regs): the call-edge share is already removed by `--local-regs`; a new
+- SPU regs spike (docs/notes/spu-regs.md, exp/spu-regs): the call-edge share is already removed by `--local-regs`; a new
   `--precise-regs` is correct but clang -O2 already emitted the same hot functions (0 % x86 change), so the >=30 %
   emitted-spill kill criterion is NOT met and no live A/B was run. `--ib-goto-starts` does add the `0xC0F4`
   self-back-edge goto and roughly halves host dispatches on four captured 0x21 states (identical LS/GPR); it is off
   by default because the live c690 burst effect is unmeasured. Next lever: register-mapped backend / split long live
   ranges, not call summaries.
-- SPU codegen v2 (docs/spu-codegen-v2.md, exp/spu-v2): the 3.3x is not spills. Dynamic attribution on the real
+- SPU codegen v2 (docs/notes/spu-codegen-v2.md, exp/spu-v2): the 3.3x is not spills. Dynamic attribution on the real
   0xFDA0 corpus: emulation 63 % (float semantics/FTZ 39, frsqest/fi/LUT 26), spills 12.7 %, LS 3.3 %, shufb 3.7 %.
   `--spu-ftz-hw` (default off) runs lifted float under MXCSR FTZ|DAZ: 1.36x on 0xFDA0, 1.22-1.24x on the 0x21 loop,
   bit-identical LS+GPR; below the 1.5x gate, so off and no live A/B. Next: lazy sign-of-zero canonicalisation
@@ -512,7 +514,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   (a) codegen work (spills) for all SPU code, 1.2-1.4x; (b) native emit kernels 0x21 sel 1/7 (~3-5 ms);
   (c) GPU offload of Edge geometry (c690-offload-decision.md); (d) run more c690 jobs in parallel than the guest's
   5 lanes without the guest knowing (SPURS_LANE6 wedged; needs a different design); (e) combine a+b.
-- Review-fix batch 1 (docs/review-fixes-batch1.md, 16fc2d28): sticky ferror, live fs switch, lwcond tombstone,
+- Review-fix batch 1 (docs/notes/review-fixes-batch1.md, 16fc2d28): sticky ferror, live fs switch, lwcond tombstone,
   shader cache tmp sweep / trailing bytes / I/O outside the lock. Medium review: tmp sweep deleted ANY old *.tmp in a
   possibly user-supplied dir -> fixed (own names only, test added). Open nits: clearerr hides an earlier failed
   write's lost bytes (game sees CELL_OK on the next write); lwcond tombstone still ambiguous on Windows (32-bit long);
@@ -561,7 +563,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   runtime had two fd tables, the read returned `EBADF`, and BinkOpen reported
   "Not a Bink file." with no read. Fixed by bridging the fd spaces plus the
   Bink SPU task-attribute descriptor. Details and the ~2-min user check:
-  [`bink-video.md`](bink-video.md). Same path as the team-select `BINK_LOGO`.
+  [`bink-video.md`](notes/bink-video.md). Same path as the team-select `BINK_LOGO`.
 
 - **Team-select green flash EXPLAINED 2026-11-05 (key off by default).** The  game clears the Bink Y/Cr/Cb planes to zero on open and shows the sprite on
   the fourth update call without waiting for the first decoded frame
@@ -570,7 +572,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   `exp/bink-green` orders the SPU PUT writes after the copy and revalidates the
   texture within the bind frame, closing the renderer's bind-vs-GPU window; if
   the decode lands after the draw, the guest race remains. Offline-tested
-  (34/34 fixtures), no live launch. User command: [`bink-video.md`](bink-video.md)
+  (34/34 fixtures), no live launch. User command: [`bink-video.md`](notes/bink-video.md)
   §7.6.
 
 - **RSX write-vs-pending-read ordering ANALYSED 2026-11-05 (key off by
@@ -582,7 +584,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   the pending draw's bind. `PS3RECOMP_RSX_SYNC_FIX=1` on `exp/rsx-sync` holds
   the write until one drain pass that started after it has finished, then
   charges it. Offline 34/34; estimates and the user A/B:
-  [`rsx-sync.md`](rsx-sync.md).
+  [`rsx-sync.md`](notes/rsx-sync.md).
 
 - **Depth of field (close-up/replay blur) PATCH IMPLEMENTED 2026-11-05
   (key off by default).** `PS3RECOMP_DOF_PATCH=1` applies the user's RPCS3
@@ -593,7 +595,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   DOF pass. Key-on meter launch applied cleanly (first A/A segments
   33.4/36.2/34.3/36.7 fps; later segments contaminated by another mission's
   build). Next: user visual check in a replay/close-up, then decide on a play
-  default. Details: [`dof-patch.md`](dof-patch.md).
+  default. Details: [`dof-patch.md`](notes/dof-patch.md).
 - **Jerseys FIXED 2026-11-05 (key off by default).** The torso was not a
   texture: character fragment programs were dropped because they use
   `DDX`/`DDY` + gamma `TXD`, which the decompiler did not translate. Implemented
@@ -601,7 +603,7 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   key-off replay digest unchanged, key-on restores **23 draws/frame** and the
   jersey. Meter A/B: fps 37.88 -> 36.38, p50 34.15 both, walker +2 ms -- the
   cost of the draws that were missing. Details and the user command:
-  [`jersey-transparent.md`](jersey-transparent.md). Next: user visual check,
+  [`jersey-transparent.md`](notes/jersey-transparent.md). Next: user visual check,
   then decide on a play default.
 - **Uniform moire / ripple (OPEN, 2026-11-05).** At the meter the guest asks for
   54 sampler states: LOD bias 0 on all of them, full mip chains, 2x-8x anisotropy
@@ -611,12 +613,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   grid) is default off: key-off digest exact, 51/51 shaders compile, but the
   meter A/B showed no confirmed visual change and cost ~5 fps (35.56 ->
   30.44). Next: implement guest MaxAnisotropy behind a key and dump the pants
-  texture at a close-up. Details: [`uniform-moire.md`](uniform-moire.md).
+  texture at a close-up. Details: [`uniform-moire.md`](notes/uniform-moire.md).
 - Jerseys: previous note (not the cube probes; cause was unknown) superseded by
   the entry above.
 - Tiled logo pattern over the screen during transitions / batter intro (recomp-work/ab_live_wcb_attr_20261102_191439/
   scene_1793665113991.png).
-- Team-select 3D logo: **not a mesh path.** 2026-11-05 offline follow-up ([`team-logo.md`](team-logo.md) §10): the resolver's
+- Team-select 3D logo: **not a mesh path.** 2026-11-05 offline follow-up ([`team-logo.md`](notes/team-logo.md) §10): the resolver's
   asset kind is `BINK_LOGO`; the in-game twin is a `MovieSprite`; the settled capture's 107 quads and the two 1024x512
   targets at team entry point at a Bink/UI-movie or texture-card sprite, not a `ScriptModel`. No HLE gap found; no fix
   implemented. Next user run: `PPU_RWATCH=0x01177574,0x228` + armed FIFO dump at a **team switch** (team-logo.md §10.6).
@@ -630,15 +632,15 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
 - Crowd placement: port the RPCS3 crowd-fix patch.
 - Loading hangs (~3 s) and start-menu hitches (these also hurt playability; may move up).
 - 1080p output + 300% resolution scale (downscale on the GPU before readback).
-- Walker waits (docs/walker-waits.md, exp/walker-waits): `PS3RECOMP_WALKER_WAITS=1` splits the live walker's in-drain blocking by site; user's crowded run decides which wait (readback, GPU fences, WCB lock, shader compile) to cut.
-- One-shot waits (docs/oneshot-waits.md, exp/oneshot): `[oneshot-by]` names the caller of each live one-shot; `PS3RECOMP_VK_BATCH_CREATES=1` (live) batches creates/snapshots. User's crowded run decides if the CPU-read callers (readback, depth_readback) are next.
+- Walker waits (docs/notes/walker-waits.md, exp/walker-waits): `PS3RECOMP_WALKER_WAITS=1` splits the live walker's in-drain blocking by site; user's crowded run decides which wait (readback, GPU fences, WCB lock, shader compile) to cut.
+- One-shot waits (docs/notes/oneshot-waits.md, exp/oneshot): `[oneshot-by]` names the caller of each live one-shot; `PS3RECOMP_VK_BATCH_CREATES=1` (live) batches creates/snapshots. User's crowded run decides if the CPU-read callers (readback, depth_readback) are next.
 - Item 2 follow-up (2026-11-05, exp/wws-native): `PS3RECOMP_C690_STEPS=1` measured the head/tail split on
   `build-sync` at the meter (81.8 jobs/lane/frame): tail-submit 0.63, PM-exit+host 1.83, claim+alloc 0.18,
   staging+dispatch 1.46 lane-ms/lane/burst. All copies+atomics are ~0.8 lane-ms; the rest is lifted instruction
   execution, so no safe local cut reaches 1 ms. The only >1 ms piece is the PM exit/re-entry chain -> native
-  translation (Stage B), not a memo/memcpy/tag fix. [`wws-native-pm.md`](wws-native-pm.md) §9.
+  translation (Stage B), not a memo/memcpy/tag fix. [`wws-native-pm.md`](notes/wws-native-pm.md) §9.
 - SPU v3 (2026-11-05, exp/spu-v3): `PS3RECOMP_SPU_FTZ` is a live key (default 0) selecting a bit-exact MXCSR FTZ|DAZ
   twin of every lifted SPU module; measured live 1.117x on c690 job time (204.5 -> 183.1 us/job), frame rate flat at
   the walker-bound pitch meter. Next SPU lever: lazy sign-of-zero canonicalisation (1.54x upper bound on 0xFDA0) and
   preferred-slot scalarisation; capture 0x8160/0xD2B8/0xD4A8/0xE750 entry states first (0x6D68 captured).
-  [`spu-codegen-v2.md`](spu-codegen-v2.md).
+  [`spu-codegen-v2.md`](notes/spu-codegen-v2.md).

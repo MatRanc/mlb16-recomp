@@ -6,7 +6,7 @@ crowded-replay logs (`recomp-work/play_20261104_165634.log` and
 `recomp-work/play_20261104_165829.log`) plus the measurements already written
 up in [`walker-profile.md`](walker-profile.md),
 [`c690-serialisation.md`](c690-serialisation.md),
-[`wcb-async.md`](wcb-async.md), [`targets-and-backlog.md`](targets-and-backlog.md)
+[`wcb-async.md`](wcb-async.md), [`targets-and-backlog.md`](../targets-and-backlog.md)
 and [`nhl-lessons.md`](nhl-lessons.md). Code references are to the
 `exp/live-ab` tree (`ps3recomp-play`) at `097e6c46` plus the in-flight
 vertex-remap diff; line numbers move with that diff, so re-check them before

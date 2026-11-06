@@ -4,7 +4,7 @@ Date: 2026-11-04. Branch `exp/live-ab` in `ps3recomp-play`, flag
 `--inline-direct` (default off). Offline only: no game launch, no changes to
 `build-play`, no `recomp-work` commit. This follows
 [`spu-codegen-audit.md`](spu-codegen-audit.md) §6-8 and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

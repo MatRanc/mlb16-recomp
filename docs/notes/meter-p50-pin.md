@@ -20,7 +20,7 @@ This follows [`frame-pacing-floor.md`](frame-pacing-floor.md),
 [`pin-and-burst-path.md`](pin-and-burst-path.md),
 [`c690-serialisation.md`](c690-serialisation.md),
 [`c690-native-dispatch.md`](c690-native-dispatch.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

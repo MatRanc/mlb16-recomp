@@ -18,7 +18,7 @@ the FIFO walker, not readback.
 `measure_fast.sh` method, but running `build-play` and recording each arm:
 
 - `PS3RECOMP_VK_WINDOW=1`, `VK_DUMMY_BLACK=1`, `PS3RECOMP_VK_PRESENT_MODE=fifo`
-  (the `docs/window-freeze-fix.md` fix), `VK_DRAW_BATCH=1`,
+  (the `docs/notes/window-freeze-fix.md` fix), `VK_DRAW_BATCH=1`,
   `VK_FRAME_PIPELINE=1`, `GCM_FLIPCOUNT=1`, scripted pad to the pitch
   (NAV_HOME=1 nav), 10 s fps window from `[flip]`.
 - MangoHud CSV per arm (`tools/frametime_plot.py` after each run).

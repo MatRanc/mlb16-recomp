@@ -5,7 +5,7 @@ worktree `ps3recomp-tools`, build `recomp-work/build-tools`. One automated
 pitch-meter launch (the mission cap), X once; no other game run. Follows
 [`c690-serialisation.md`](c690-serialisation.md), [`walker-mt-m3.md`](walker-mt-m3.md),
 [`walker-per-draw.md`](walker-per-draw.md), [`walker-tex-cost.md`](walker-tex-cost.md),
-[`walker-prof.md`](walker-prof.md) and [`targets-and-backlog.md`](targets-and-backlog.md).
+[`walker-prof.md`](walker-prof.md) and [`targets-and-backlog.md`](../targets-and-backlog.md).
 No RPCS3 or other GPL emulator source was read or cited.
 
 ## TL;DR

@@ -298,9 +298,9 @@ the `[fliplog]`/`[shader-cache]`/`[pipe-timing]` lines in the two logs.
   `recomp-work/captures/bootgaps_on_20261105_073812.pstl`.
 * Logs: `recomp-work/ab_live_bootgap_off_20261105_073251.log`,
   `recomp-work/ab_live_bootgap_on_20261105_073812.log`.
-* Pre-lift evidence: `docs/boot-spu-hitches.md`,
-  `docs/hitch-census.md`, `docs/dxt-native-step3.md`,
-  `docs/shader-disk-cache.md`, `docs/present-stalls.md`.
+* Pre-lift evidence: `docs/notes/boot-spu-hitches.md`,
+  `docs/notes/hitch-census.md`, `docs/notes/dxt-native-step3.md`,
+  `docs/notes/shader-disk-cache.md`, `docs/notes/present-stalls.md`.
 
 ## Default on (2026-11-05, Claude)
 

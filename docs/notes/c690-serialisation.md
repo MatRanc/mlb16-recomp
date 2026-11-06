@@ -8,7 +8,7 @@ Follows [`long-frames.md`](long-frames.md),
 [`pin-and-burst-path.md`](pin-and-burst-path.md),
 [`frame-timeline-2.md`](frame-timeline-2.md),
 [`c690-native-dispatch.md`](c690-native-dispatch.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

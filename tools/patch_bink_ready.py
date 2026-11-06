@@ -6,7 +6,7 @@ ticks (+0x1d0) without checking the decoded-frame count (+0x110). UI_Movie_Open
 clears the planes to 0 (green in YUV) and resets both counters, so when the
 first decode takes longer than 3 game frames the cleared planes are drawn.
 With PS3RECOMP_BINK_WAIT_DECODE=1 the getter also returns 0 while +0x110 == 0.
-See mlb16-recomp/docs/bink-video.md.
+See mlb16-recomp/docs/notes/bink-video.md.
 
 Usage: patch_bink_ready.py <recompiled dir>   (idempotent)
 """

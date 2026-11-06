@@ -146,7 +146,7 @@ as `pipecrt`/`pipems` in the next `[walker-prof]` line; with
 The first A/A run (native Wayland, FIFO) froze the window from 13:42:00 on:
 `blits 0, shown 0, dropped ~70 no-slot/s` for the rest of the run, MangoHud
 logged only the first 7 s, and the guest fps drifted. That is the failure in
-`docs/window-freeze-fix.md`, not a measurement of the arms. The retry (and all
+`docs/notes/window-freeze-fix.md`, not a measurement of the arms. The retry (and all
 later runs) used `SDL_VIDEODRIVER=x11` (Xwayland), the documented fallback:
 2-5 frozen seconds, 11-128 no-slot drops over the whole run, CSV complete.
 

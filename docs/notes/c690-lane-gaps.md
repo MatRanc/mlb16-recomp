@@ -23,7 +23,7 @@ rerun), [`c690-serialisation.md`](c690-serialisation.md) (the replay is
 walker-bound, not Edge-bound), [`meter-p50-pin.md`](meter-p50-pin.md),
 [`frame-pacing-floor.md`](frame-pacing-floor.md),
 [`spu-codegen-audit.md`](spu-codegen-audit.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

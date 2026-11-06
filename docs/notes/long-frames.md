@@ -357,9 +357,9 @@ remove 40-80 ms frames; they only move p50 once the burst shrinks a lot. The
 
 ## 6. Artifacts and reproduce
 
-* `docs/long-frames-hist.png` — the session histograms (all phases, 1:1 mesh,
+* `docs/notes/long-frames-hist.png` — the session histograms (all phases, 1:1 mesh,
   guest 10-flip windows, per-session shares).
-* `docs/long-frames-decomp.png` — extra-ms decomposition and class shares.
+* `docs/notes/long-frames-decomp.png` — extra-ms decomposition and class shares.
 * Analysis scripts (not committed; they read only the logs/CSVs/JSON on disk):
   the play census re-derives the CSV+`[flip]`/`[c690-stats]`/`[RSX]` tables;
   the timeline/burst scripts read `timeline_per_frame.csv` and `burst*.json`.

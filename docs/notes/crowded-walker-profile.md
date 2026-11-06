@@ -9,7 +9,7 @@ Follows [`walker-tex-cost.md`](walker-tex-cost.md),
 [`capture-tools-fix.md`](capture-tools-fix.md),
 [`texture-dirty.md`](texture-dirty.md),
 [`walker-mt-live.md`](walker-mt-live.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md). No RPCS3 or other GPL
+[`targets-and-backlog.md`](../targets-and-backlog.md). No RPCS3 or other GPL
 emulator source was read or cited.
 
 ## TL;DR

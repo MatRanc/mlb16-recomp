@@ -174,7 +174,7 @@ run campaign stopped there.
 The centre 3-D logo is missing in both; the 2-D team crests and the `AT`
 panel are present. `PS3RECOMP_WALKER_RESYNC_FIX=1` does not bring it back, and
 the census shows no texture fallback on the frame. This is the park-resync
-draw loss in `docs/tick-and-resync.md`, not texture resolution (the earlier
+draw loss in `docs/notes/tick-and-resync.md`, not texture resolution (the earlier
 WCB doc reached the same conclusion: WCB does not change the team frame).
 
 ## 4. What the dark players are (and the fix that is not contained)

@@ -55,7 +55,7 @@ the 2.05 s replay hitch, and three later ones).
 The 14 boot hitches are 21.52-33.59 s (sum **10,134.8 ms**), i.e. just after
 the start screen appeared (~20:26:20; the frames are 20:26:27.5-20:26:39.6).
 The 5.55 s match load is at 134.5 s and is the known shader-translation case
-(the shader cache was emptied by the review fix, `docs/shader-disk-cache.md`);
+(the shader cache was emptied by the review fix, `docs/notes/shader-disk-cache.md`);
 it is not re-analysed here. The 216.9 s hitch is section 2.
 
 Thread ids in the PSTL are host-thread slots in order of first use. Parsing
@@ -231,7 +231,7 @@ loop and the walker waits for the producer.
 The shader cache was cold in this run: `[shader-cache] 896 stores, 0 hits,
 896 misses` and `[rsx engine] 448 pipelines created by frame 11893` at
 20:29:43. The 96 pipeline creates inside this frame are part of that first-use
-burst (the cache was emptied by the review fix, `docs/shader-disk-cache.md`),
+burst (the cache was emptied by the review fix, `docs/notes/shader-disk-cache.md`),
 which is why a replay camera that was not seen earlier pays it now. The
 texture and surface creates point at the replay's own render targets and
 textures, again first-use.

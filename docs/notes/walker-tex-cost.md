@@ -10,7 +10,7 @@ Follows [`texture-dirty.md`](texture-dirty.md),
 [`readback-cost.md`](readback-cost.md), [`wcb-async.md`](wcb-async.md),
 [`walker-mt-repair.md`](walker-mt-repair.md),
 [`nhl-lessons.md`](nhl-lessons.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md). No RPCS3 or other GPL
+[`targets-and-backlog.md`](../targets-and-backlog.md). No RPCS3 or other GPL
 emulator source was read or cited.
 
 ## TL;DR

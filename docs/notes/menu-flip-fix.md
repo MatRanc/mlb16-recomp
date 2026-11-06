@@ -10,7 +10,7 @@ confirmed the fix (`=1`: ~60 fps, from ~42).
 
 Follows [`menu-34ms.md`](menu-34ms.md), [`meter-p50-pin.md`](meter-p50-pin.md),
 [`walker-cuts-2.md`](walker-cuts-2.md), [`frame-pacing.md`](frame-pacing.md)
-and [`targets-and-backlog.md`](targets-and-backlog.md).
+and [`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

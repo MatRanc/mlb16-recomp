@@ -10,7 +10,7 @@ nothing is default-on.
 This follows [`edge-gpu-phase1.md`](edge-gpu-phase1.md),
 [`c690-emit-ring.md`](c690-emit-ring.md),
 [`c690_function_map.md`](c690_function_map.md),
-[`targets-and-backlog.md`](targets-and-backlog.md) and
+[`targets-and-backlog.md`](../targets-and-backlog.md) and
 [`pin-and-burst-path.md`](pin-and-burst-path.md).
 
 ## TL;DR
@@ -286,7 +286,7 @@ mlb16-recomp/tools/replay/test_vk_sync
 ```
 
 The LS/GPR capture format is produced by `SPU_FN_CAPTURE` (see
-`docs/edge-gpu-phase1.md` §6); the read/write trace harness used for §1 is a
+`docs/notes/edge-gpu-phase1.md` §6); the read/write trace harness used for §1 is a
 private research build of the lifted module with a hook in
 `spu_ls_read128`/`spu_ls_write128`.
 

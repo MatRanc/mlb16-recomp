@@ -5,7 +5,7 @@ Three reviewers each read the docs and code, wrote a position paper, then answer
 - **B**, runtime and renderer performance.
 - **C**, static recompilation and codegen.
 
-Nothing was built or run. All ms and fps figures below are estimates from existing measurements, not new data. The full papers are in [roundtable-2026-11-05/](roundtable-2026-11-05/):
+Nothing was built or run. All ms and fps figures below are estimates from existing measurements, not new data. The full papers are in [roundtable-2026-11-05/](roundtable-2026-11-05):
 - round 1: `A_architecture.md`, `B_renderer.md`, `C_recomp.md`;
 - round 2: `*_round2.md`.
 

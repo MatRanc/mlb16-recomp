@@ -4,7 +4,7 @@
 > A windowed `PS3RECOMP_TRACE` run attributes only **~2.8 ms/frame** to c690 production; ~5.7 ms/frame
 > is PPU/park-patch and ~3.0 ms/frame is the walker's own resume cadence, with workers 42 % c690-busy.
 > Design B alone is ~38 fps here, not 55–60; the cheap levers are wake-on-PUT and producer/walker
-> pipelining. See [`docs/walker-spu-wait.md`](walker-spu-wait.md). The Design B estimate below is left
+> pipelining. See [`docs/notes/walker-spu-wait.md`](walker-spu-wait.md). The Design B estimate below is left
 > as written for the record.
 
 Date: 2026-11-01. Host: Ryzen 5 2600X, RTX 3060 Ti (clocks locked 1400–1980), Fedora 44.

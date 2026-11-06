@@ -13,7 +13,7 @@ This follows [`meter-p50-pin.md`](meter-p50-pin.md),
 [`flip-deadline.md`](flip-deadline.md),
 [`frame-pacing-floor.md`](frame-pacing-floor.md),
 [`walker-cuts-2.md`](walker-cuts-2.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 

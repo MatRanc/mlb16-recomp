@@ -5,7 +5,7 @@ merged build was then measured in one live A/B (§6, `ab_live_holesab_
 20261103_233122`). Worktree `ps3recomp-holes` (branch `exp/edge-holes`,
 base `8a082ddb`, merged into `exp/live-ab` as `283c2d86`); the captured cull
 pairs and the generated c690 module are read-only inputs. See
-`docs/edge-native-step3.md` for the stage-1/2 context and the 400-pair
+`docs/notes/edge-native-step3.md` for the stage-1/2 context and the 400-pair
 replay gate.
 
 ## TL;DR

@@ -5,7 +5,7 @@ Date: 2026-11-02. Branch `play/multiscene` (ps3recomp-probe), built in
 windowed view; nothing here runs the game automatically.
 
 The question: the pitch screen is walker/PPU-bound and the earlier trace showed
-c690 is not the bottleneck there (`docs/walker-spu-wait.md`). Is c690/SPU load
+c690 is not the bottleneck there (`docs/notes/walker-spu-wait.md`). Is c690/SPU load
 heavier in ball-in-play, replays/cutscenes or crowd shots, i.e. is the shelved
 Design B worth doing for those scenes?
 
@@ -62,7 +62,7 @@ Ctrl-C) to end it. The script uses `build-play/MyGameRecomp` and the normal
 | `PS3RECOMP_WALKER_PROF=1` | walker own CPU and per-phase time |
 | `PS3RECOMP_VK_PRESENT_STATS=1` | pump gap, shown/dropped, present stall |
 | `PS3RECOMP_PUMP_MS=8` | pump inside the catch-up loop (freeze knob, already on) |
-| `PS3RECOMP_VK_PRESENT_MODE=fifo` | default freeze fix; `mailbox` overrides (see `docs/window-freeze-fix.md`) |
+| `PS3RECOMP_VK_PRESENT_MODE=fifo` | default freeze fix; `mailbox` overrides (see `docs/notes/window-freeze-fix.md`) |
 | `VK_DUMMY_BLACK=1` | disabled texture units read black, not magenta (no pink picture) |
 | `PS3RECOMP_VK_DUMP` + `_EVERY=30` | the thumbnail source (the game's own frame) |
 
@@ -183,9 +183,9 @@ PS3RECOMP_WALKER_WAKE=1 recomp-work/play_windowed.sh
 ```
 
 * `WALKER_FAST` caches the vertex fetch/remap plan and the pipeline input memo
-  (`docs/walker-cuts.md`). Expect a few ms off the walker in draw-heavy scenes.
+  (`docs/notes/walker-cuts.md`). Expect a few ms off the walker in draw-heavy scenes.
 * `WALKER_WAKE` wakes the FIFO walker as soon as an SPU PUT fills the parked
-  ring slot, instead of waiting for the idle timeout (`docs/walker-wake.md`).
+  ring slot, instead of waiting for the idle timeout (`docs/notes/walker-wake.md`).
   Expect lower wait, not more throughput.
 
 They compose: `PS3RECOMP_WALKER_FAST=1 PS3RECOMP_WALKER_WAKE=1 ...`.

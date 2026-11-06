@@ -9,7 +9,7 @@ Reads: [`rsx-sync.md`](rsx-sync.md), [`cube-rt-and-frames-in-flight.md`](cube-rt
 [`overlap-analysis.md`](overlap-analysis.md) (ring table), [`ppu-critical-path.md`](ppu-critical-path.md),
 [`frame-timeline.md`](frame-timeline.md), [`frame-timeline-2.md`](frame-timeline-2.md),
 [`c690-serialisation.md`](c690-serialisation.md), [`bink-video.md`](bink-video.md) §8,
-[`walker-multithread-design.md`](walker-multithread-design.md), [`progress.md`](progress.md) (2026-10-27 mesh rings).
+[`walker-multithread-design.md`](walker-multithread-design.md), [`progress.md`](../progress.md) (2026-10-27 mesh rings).
 
 ## TL;DR
 

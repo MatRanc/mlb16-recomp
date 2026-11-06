@@ -110,7 +110,7 @@ So:
   (p90 5.0 ms) in A, so the present thread is not sitting on frames;
 * it **is** the walker handing two guest flips to the window back to back.
   The guest is allowed three display flips ahead and one render frame in
-  flight (`docs/cube-rt-and-frames-in-flight.md`); after a slow drain it
+  flight (`docs/notes/cube-rt-and-frames-in-flight.md`); after a slow drain it
   catches up and two decoded flips reach `present_guest_frame()` in the same
   pass or a tick apart. MangoHud then sees the pair as ~1 ms + ~47 ms.
 

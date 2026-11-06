@@ -63,7 +63,7 @@ Ghidra (EBOOT `a58eb36f...`) on the import thunks and the render code:
   (`Gfx_FrameEnd` -> `FUN_00065760` put writer -> `FUN_000655cc` ref wait,
   and the same DisplayFlip thread). There is no scene-specific pacing switch.
   The difference between the two scenes is workload, not policy: at the
-  pitch the walker drains in ~17 ms (`docs/ppu-critical-path.md`), on the
+  pitch the walker drains in ~17 ms (`docs/notes/ppu-critical-path.md`), on the
   meter the guest producer/walker mix is different (below).
 
 The `FUN_000655cc` ref wait is the only per-frame PPU block. It waits for the
@@ -159,7 +159,7 @@ Trace window (512 A / 434 B frames):
 
 With WCB=2 the same ref wait is mostly **walker draw execution** (16.8 of
 21.2 ms), and the total drain (26.8 ms) is the frame's largest term. That is
-the scene `docs/meter-scene-baseline.md` already ranks for a draw fast path
+the scene `docs/notes/meter-scene-baseline.md` already ranks for a draw fast path
 (mesh 11.6, tex 9.8, main ring 10.2 ms). Yet the 8 ms tick still does not
 help: the frame stays ~35-38 ms and the extra drain eats the tick's
 potential.
@@ -280,6 +280,6 @@ faster; the guest fps is lower in both runs.
   `ref_drain` / `ref_putwait` split is a union inside the main's ref wait.
 * The boot thread's trace name is missing (named before trace init); main is
   identified by the `0x1245090` block. The pitch-wait comparison in the text
-  is from `docs/ppu-critical-path.md`, not a new run.
+  is from `docs/notes/ppu-critical-path.md`, not a new run.
 * Numerical differences of ~2 fps between the traced and untraced reports are
   within the trace's small overhead and the meter's own warm-up drift.

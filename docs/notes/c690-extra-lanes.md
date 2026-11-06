@@ -13,7 +13,7 @@ lanes concurrently, ~100-110 ms of lane time, last job +29-32 ms),
 producer), [`c690-native-dispatch.md`](c690-native-dispatch.md) (native
 dispatch and the fairness gate), [`spu-codegen-audit.md`](spu-codegen-audit.md)
 (the per-job compute is the remaining lever) and
-[`targets-and-backlog.md`](targets-and-backlog.md) (speed option (d)).
+[`targets-and-backlog.md`](../targets-and-backlog.md) (speed option (d)).
 
 ## TL;DR
 

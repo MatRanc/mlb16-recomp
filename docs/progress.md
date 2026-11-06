@@ -16,7 +16,7 @@
   wall and was not written. The shipped twin is byte-identical to v3.
 - Gates: 20/20 replay cases bit-identical, WWS PM claim 5/5, `run_tests.sh` 11/11, local-regs/ib-known/context-ABI
   pass, video fixtures 34/34 (known `test_gcm_tick_in_drain` flake once in nine runs), build-sync 0 PPU recompiles,
-  build-play untouched. Details: [`v4 in spu-codegen-v2.md`](spu-codegen-v2.md).
+  build-play untouched. Details: [`v4 in spu-codegen-v2.md`](notes/spu-codegen-v2.md).
 
 ## 2026-11-05: SPU lifter register pressure; the 30 % spill target is not reachable this way (exp/spu-regs)
 
@@ -27,14 +27,14 @@
   functions are unchanged (0 %). `--ib-goto-starts` adds the documented `0xC0F4` self-back-edge goto
   (`0xC018` 468 -> 554 x86, +7.1 % module text); on four captured 0x21 kernel states it halves host dispatches
   (146 -> 79, 153 -> 71, 190 -> 101, 250 -> 187) with identical final LS/GPR. That is a dispatch win, not a spill
-  win. No title lift flag changed; no game launch. Details: [`spu-regs.md`](spu-regs.md).
+  win. No title lift flag changed; no game launch. Details: [`spu-regs.md`](notes/spu-regs.md).
 - Correctness: 0xFDA0 stage corpus (4 pairs) LS+GPR bit-exact for baseline/precise/goto/both; `run_tests.sh` 11/11;
   `test_spu_local_regs.py` and `test_spu_ib_known_targets.py` pass; WWS native-PM claim differential passes (test
   harness now defines `g_spu_direct`/`g_spu_stack_reset_hint` so a PM lifted with `--ib-goto` links).
 
 ## 2026-11-05 (walker diet): keeping the render pass open and hoisting the vertex unpack cuts the draw phase ~4 ms
 
-Branch `exp/walker-diet` (docs/walker-diet.md). Four default-0 live keys; offline Vulkan crowded replay walker
+Branch `exp/walker-diet` (docs/notes/walker-diet.md). Four default-0 live keys; offline Vulkan crowded replay walker
 43-46 -> 38.3 ms, `draw` 13-14 -> 8.9, byte-identical frame, validation layers clean. The shadow constant texture is
 correct but gains nothing after the depth-GPU fix. Existing REMAP_DIRECT+FAST add another ~1.8 ms of `fetch`.
 Live perf shows the walker on-CPU only ~52% of the time, so CPU-side gains are bounded. USER owes one live flip test.
@@ -54,7 +54,7 @@ after the fence but before the pending draw's bind; `PS3RECOMP_RSX_SYNC_FIX=1`
 holds such a write until one drain pass that started after it has finished.
 Offline 34/34 fixtures (the known `test_gcm_tick_in_drain` flake rerun passes);
 no live launch. Details, frame-lag numbers and the A/B command:
-[`rsx-sync.md`](rsx-sync.md). User live check still owed.
+[`rsx-sync.md`](notes/rsx-sync.md). User live check still owed.
 
 ## 2026-11-05 (depth GPU): the 222 depth-guest binds are one empty shadow map
 
@@ -63,11 +63,11 @@ Z24S8 zeta sampled as linear DEPTH24_D8 by 222 draws a frame; the crowded captur
 `eng_zdepth_snapshot` refused a clear-only zeta (needs `had_write`), so each frame paid a GPU wait + 8 MB readback +
 store + re-upload. `PS3RECOMP_ENG_DEPTH_GPU=1` (live key, default 0) snapshots it on the GPU while its guest copy is
 unstored; the store stays lazy. Offline real-Vulkan, 3 runs: walker 61.3 -> 42.2 ms, `tex` 23.6 -> 5.4, `dguest`
-222 -> 0; final frame byte-identical. Details: [`depth-gpu.md`](depth-gpu.md). User live check still owed.
+222 -> 0; final frame byte-identical. Details: [`depth-gpu.md`](notes/depth-gpu.md). User live check still owed.
 
 ## 2026-11-05 (crowded walker profile): the live texture cost is the Vulkan depth guest fallback
 
-Full details in [`docs/crowded-walker-profile.md`](crowded-walker-profile.md).
+Full details in [`docs/notes/crowded-walker-profile.md`](notes/crowded-walker-profile.md).
 Branch `exp/crowd-prof` (off `exp/live-ab`) in `ps3recomp-prof`, build
 `recomp-work/build-prof`; **zero game launches** (offline capture + the user's
 11:06-11:11 log). Code pushed to `fork` only; measurement switches only, all
@@ -100,7 +100,7 @@ default off.
 
 ## 2026-11-05 (team-logo green flash): the Bink planes are drawn before the first decode
 
-Full details in [`docs/bink-video.md`](bink-video.md) §7. Branch `exp/bink-green`
+Full details in [`docs/notes/bink-video.md`](notes/bink-video.md) §7. Branch `exp/bink-green`
 in `ps3recomp-play`, build `recomp-work/build-green`; **no game launch** (the
 user plays and checks team select). Code pushed to `fork` only; the key is
 **default off**.
@@ -131,7 +131,7 @@ user plays and checks team select). Code pushed to `fork` only; the key is
 
 ## 2026-11-05 (c690 lane gaps): the ~20 % idle is the PM's head/tail, not runtime dispatch
 
-Full details in [`docs/c690-lane-gaps.md`](c690-lane-gaps.md). Branch
+Full details in [`docs/notes/c690-lane-gaps.md`](notes/c690-lane-gaps.md). Branch
 `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Two
 pitch-meter launches (the cap), X once: `ab_live_lanegapsA_20261105_080615`
 and `ab_live_lanegapsB_20261105_081004`; 24 s timelines each.
@@ -165,7 +165,7 @@ and `ab_live_lanegapsB_20261105_081004`; 24 s timelines each.
 
 ## 2026-11-05 (boot gaps / match load): C6 was already fixed by the DXT lift; the shader cache never hit
 
-Full details in [`docs/boot-gaps.md`](boot-gaps.md). Branch `exp/live-ab` in
+Full details in [`docs/notes/boot-gaps.md`](notes/boot-gaps.md). Branch `exp/live-ab` in
 `ps3recomp-play`, build `recomp-work/build-play`. Two boot -> pitch-meter
 launches (the cap), X once: `ab_live_bootgap_off_20261105_073251` and
 `ab_live_bootgap_on_20261105_073812`; the second was after a rebuild.
@@ -200,7 +200,7 @@ launches (the cap), X once: `ab_live_bootgap_off_20261105_073251` and
 
 ## 2026-11-05 (c690 extra host lanes): the guest's maxContention is the ceiling; no burst win
 
-Full details in [`docs/c690-extra-lanes.md`](c690-extra-lanes.md). Branch
+Full details in [`docs/notes/c690-extra-lanes.md`](notes/c690-extra-lanes.md). Branch
 `exp/c690-lanes` in the new worktree `ps3recomp-lanes` (from `exp/live-ab`,
 with the parked WIP `27f49913` cherry-picked and fixed), build
 `recomp-work/build-lanes`. Code pushed to `fork` only;
@@ -236,7 +236,7 @@ cap), arms 0 / 2 / 4 hidden host lanes, 4 x 12 s each, plus a 24 s timeline.
 
 ## 2026-11-05 (pipeline async, verified): the key-on failure was an inverted publish; fixed, cold run reaches the meter with 0 failures
 
-Full details in [`docs/pipeline-async.md`](pipeline-async.md) §7. Branch
+Full details in [`docs/notes/pipeline-async.md`](notes/pipeline-async.md) §7. Branch
 `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play` at
 `ff6e5f02` + `f3311e68`; code pushed to `fork` only. `PS3RECOMP_PIPE_ASYNC`
 stays **default off**. Two cold-cache pitch-meter launches (the cap); caches
@@ -270,7 +270,7 @@ never deleted.
 
 ## 2026-11-05 (pipeline async): translation is 93 % of the first-use stall; worker path added, key-on launch still to verify
 
-Full details in [`docs/pipeline-async.md`](pipeline-async.md). Branch
+Full details in [`docs/notes/pipeline-async.md`](notes/pipeline-async.md). Branch
 `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Code pushed
 to `fork` only; `PS3RECOMP_PIPE_ASYNC` stays **default 0**. Two cold-cache
 pitch-meter launches (the cap); shader/pipeline caches moved to
@@ -308,7 +308,7 @@ pitch-meter launches (the cap); shader/pipeline caches moved to
 
 ## 2026-11-05 (native 0x21): whole-command rewrite is bit-exact offline but at parity; the one live A/B attempt wedged (pre-fix)
 
-Full details in [`docs/edge-native-21.md`](edge-native-21.md). Branch
+Full details in [`docs/notes/edge-native-21.md`](notes/edge-native-21.md). Branch
 `exp/native-21` in `ps3recomp-n21`, build `recomp-work/build-n21`. Code pushed
 to `fork` only; `PS3RECOMP_C690_NATIVE_21` stays **default 0**. Two pitch-meter
 launches (the cap): launch 1 lost to a missing archive anchor, launch 2 captured
@@ -348,7 +348,7 @@ the corpus and ran the A/B.
 
 ## 2026-11-05 (present stalls, C4): the frame dump blocked the walker; async writer, default off
 
-Full details in [`docs/present-stalls.md`](present-stalls.md). Branch
+Full details in [`docs/notes/present-stalls.md`](notes/present-stalls.md). Branch
 `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. **Two
 pitch-meter launches (the cap)**: one diagnostic with a stall tracer, one
 confirm with the fix. Code pushed to `fork` only; the key is default off.
@@ -377,7 +377,7 @@ confirm with the fix. Code pushed to `fork` only; the key is default off.
 
 ## 2026-11-05 (c690 GPU Edge): key-on cost diagnosed; the hand-off, not the submit, costs 5.9 ms/frame
 
-Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §9. Branch
+Full details in [`docs/notes/edge-gpu-binding.md`](notes/edge-gpu-binding.md) §9. Branch
 `exp/edge-gpu` in `ps3recomp-gpu` (commit `ff29ad46`), build
 `recomp-work/build-gpu`. **Two pitch-meter launches (the cap)**; run 1 is
 discarded (a concurrent mission build loaded the machine and the off arm kept
@@ -410,7 +410,7 @@ default 0.
 
 ## 2026-11-05 (c690 Edge): native 0x2A field pack; policy-exact on 112/131 pairs, live A/B neutral
 
-Full details in [`docs/edge-native-2a.md`](docs/edge-native-2a.md). Branch
+Full details in [`docs/notes/edge-native-2a.md`](notes/edge-native-2a.md). Branch
 `exp/native-2a` in `ps3recomp-n2a`, build `recomp-work/build-n2a`. Code pushed
 to `fork` only; `PS3RECOMP_C690_NATIVE_2A` stays default 0. **Two pitch-meter
 launches (the cap)**: run 1 carried a per-layout lookup bug found afterwards,
@@ -450,7 +450,7 @@ run 2 is the measurement.
 
 ## 2026-11-05 (c690 GPU Edge): asynchronous 0x2A hand-off; submit 0.061 ms/frame, p90 still pays the compute queue
 
-Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §8. Branch
+Full details in [`docs/notes/edge-gpu-binding.md`](notes/edge-gpu-binding.md) §8. Branch
 `exp/edge-gpu` in `ps3recomp-gpu`, build `recomp-work/build-gpu`. **Two
 pitch-meter launches (the cap)**; the key stays default 0.
 
@@ -485,7 +485,7 @@ pitch-meter launches (the cap)**; the key stays default 0.
 
 ## 2026-11-05 (c690 GPU Edge): 0x2A live crash fixed, one clean A/B; overlay costs 5.96 ms/frame
 
-Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md) §7. Branch
+Full details in [`docs/notes/edge-gpu-binding.md`](notes/edge-gpu-binding.md) §7. Branch
 `exp/edge-gpu` in `ps3recomp-gpu`, build `recomp-work/build-gpu`. **One
 pitch-meter launch (the cap), no crash.** Code pushed to `fork` only;
 `PS3RECOMP_C690_GPU_2A` stays default 0.
@@ -526,7 +526,7 @@ pitch-meter launch (the cap), no crash.** Code pushed to `fork` only;
 
 ## 2026-11-05 (c690 GPU Edge): 0x2A record-class decode + per-class kernels, 68.2 % coverage
 
-Full details in [`docs/edge-gpu-2a-classes.md`](edge-gpu-2a-classes.md). **Offline
+Full details in [`docs/notes/edge-gpu-2a-classes.md`](notes/edge-gpu-2a-classes.md). **Offline
 only: zero game launches**, no `ps3recomp-gpu` changes; the walker-binding
 mission's worktree and the existing `c690_2a_32b.*` files were not touched.
 
@@ -554,7 +554,7 @@ mission's worktree and the existing `c690_2a_32b.*` files were not touched.
 
 ## 2026-11-05 (c690 GPU Edge): 0x2A binding + live key; offline gates pass, live A/B crashes
 
-Full details in [`docs/edge-gpu-binding.md`](docs/edge-gpu-binding.md). Branch
+Full details in [`docs/notes/edge-gpu-binding.md`](notes/edge-gpu-binding.md). Branch
 `exp/edge-gpu` in `ps3recomp-gpu` (merged `exp/live-ab`), build
 `recomp-work/build-gpu`. **Two pitch-meter launches (the cap), both crashed on
 the key-on arm; no A/B numbers.** Key `PS3RECOMP_C690_GPU_2A` is default 0.
@@ -588,7 +588,7 @@ ps3recomp at upstream `4e8f3ca` (2026-10-26) with `mlb16-work`, `feat/presentati
 ## 2026-11-05 (capture tools): walker-prof sampling and full guest imaging fixed
 
 Full details, tests and the user command are in
-[`docs/capture-tools-fix.md`](capture-tools-fix.md). Branch `exp/capture-tools`
+[`docs/notes/capture-tools-fix.md`](notes/capture-tools-fix.md). Branch `exp/capture-tools`
 in a new `ps3recomp-tools` worktree, build `recomp-work/build-tools`. One
 automated pitch-meter launch (the cap), X once; no RPCS3 source read or cited.
 
@@ -619,7 +619,7 @@ automated pitch-meter launch (the cap), X once; no RPCS3 source read or cited.
 
 ## 2026-11-05 (c690 GPU Edge): 32-byte 0x2A index contract and exact kernel; live A/B blocked
 
-Full details in [`docs/edge-gpu-2a-32b.md`](edge-gpu-2a-32b.md). Two pitch-meter
+Full details in [`docs/notes/edge-gpu-2a-32b.md`](notes/edge-gpu-2a-32b.md). Two pitch-meter
 launches, both capture-only (the cap); **no live A/B**. Branch `exp/edge-gpu`
 in a new `ps3recomp-gpu` worktree, build `recomp-work/build-gpu`; `build-play`
 and `recomp-work/spu_lifted` were not touched.
@@ -646,8 +646,8 @@ and `recomp-work/spu_lifted` were not touched.
 ## 2026-11-05 (Bink video): the intro never opened because the fd spaces were split
 
 Full details, the two fixes and the user check are in
-[`docs/bink-video.md`](bink-video.md); the team-logo pointer is in
-[`docs/team-logo.md`](team-logo.md) §11. Two automated launches (the cap);
+[`docs/notes/bink-video.md`](notes/bink-video.md); the team-logo pointer is in
+[`docs/notes/team-logo.md`](notes/team-logo.md) §11. Two automated launches (the cap);
 no GPL source read or cited.
 
 - **Failure site, from a live write-watch:** after `MLB_INTRO.BIK` opens on
@@ -677,7 +677,7 @@ no GPL source read or cited.
 
 ## 2026-11-05 (team logo): the resolver is a `BINK_LOGO` asset, not a mesh path
 
-Full details and the user command are in [`docs/team-logo.md`](team-logo.md) §10.
+Full details and the user command are in [`docs/notes/team-logo.md`](notes/team-logo.md) §10.
 **Static only: no game launch.** EBOOT in Ghidra, the four WADs streamed, the
 existing team-select FIFO capture, and the 2026-11-05 logs.
 
@@ -708,7 +708,7 @@ existing team-select FIFO capture, and the 2026-11-05 logs.
 
 ## 2026-11-05 (uniform moire): sampler census done, 2x1 derivative candidate is not it
 
-Full details and the user command are in [`docs/uniform-moire.md`](uniform-moire.md).
+Full details and the user command are in [`docs/notes/uniform-moire.md`](notes/uniform-moire.md).
 Two pitch-meter launches (the cap), build `recomp-work/build-play`, branch
 `exp/live-ab`; no GPL source read or cited.
 
@@ -739,7 +739,7 @@ Two pitch-meter launches (the cap), build `recomp-work/build-play`, branch
 
 ## 2026-11-05 (depth of field): the RPCS3 blur patch runs in the recomp
 
-Full details and the user command are in [`docs/dof-patch.md`](dof-patch.md).
+Full details and the user command are in [`docs/notes/dof-patch.md`](notes/dof-patch.md).
 New code on ps3recomp `exp/dof-patch` (fork only), build
 `recomp-work/build-dof`; `PS3RECOMP_DOF_PATCH` default 0. One game launch.
 
@@ -768,12 +768,12 @@ New code on ps3recomp `exp/dof-patch` (fork only), build
   mission relinked `build-play/MyGameRecomp` at 01:16:12 during the
   measurement; those are contaminated, not a patch result. No crash, no
   thumbnail corruption. User visual check (two short launches, key off/on) is
-  in `docs/dof-patch.md`.
+  in `docs/notes/dof-patch.md`.
 
 
 ## 2026-11-05 (team logo): the 0x900 lookup is a world model, and the debug line goes to BADJUMBOS_PS3.TXT
 
-Full analysis in [`docs/team-logo.md`](team-logo.md) §8. **Zero game
+Full analysis in [`docs/notes/team-logo.md`](notes/team-logo.md) §8. **Zero game
 launches**; Ghidra, all existing `recomp-work` logs, the four ISO WADs, the
 generated C++, and `ps3recomp-play` read only. No RPCS3 or other GPL source
 read or cited.
@@ -813,7 +813,7 @@ read or cited.
 
 ## 2026-11-05 (jerseys): the torso was two dropped character draws, not a texture
 
-Full analysis in [`docs/jersey-transparent.md`](jersey-transparent.md).
+Full analysis in [`docs/notes/jersey-transparent.md`](notes/jersey-transparent.md).
 Offline replay of the existing `meter_frame` capture plus one pitch-meter A/B
 (`ab_live.sh`, N=4 x 10 s per arm). No RPCS3 or other GPL source read or cited;
 the NHL Legacy and inFAMOUS 2 MIT notes were checked for the alpha /
@@ -844,7 +844,7 @@ render-to-texture classes and did not match.
 
 ## 2026-11-05 (auto-exposure): the 1x1 chain, a high-gain dead band, and a timing-dependent read
 
-Full analysis in [`docs/exposure-flicker.md`](exposure-flicker.md).
+Full analysis in [`docs/notes/exposure-flicker.md`](notes/exposure-flicker.md).
 **Zero game launches**, no runtime or build changes; static Ghidra on
 `EBOOT.elf` plus the existing light/WCB logs. No RPCS3 or other GPL source
 read or cited; NHL Legacy and inFAMOUS 2 MIT notes used with attribution.
@@ -900,7 +900,7 @@ read or cited; NHL Legacy and inFAMOUS 2 MIT notes used with attribution.
 
 ## 2026-11-04 (30 fps investigation): no active cap, sim is elapsed-time driven, 60 is a speed problem
 
-Full analysis in [`docs/fps30-investigation.md`](fps30-investigation.md).
+Full analysis in [`docs/notes/fps30-investigation.md`](notes/fps30-investigation.md).
 **Zero game launches**; static Ghidra analysis of the EBOOT plus existing logs
 and docs only. No build and no runtime change.
 
@@ -932,7 +932,7 @@ and docs only. No build and no runtime change.
 
 ## 2026-11-04 (Edge E1 live): merged, fps neutral, but the added triangles draw giant occluders
 
-Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md) §5.4. E1
+Full analysis in [`docs/notes/edge-e1-holes.md`](notes/edge-e1-holes.md) §5.4. E1
 (`exp/edge-e1-holes` `2b5f17d1`, fused native 0x25/0x26 holes, default off)
 merged into `exp/live-ab` as `bba9787a` on top of `4ba548e6`; the shared
 generated c690 module was re-patched and is **byte-identical** to the verified
@@ -969,7 +969,7 @@ N=6 x 10 s, `MLB16_CULL_BYPASS` unset):
 
 ## 2026-11-04 (walker texture cost): crowded `tex` is per-bind work, not the rehash
 
-Full analysis in [`docs/walker-tex-cost.md`](walker-tex-cost.md). Branch
+Full analysis in [`docs/notes/walker-tex-cost.md`](notes/walker-tex-cost.md). Branch
 `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. **Two game
 launches**: the first A/B was killed by the system for low memory after two
 segments, the second completed 12 segments at the pitch meter. Offline: the
@@ -1013,7 +1013,7 @@ crowded play logs. No RPCS3 or other GPL emulator source was read or cited.
 
 ## 2026-11-04 (Edge E1): fused native 0x25/0x26 holes pass, caller modelled, one command pass (offline only)
 
-Full analysis in [`docs/edge-e1-holes.md`](edge-e1-holes.md). Worktree
+Full analysis in [`docs/notes/edge-e1-holes.md`](notes/edge-e1-holes.md). Worktree
 `ps3recomp-e1` (branch `exp/edge-e1-holes`, from `exp/live-ab` `230acd9f`),
 own build `recomp-work/build-e1` (build-play flags, private
 `recomp-work/spu_lifted-e1`). **Zero game launches** in this mission; nothing
@@ -1050,7 +1050,7 @@ under `ps3recomp-play`, `build-play` or `build-mt` was touched.
 
 ## 2026-11-04 (walker MT repair): build fixed, C hang fixed, black field gone, timing/visual gates still fail
 
-Full analysis in [`docs/walker-mt-repair.md`](walker-mt-repair.md). Branch
+Full analysis in [`docs/notes/walker-mt-repair.md`](notes/walker-mt-repair.md). Branch
 `exp/live-ab`, `build-play` live and `build-mt` offline. Four launches (the
 cap): two pre-fix A/B/C reproductions, one validation-layer A/B/C, one timing
 A/B. Nothing default-on.
@@ -1094,7 +1094,7 @@ A/B. Nothing default-on.
 
 ## 2026-11-04 (menus, revision 2): user confirms ~60 fps; FIFO fall-through and 17 ms bound kept
 
-Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Branch
+Full analysis in [`docs/notes/menu-flip-fix.md`](notes/menu-flip-fix.md). Branch
 `exp/live-ab` (`dcdd6728`), `build-play`. The user's two recordings confirm the
 fix (`PS3RECOMP_FLIP_TICK_OWN_STATE=1`): **42.10 -> 59.44 fps**, ticks/flip
 **1.485 -> 1.052**. The 34 ms two-timeout class falls **20.81 -> 2.55/s
@@ -1128,8 +1128,8 @@ after the 17 ms bound. New distribution: 17-20 ms 3.44/s, 20-32 ms 2.65/s,
 
 ## 2026-11-04 (menus): flip tick fix implemented behind a live key, meter A/B neutral
 
-Full analysis in [`docs/menu-flip-fix.md`](menu-flip-fix.md). Implements the
-[`menu-34ms.md`](menu-34ms.md) proposal on branch `exp/live-ab`,
+Full analysis in [`docs/notes/menu-flip-fix.md`](notes/menu-flip-fix.md). Implements the
+[`menu-34ms.md`](notes/menu-34ms.md) proposal on branch `exp/live-ab`,
 `build-play`. `PS3RECOMP_FLIP_TICK_OWN_STATE` (**default off**,
 `PS3RECOMP_CTL` switchable): `cellGcmTickFlip` judges a direct flip by our own
 `s_flip_direct_pending` + request timestamp instead of the guest's
@@ -1157,7 +1157,7 @@ exactly.
 
 ## 2026-11-04 (menus): the 34 ms frames are the display tick skipping a status the title rewrites
 
-Full analysis in [`docs/menu-34ms.md`](menu-34ms.md). Diagnosis only: no code
+Full analysis in [`docs/notes/menu-34ms.md`](notes/menu-34ms.md). Diagnosis only: no code
 change, no build, no launch. Evidence: the user's menu capture
 `recomp-work/captures/menus_20261104_193448.pstl` (146.2 s, every frame
 > 17 ms) and `recomp-work/play_20261104_193448.log`.
@@ -1179,13 +1179,13 @@ change, no build, no launch. Evidence: the user's menu capture
   our own outstanding flip and an age bound (< the guest's first 17 ms wait);
   menus should go to one flip per vblank, ~55-60 fps (RPCS3 parity). It is a
   no-op at the meter, whose 282/853 two-timeout frames are the c690
-  drain/producer ([`meter-p50-pin.md`](meter-p50-pin.md)); KEEP_STATUS=1 only
+  drain/producer ([`meter-p50-pin.md`](notes/meter-p50-pin.md)); KEEP_STATUS=1 only
   moved 823 -> 776 deadlines there and cost 4.3 fps. Differs from
   FLIP_ON_DONE / TICK_IN_DRAIN / FLIP_FENCE_DONE / KEEP_STATUS (see doc §5).
 
 ## 2026-11-04 (walker MT M4 live): MT-on frame is wrong and the resolver arm hangs
 
-Full analysis in [`docs/walker-mt-live.md`](walker-mt-live.md). Branch
+Full analysis in [`docs/notes/walker-mt-live.md`](notes/walker-mt-live.md). Branch
 `exp/live-ab` (`87cfe3aa` + measurement-only live-ctl key `e381d650`),
 `build-play`, one pitch-meter `ab_live.sh` launch. The Khronos validation
 layer is not installed; no validation arm.
@@ -1221,9 +1221,9 @@ layer is not installed; no validation arm.
 
 ## 2026-11-04 (walker MT M4): per-worker Vulkan recording + texture resolver, timing gate fails
 
-Full analysis in [`docs/walker-mt-m4.md`](walker-mt-m4.md). Branch
+Full analysis in [`docs/notes/walker-mt-m4.md`](notes/walker-mt-m4.md). Branch
 `exp/live-ab`, `build-mt`. M4 of
-[`docs/walker-multithread-design.md`](walker-multithread-design.md), default
+[`docs/notes/walker-multithread-design.md`](notes/walker-multithread-design.md), default
 off (`PS3RECOMP_WALKER_MT=0`). No game launch: the mission stopped at the
 first failed gate (offline timing).
 
@@ -1260,9 +1260,9 @@ first failed gate (offline timing).
 
 ## 2026-11-04 (walker MT M3): N workers + ordered commit, exact but timing gate fails
 
-Full analysis in [`docs/walker-mt-m3.md`](walker-mt-m3.md). Branch
+Full analysis in [`docs/notes/walker-mt-m3.md`](notes/walker-mt-m3.md). Branch
 `exp/live-ab`, `build-mt`. M3 of
-[`docs/walker-multithread-design.md`](walker-multithread-design.md), default
+[`docs/notes/walker-multithread-design.md`](notes/walker-multithread-design.md), default
 off (`PS3RECOMP_WALKER_MT=0`, workers 1..4 via
 `PS3RECOMP_WALKER_MT_WORKERS`). No game launch: the mission stopped at the
 first failed gate.
@@ -1298,9 +1298,9 @@ first failed gate.
 
 ## 2026-11-04 (walker MT M1/M2): packet path + one record worker, meter p50 flat
 
-Full analysis in [`docs/walker-mt-m1m2.md`](walker-mt-m1m2.md). Branch
+Full analysis in [`docs/notes/walker-mt-m1m2.md`](notes/walker-mt-m1m2.md). Branch
 `exp/live-ab`, builds `build-play` (live) and `build-mt` (offline). M1 and M2
-of [`docs/walker-multithread-design.md`](walker-multithread-design.md), both
+of [`docs/notes/walker-multithread-design.md`](notes/walker-multithread-design.md), both
 default off (`PS3RECOMP_WALKER_MT=0`, live key `PS3_LIVE_WALKER_MT`).
 
 - **M1: packet ABI, serial path.** `sink_end_work` now builds an immutable
@@ -1330,7 +1330,7 @@ default off (`PS3RECOMP_WALKER_MT=0`, live key `PS3_LIVE_WALKER_MT`).
 
 ## 2026-11-04 (walker profiler + remap): profiler sampling is a free win, direct remap is neutral
 
-Full analysis in [`docs/walker-remap.md`](walker-remap.md). Branch
+Full analysis in [`docs/notes/walker-remap.md`](notes/walker-remap.md). Branch
 `exp/live-ab`, build `build-play`; offline replay plus two meter A/Bs (the
 second after fixing a profiler-report bug the first exposed).
 
@@ -1365,7 +1365,7 @@ second after fixing a profiler-report bug the first exposed).
 Design-only mission: **zero code changes in `ps3recomp-play`, zero builds,
 zero game launches**. Full dependency map, design comparison, Vulkan rules,
 missions and kill criteria in
-[`docs/walker-multithread-design.md`](walker-multithread-design.md). Data is
+[`docs/notes/walker-multithread-design.md`](notes/walker-multithread-design.md). Data is
 the user's two crowded-replay logs (`play_20261104_165634.log`,
 `_165829.log`) plus the existing walker/WCB/c690 docs.
 
@@ -1412,7 +1412,7 @@ the user's two crowded-replay logs (`play_20261104_165634.log`,
 
 Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
 evidence, code paths and the user's replay command in
-[`docs/wcb-async.md`](wcb-async.md).
+[`docs/notes/wcb-async.md`](notes/wcb-async.md).
 
 - **Attribution (code + live trace):** an ondemand readback is **two**
   `vkQueueSubmit`+`vkWaitForFences` round trips -- flush the open draw batch
@@ -1451,7 +1451,7 @@ evidence, code paths and the user's replay command in
 ## 2026-11-04 (walker per-draw): offline -14 %, live neutral, nothing default-on
 
 Branch `exp/live-ab` in `ps3recomp-play`, build `recomp-work/build-play`. Full
-rank, exactness and commands in [`docs/walker-per-draw.md`](walker-per-draw.md).
+rank, exactness and commands in [`docs/notes/walker-per-draw.md`](notes/walker-per-draw.md).
 
 - **Offline replay, 7 interleaved runs x 240 frames:** from the play defaults
   (`PIPE_MEMO=1 REMAP_FAST=1`) the reference-list remap memo plus an
@@ -1486,7 +1486,7 @@ rank, exactness and commands in [`docs/walker-per-draw.md`](walker-per-draw.md).
 
 Two meter launches, branch `exp/live-ab` in `ps3recomp-play`, build
 `recomp-work/build-play`, native dispatch on. Details and reproduce commands in
-[`docs/meter-p50-pin.md`](docs/meter-p50-pin.md).
+[`docs/notes/meter-p50-pin.md`](notes/meter-p50-pin.md).
 
 - **Diagnostic timeline (`ab_live_p50pin_20261104_152125`, 25 s, 853 frames):**
   frame p50 **34.15 ms**, c690 lane union p50 **32.01 ms**, first c690 job
@@ -1527,7 +1527,7 @@ Two meter launches, branch `exp/live-ab` in `ps3recomp-play`, build
 Offline only (zero game launches, no build). Data is the user's 40 ms hitch
 recording `longframes_20261104_142459.pstl` (1,930 frames >= 40 ms) plus its
 matching `play_20261104_142459.log`. Details, band tables, candidate verdicts
-and the Gantt in [`docs/c690-serialisation.md`](docs/c690-serialisation.md).
+and the Gantt in [`docs/notes/c690-serialisation.md`](notes/c690-serialisation.md).
 
 - **The "Edge on one lane of five" is a frame-length average, not
   serialisation.** Inside the Edge burst the five lanes run **3.82 of 5
@@ -1572,7 +1572,7 @@ and the Gantt in [`docs/c690-serialisation.md`](docs/c690-serialisation.md).
 
 Offline only (zero game launches). Branch `exp/live-ab` (`ps3recomp-play`);
 no code was wired and `build-play` was not rebuilt. Details and the design in
-[`docs/edge-gpu-2a-wiring.md`](docs/edge-gpu-2a-wiring.md).
+[`docs/notes/edge-gpu-2a-wiring.md`](notes/edge-gpu-2a-wiring.md).
 
 - **Premise correction.** The meter's 0x2A output is a family, not one
   32-byte class. Over the two meter tail spools (128 sampled pairs):
@@ -1608,7 +1608,7 @@ Branch `exp/live-ab` (`ps3recomp-play`), build `recomp-work/build-play`. Three
 meter launches: `fastresched1`, `native1` (staged-only first attempt),
 `native2` (native key with the fairness fallback). Details, tables and the
 reproduce commands in
-[`docs/c690-native-dispatch.md`](docs/c690-native-dispatch.md).
+[`docs/notes/c690-native-dispatch.md`](notes/c690-native-dispatch.md).
 
 - **`SPURS_PM_FAST_RESCHED=64` wins the 8/16/32/64 probe.** 3 x 10 s per arm,
   2 s dropped: fps 33.04 -> **33.54**, p90 **44.63 -> 43.53 ms**, p99
@@ -1655,7 +1655,7 @@ reproduce commands in
 
 Branch `exp/live-ab` (`ps3recomp-play`), flag `--inline-direct` (default off).
 Offline only: no game launch, `build-play` untouched. Details in
-[`docs/spu-inline-callees.md`](docs/spu-inline-callees.md).
+[`docs/notes/spu-inline-callees.md`](notes/spu-inline-callees.md).
 
 - **Implemented** the audit's §8(2) option: acyclic `SPU_DIRECT` tail targets
   inlined in tail position, `brsl` callees inlined when they return cleanly
@@ -1681,7 +1681,7 @@ Offline only (no game launch, no build). Data: 35 `play_*` sessions
 (MangoHud CSV + log), the four non-empty `hitches.pstl` (>250 ms), and the
 per-frame meter timelines `ab_live_timeline2_20261103_065615` and
 `ab_live_pinburst0/1_20261104_*`. Details in
-[`docs/long-frames.md`](docs/long-frames.md).
+[`docs/notes/long-frames.md`](notes/long-frames.md).
 
 - **40-80 ms frames are a mesh-scene problem, not a menu/boot one.** 176,821
   presented frames in 78.6 min: 16,651 are 40-80 ms (9.4 %, 222/min). Mesh
@@ -1723,7 +1723,7 @@ per-frame meter timelines `ab_live_timeline2_20261103_065615` and
 Offline only (no game launch). The data is the clean 60 s meter window of
 `ab_live_copy1_20261104_120526`, the phase-2a/2b captures, and a new
 offline harness. Details and tables in
-[`docs/edge-gpu-plumbing.md`](docs/edge-gpu-plumbing.md).
+[`docs/notes/edge-gpu-plumbing.md`](notes/edge-gpu-plumbing.md).
 
 - **The `0x14/0x0E/0x0F/0x18..0x1D/0x23` chain is 20.75 us/job, 11.21 %**
   of the c690 wall (907,390 jobs, 167.96 s wall), not ~26 us/13 %. The
@@ -1753,7 +1753,7 @@ offline harness. Details and tables in
 
 One pitch-meter A/B (native 0xFDA0 off/on, `PS3RECOMP_C690_OP21=1`), no
 capture spool. Details and the clean 60 s table in
-[`docs/c690-copy-unpack.md`](docs/c690-copy-unpack.md).
+[`docs/notes/c690-copy-unpack.md`](notes/c690-copy-unpack.md).
 
 - **0x13 is a real 16-byte copy at 0.72 us/call, not 17.73 us.** The step-5
   map named only 15 handlers; 26 were missing, so the commands after 0x13
@@ -1780,7 +1780,7 @@ capture spool. Details and the clean 60 s table in
 Two pitch-meter launches (the second after fixing the command map), no
 capture spool, plus offline parsing of the 2 s reports and the raw module
 handler table. Details and tables in
-[`docs/edge-gpu-phase2b-step5.md`](docs/edge-gpu-phase2b-step5.md).
+[`docs/notes/edge-gpu-phase2b-step5.md`](notes/edge-gpu-phase2b-step5.md).
 
 - **Capture cap fixed.** The per-key pair cap is checked before the 256 KiB
   snapshot; a command-boundary 0x21 defers its snapshot to the sub-selector
@@ -1813,7 +1813,7 @@ handler table. Details and tables in
 ## 2026-11-04 (c690 GPU phase 2b step 4): 0xB830 leaf kernel exact; the 47 % was capture overhead
 
 Offline only, zero game launches. Kernel, gate, burst and wrapper review in
-[`docs/edge-gpu-phase2b-step4.md`](docs/edge-gpu-phase2b-step4.md).
+[`docs/notes/edge-gpu-phase2b-step4.md`](notes/edge-gpu-phase2b-step4.md).
 
 - **0xB830 leaf kernel is bit-exact on all 64 meter pairs.** 0 differing LS
   bytes (4,194,304 words, max ULP 0) and the nine GPRs that survive the
@@ -1846,7 +1846,7 @@ Offline only, zero game launches. Kernel, gate, burst and wrapper review in
 
 One pitch-meter launch (`ab_live.sh`, build-play, governor performance) and
 offline replay. Evidence and port plan in
-[`docs/edge-gpu-phase2b-step3.md`](edge-gpu-phase2b-step3.md).
+[`docs/notes/edge-gpu-phase2b-step3.md`](notes/edge-gpu-phase2b-step3.md).
 
 - **A730 is unblocked at the right body.** The heavy path is
   `0x13140 -> 0x13250 -> 0xA3C0/0xA3F8 -> 0xA410 -> (bi gpr[82]) 0xA730 ->
@@ -1877,7 +1877,7 @@ offline replay. Evidence and port plan in
 Two pitch-meter launches (`ab_live.sh`, build-play, governor performance;
 the second only to validate the pairing fix) and offline replay. Evidence and
 coverage plan in
-[`docs/edge-gpu-phase2b-step2.md`](edge-gpu-phase2b-step2.md).
+[`docs/notes/edge-gpu-phase2b-step2.md`](notes/edge-gpu-phase2b-step2.md).
 
 - **Capture gate fixed.** The tail hook has a dedicated, non-consumed
   `PS3RECOMP_C690_TAIL_TRIGGER`; `ab_live.sh` touches it only after the
@@ -1914,7 +1914,7 @@ coverage plan in
 Two pitch-meter capture attempts (`ab_live.sh`, build-play, governor
 performance; both launches used) plus offline analysis and a headless Vulkan
 batch kernel. Evidence and plan in
-[`docs/edge-gpu-phase2b-step1.md`](edge-gpu-phase2b-step1.md).
+[`docs/notes/edge-gpu-phase2b-step1.md`](notes/edge-gpu-phase2b-step1.md).
 
 - **New stage capture, unit-tested.** `PS3RECOMP_C690_TAIL_CAPTURE=<dir>`
   records IN/OUT pairs for 0x21/0x25/0x26/0x2A at the command boundary: full
@@ -1951,7 +1951,7 @@ batch kernel. Evidence and plan in
 
 Two pitch-meter capture runs (`ab_live.sh`, build-play, governor performance;
 2/3 launches) plus offline static analysis and a headless Vulkan kernel.
-Evidence and plan in [`docs/edge-gpu-phase2a.md`](edge-gpu-phase2a.md).
+Evidence and plan in [`docs/notes/edge-gpu-phase2a.md`](notes/edge-gpu-phase2a.md).
 
 - **The phase-2a premise is contradicted.** A GPU 0x21 that leaves its result
   in VRAM removes **0 ms** of SPU critical-lane time. On the real captured
@@ -1982,7 +1982,7 @@ Evidence and plan in [`docs/edge-gpu-phase2a.md`](edge-gpu-phase2a.md).
 
 Offline only (no game launch). Static analysis of the EBOOT/lifted c690 module,
 the corpus and our walker, plus one Vulkan transport microbenchmark; design and
-evidence in [`docs/edge-gpu-phase1.md`](edge-gpu-phase1.md).
+evidence in [`docs/notes/edge-gpu-phase1.md`](notes/edge-gpu-phase1.md).
 
 - **Consumer map is closed.** The five 2 MB mesh rings (EA
   `0x11900000`-`0x12300000`), the kept-index list and the 0x90-byte command
@@ -2021,7 +2021,7 @@ evidence in [`docs/edge-gpu-phase1.md`](edge-gpu-phase1.md).
 Offline only (no game launch). The user's armed team-select capture was
 replayed with `tools/fifo_dump_scan.py` and `replay_rsx`; the plan, the
 capture hashes, the scan figure and the next diagnostic run are in
-[`docs/team-logo.md`](team-logo.md) §5.5. Branch `exp/live-ab`, build
+[`docs/notes/team-logo.md`](notes/team-logo.md) §5.5. Branch `exp/live-ab`, build
 `recomp-work/build-play`.
 
 - **The raw capture is complete:** 116,280 B / 29,070 big-endian words, 12
@@ -2060,7 +2060,7 @@ capture hashes, the scan figure and the next diagnostic run are in
 One meter launch (`ab_live_op21meas_20261104_043452`), `N=3 x 10 s` (2 s
 dropped), `PIN=0 WCB=2`, standard `ab_live.sh` plus `METER=1 SKIP_CINE=1
 PITCH_THRESH=35` and the new `PS3RECOMP_C690_OP21=1`. Full tables, static
-trace, and the fix estimate: [`docs/c690-emit-ring.md`](c690-emit-ring.md).
+trace, and the fix estimate: [`docs/notes/c690-emit-ring.md`](notes/c690-emit-ring.md).
 Branch `exp/live-ab`, build `recomp-work/build-play`.
 
 - **0x21 is 99.9 % compute, 0 % wait.** 619,067 calls, 64.99 s inclusive
@@ -2088,7 +2088,7 @@ Branch `exp/live-ab`, build `recomp-work/build-play`.
 Two 90 s meter measurement launches (`ab_live_stage5meas_20261104_040459`,
 `ab_live_stage5meas2_20261104_041417`), `PIN=0 WCB=2`, standard
 `ab_live.sh` plus `METER=1 SKIP_CINE=1 PITCH_THRESH=35`. Full tables and the
-decision: [`docs/edge-native-step5.md`](edge-native-step5.md). Branch
+decision: [`docs/notes/edge-native-step5.md`](notes/edge-native-step5.md). Branch
 `exp/live-ab`, build `recomp-work/build-play`.
 
 - **The old stage shares are not the meter.** Per-command inclusive time on
@@ -2112,7 +2112,7 @@ decision: [`docs/edge-native-step5.md`](edge-native-step5.md). Branch
 One windowed meter launch (`ab_live_pacingfloor_20261104_033642`), N=4 x 10 s
 per arm, 2 s dropped, `PIN=0 WCB=2`, fifo, plus a 90 s PSTL timeline (774 MiB,
 deleted). Full tables, the frame timeline and the code:
-[`docs/frame-pacing-floor.md`](frame-pacing-floor.md). Branch `exp/live-ab`,
+[`docs/notes/frame-pacing-floor.md`](notes/frame-pacing-floor.md). Branch `exp/live-ab`,
 build `recomp-work/build-play`.
 
 - **Hard frames are producer-bound.** A hard meter frame is `c690 lane union
@@ -2149,7 +2149,7 @@ build `recomp-work/build-play`.
 One launch at the pitch meter (N=6 x 10 s per arm, 2 s dropped,
 `PIN=0 WCB=2`, governor `performance`) plus a 95 s timeline window. Full
 tables, the code and the sixth-lane evidence:
-[`docs/c690-dispatch-cuts.md`](c690-dispatch-cuts.md). Branch `exp/live-ab`,
+[`docs/notes/c690-dispatch-cuts.md`](notes/c690-dispatch-cuts.md). Branch `exp/live-ab`,
 build `recomp-work/build-play`, commit `84e5dd06`.
 
 - **Gap anatomy.** Big bursts (arm A): 34.25 ms wall, 70.3 % lane occupancy,
@@ -2185,7 +2185,7 @@ build `recomp-work/build-play`, commit `84e5dd06`.
 
 Three launches (the hard cap): a shadow/live soak, the A/B at the meter, and
 a timeline mapping run. Details, tables and the gate in
-[`docs/edge-native-step4.md`](edge-native-step4.md). Branch `exp/live-ab`,
+[`docs/notes/edge-native-step4.md`](notes/edge-native-step4.md). Branch `exp/live-ab`,
 build `recomp-work/build-play`, `METER=1 SKIP_CINE=1`, `PITCH_THRESH=35`,
 `PIN=0 WCB=2`, governor `performance`.
 
@@ -2225,7 +2225,7 @@ build `recomp-work/build-play`, `METER=1 SKIP_CINE=1`, `PITCH_THRESH=35`,
 Two launches (the hard cap), both start screen, `PIN=1 WCB=2`, capture on:
 A `ab_live_dxtliftA_20261103_225911` off, B `ab_live_dxtliftB_20261103_230713`
 on. Details, tables and the gate in
-[`docs/dxt-native-step3.md`](dxt-native-step3.md).
+[`docs/notes/dxt-native-step3.md`](notes/dxt-native-step3.md).
 
 - **Lifted.** `lift_jobmods.py --engine-elf` accepts a header link base of 0
   (PIC) and lifts the module at `0x4000`, entry `0x4030`, source EA
@@ -2264,7 +2264,7 @@ on. Details, tables and the gate in
 
 One launch (`ab_live_dxtcap1_20261103_224034`, start screen, `PIN=1 WCB=2`).
 Details, tables and the corpus numbers in
-[`docs/dxt-native-step2.md`](dxt-native-step2.md).
+[`docs/notes/dxt-native-step2.md`](notes/dxt-native-step2.md).
 
 - **The DXT kernel is the unlifted base-0 module at `0x010A1700`.** Every
   wid-0 job loads 0x2C10 bytes from that EA to LS `0x4000` on all four lanes;
@@ -2295,7 +2295,7 @@ Details, tables and the corpus numbers in
 Three launches (`ab_live_edge3s1_20261103_205745` wedge,
 `ab_live_edge3s2_20261103_210626` shadow + corpus,
 `ab_live_edge3s3_20261103_212337` A/B). Details and tables in
-[`docs/edge-native-step3.md`](edge-native-step3.md).
+[`docs/notes/edge-native-step3.md`](notes/edge-native-step3.md).
 
 - **Live wedge root cause: the native kernel never published its return PC.**
   The lifted `0xFDA0` body ends in `SPU_RET` (`pc = gpr[0]`, trampoline at
@@ -2329,7 +2329,7 @@ Three launches (`ab_live_edge3s1_20261103_205745` wedge,
 Two launches (`ab_live_hitchcold2_20261103_155504` cold census,
 `ab_live_hitchwarm_20261103_160035` warm pipeline cache), plus one discarded
 first attempt. Details, tables and artifacts in
-[`docs/hitch-census.md`](hitch-census.md).
+[`docs/notes/hitch-census.md`](notes/hitch-census.md).
 
 - **824 frames > 50 ms** in the 318 s cold run (10,051 flips): 67.4 s of
   frame time, 39.9 s above a 33.3 ms budget. Boot 18/5.92 s, menus **0**,
@@ -2370,7 +2370,7 @@ first attempt. Details, tables and artifacts in
 
 Two meter launches (`ab_live_flipdiag_20261103_150246` diagnosis,
 `ab_live_prepflip_20261103_151553` A/B). Details in
-[`docs/flip-deadline.md`](flip-deadline.md).
+[`docs/notes/flip-deadline.md`](notes/flip-deadline.md).
 
 - **The 33 ms mode is the title's 2-vblank deadline, and it fires often.**
   369/1,289 frames (28.6 %) at the meter left `Gfx_DisplayFlip` by its
@@ -2400,7 +2400,7 @@ Two meter launches (`ab_live_flipdiag_20261103_150246` diagnosis,
 
 Five audit findings fixed, each behind its own default-off switch; the play
 scripts now default them on. Details, line references and the test list are in
-[`docs/hle-fixes-batch1.md`](hle-fixes-batch1.md).
+[`docs/notes/hle-fixes-batch1.md`](notes/hle-fixes-batch1.md).
 
 - **#9 `PS3_LWCOND_REAL`**: the real wait/signal/timeout core already existed
   (it was left off as neutral, not because it was broken). Its gap was destroy:
@@ -2447,7 +2447,7 @@ sites); **26** never called. At **548** call sites the lifted code reads `r3`;
 none fixed, no game run.
 
 Top ones (guest addresses, evidence and one-line fixes in
-[`docs/hle-contract-audit.md`](hle-contract-audit.md)):
+[`docs/notes/hle-contract-audit.md`](notes/hle-contract-audit.md)):
 
 - `_cellSpursTaskAttributeInitialize` mis-decodes the descriptor form used by
   the Bink SPU task: context becomes the stack descriptor address, size 0,
@@ -2511,7 +2511,7 @@ real SDK and RPCS3 both return the buffer id.
   `test_gcm_fifo_user_command` still fails to link on the pre-existing missing
   `rsx_draw_engine_set_*` stubs. `spu_context` ABI check passes.
 
-Details, tables and images: [`docs/backward-frames.md`](backward-frames.md).
+Details, tables and images: [`docs/notes/backward-frames.md`](notes/backward-frames.md).
 
 ## 2026-11-03 (freeze): the 08:30 stall was a `spu_context` ABI split; VFS exonerated
 
@@ -2545,14 +2545,14 @@ a downstream symptom. The 08:09 glibc crash was the already-fixed
   c690 jobs), pre-fix HEAD stalls (`jobs=3`), fixed HEAD works (1,092,754 jobs,
   no resync/`[pm-end]`, pitch meter confirmed at 162 s).
 
-Details and the offset table: [`docs/freeze-20261103.md`](freeze-20261103.md).
+Details and the offset table: [`docs/notes/freeze-20261103.md`](notes/freeze-20261103.md).
 
 ## 2026-11-03 (c690 code memo, O(1)): generation-tracked reloads; A/B launch wedged in baseline
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. The follow-up mission had
 a **one-game-launch** cap. Unit tests run before it; the launch was used and
 failed to reach the meter. Details and tables:
-[`docs/c690-job-gaps.md`](c690-job-gaps.md).
+[`docs/notes/c690-job-gaps.md`](notes/c690-job-gaps.md).
 
 - **`SPU_CODE_DMA_MEMO` now has an O(1) check.** The first GET after a load
   still compares the bytes, then registers the full source span with the
@@ -2585,7 +2585,7 @@ failed to reach the meter. Details and tables:
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One mapping launch
 (timeline + 25 s `perf` + `PS3RECOMP_C690_GAP`) and one A/B launch that was
 aborted by a runtime crash in its second arm; the two-launch cap is used.
-Full tables, the code changes and the crash: [`docs/c690-job-gaps.md`](c690-job-gaps.md).
+Full tables, the code changes and the crash: [`docs/notes/c690-job-gaps.md`](notes/c690-job-gaps.md).
 
 - **The inter-job gap is three phases.** 628,783 same-lane gaps under 2 ms:
   job end -> policy-run end **28.6 us** p50, policy-run end -> next start
@@ -2616,7 +2616,7 @@ Full tables, the code changes and the crash: [`docs/c690-job-gaps.md`](c690-job-
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch,
 45 s `PS3RECOMP_TIMELINE` window armed 22 s after the meter. Details, tables
-and the counterfactuals: [`docs/frame-timeline-2.md`](frame-timeline-2.md).
+and the counterfactuals: [`docs/notes/frame-timeline-2.md`](notes/frame-timeline-2.md).
 
 - **p50 did not move, the tail did.** 300 frames: p50 **34.23 ms** (old
   33.85), p90 **44.33** (51.32), p99 **49.14** (59.60), mean 32.43 (33.64).
@@ -2648,7 +2648,7 @@ and the counterfactuals: [`docs/frame-timeline-2.md`](frame-timeline-2.md).
 ## 2026-11-03 (pinning and idle retest): `lanes` no longer wedges, no layout winner; back-off neutral
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Full numbers and method:
-[`docs/pinning-and-idle.md`](pinning-and-idle.md). Two launches (the retest
+[`docs/notes/pinning-and-idle.md`](notes/pinning-and-idle.md). Two launches (the retest
 budget), both completed.
 
 - **`PS3RECOMP_PIN` is live in `build-play`.** The earlier weak-reference bug
@@ -2684,7 +2684,7 @@ budget), both completed.
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Details, algorithm
 description, exactness tables and the updated stage plan:
-[`docs/edge-native-step2.md`](edge-native-step2.md).
+[`docs/notes/edge-native-step2.md`](notes/edge-native-step2.md).
 
 - **Corpus fixed.** Stage snapshots are capped on outermost `0xFDA0` entries and
   written to a per-lane spool independent of job sampling; the job file stays
@@ -2712,7 +2712,7 @@ description, exactness tables and the updated stage plan:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Offline replay A/B plus
 two live meter launches; details, tables and the perf call-site map:
-[`docs/walker-quick-wins.md`](walker-quick-wins.md).
+[`docs/notes/walker-quick-wins.md`](notes/walker-quick-wins.md).
 
 - **Pipeline memo is the only live win.** `PS3RECOMP_PIPE_MEMO=1`, 85.0 % hit
   live, walker `pipe` **2.107 -> 1.633 ms** (-0.47) and -0.84 ms offline.
@@ -2739,7 +2739,7 @@ two live meter launches; details, tables and the perf call-site map:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One successful meter
 launch with a 20 s whole-process `perf record` plus an env-gated c690 corpus;
-details, tables and the ranked plan: [`docs/edge-native-step1.md`](edge-native-step1.md).
+details, tables and the ranked plan: [`docs/notes/edge-native-step1.md`](notes/edge-native-step1.md).
 
 - **Per-flip (20.008 s perf window, 640 intervals):** p50 **34.05 ms**,
   p90 43.58, p99 49.35, mean 31.19, std 11.20, 32.0 fps. Measured from
@@ -2769,7 +2769,7 @@ details, tables and the ranked plan: [`docs/edge-native-step1.md`](edge-native-s
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter A/B launch
 plus one paranoid-check launch. Details, coverage table and limitations:
-[`docs/texture-dirty.md`](texture-dirty.md).
+[`docs/notes/texture-dirty.md`](notes/texture-dirty.md).
 
 - **Replaced the texture content hash** (`eng_texture_slot`'s sparse hash
   every frame plus a full hash every 8) with a per-4K-guest-page write
@@ -2803,7 +2803,7 @@ plus one paranoid-check launch. Details, coverage table and limitations:
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One meter launch
 (`ab_live_metercap_20261103_002238`) captured one frame and produced the live
 phases; the per-draw split is offline replay of that capture. Details, tables,
-ranked plan and exactness gates: [`docs/walker-profile.md`](walker-profile.md).
+ranked plan and exactness gates: [`docs/notes/walker-profile.md`](notes/walker-profile.md).
 
 - **Live meter, 552 draws/frame:** walker drain **27.64 ms**, engine
   **26.02 ms**, parse 1.62 ms. Per draw: 50.1 us drain / 47.2 us engine.
@@ -2840,7 +2840,7 @@ ranked plan and exactness gates: [`docs/walker-profile.md`](walker-profile.md).
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Three meter launches
 (one killed by the run harness, two usable); details, tables and the ranked
-plan: [`docs/c690-profile.md`](c690-profile.md).
+plan: [`docs/notes/c690-profile.md`](notes/c690-profile.md).
 
 - **Job cost:** c690 job wall p50/p90/p99 = 121/248/980 us, mean 164.6 us,
   437 jobs/frame. Cumulative 72 ms/frame across five lanes = **14.4 ms
@@ -2871,7 +2871,7 @@ Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. One windowed meter run
 (`ab_live_timeline_20261102_233854`), X once, WCB=2, PIN=1, CUBE_RT=1,
 `PRESENT_NEW_ONLY=1`, PACE=1, x11, the four cheap-win live switches on.
 Analysis and instrumentation only; no optimisation. Details, inventory,
-tables and PNGs: [`docs/frame-timeline.md`](frame-timeline.md).
+tables and PNGs: [`docs/notes/frame-timeline.md`](notes/frame-timeline.md).
 
 - **New `PS3RECOMP_TIMELINE=<path>|1`**: the existing per-thread trace rings,
   written as a binary record stream (`PSTL`, 32-byte records, thread-name and
@@ -2911,7 +2911,7 @@ tables and PNGs: [`docs/frame-timeline.md`](frame-timeline.md).
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
 PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, PACE=1, x11. Details, tables and PNGs:
-[`docs/cheap-wins.md`](cheap-wins.md).
+[`docs/notes/cheap-wins.md`](notes/cheap-wins.md).
 
 - **Nav: boot-to-meter 245 s -> 153-157 s** with `SKIP_CINE=1` (X only on a
   frame that matches no menu, is not black, and is not the pitch camera; the
@@ -2940,7 +2940,7 @@ PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, PACE=1, x11. Details, tables and PNGs:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
 PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, PACE=1, x11, two runs of 240 s each.
-Details, tables and images: [`docs/exposure-and-readback-cuts.md`](exposure-and-readback-cuts.md).
+Details, tables and images: [`docs/notes/exposure-and-readback-cuts.md`](notes/exposure-and-readback-cuts.md).
 
 - **The uncommitted RECT/BATCH/SKIP cuts are committed and gated** (live keys,
   default off; off path is the old path). Fixed one gating bug: `guest_dirty`
@@ -2968,7 +2968,7 @@ Details, tables and images: [`docs/exposure-and-readback-cuts.md`](exposure-and-
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
 PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, x11. Details, tables and images:
-[`docs/frame-pacing.md`](frame-pacing.md).
+[`docs/notes/frame-pacing.md`](notes/frame-pacing.md).
 
 - **Per-flip log:** `PS3RECOMP_FLIP_LOG=1` prints `req/fin/pres/show` for every
   flip on one microsecond clock (`show_gap` is the display interval). For this
@@ -3009,7 +3009,7 @@ PIN=1, CUBE_RT=1, `PRESENT_NEW_ONLY=1`, x11. Details, tables and images:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
 PIN=1, CUBE_RT=1, x11. Details, tables and images:
-[`docs/readback-cost.md`](readback-cost.md).
+[`docs/notes/readback-cost.md`](notes/readback-cost.md).
 
 - **Attribution added:** `PS3RECOMP_RSX_WCB_ATTR=1` (default off) counts every
   WCB=2 copy per surface, per trigger (`texbind`, `guest`, `other`) and per
@@ -3041,7 +3041,7 @@ PIN=1, CUBE_RT=1, x11. Details, tables and images:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Meter, X once, WCB=2,
 PIN=1, x11. Details, tables and PNGs:
-[`docs/cube-rt-and-frames-in-flight.md`](cube-rt-and-frames-in-flight.md).
+[`docs/notes/cube-rt-and-frames-in-flight.md`](notes/cube-rt-and-frames-in-flight.md).
 
 - **Part A (static):** `FUN_000655cc` waits for the **previous** frame's ref
   (`DAT_01245058[DAT_011203d4 & 3]`, where `DAT_011203d4` is the last frame id
@@ -3077,7 +3077,7 @@ PIN=1, x11. Details, tables and PNGs:
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. WCB=2, PIN=1, x11,
 `PS3RECOMP_WALKER_RESYNC_FIX=1`, new `PS3RECOMP_TEX_MISS_LOG=1`. Details,
-run table and PNGs: [`docs/textures-dummy-census.md`](textures-dummy-census.md).
+run table and PNGs: [`docs/notes/textures-dummy-census.md`](notes/textures-dummy-census.md).
 
 - **New census** (`libs/video/rsx_tex_miss.{c,h}` + unit
   `test_rsx_tex_miss`): every dummy fallback by reason (format, surface,
@@ -3110,7 +3110,7 @@ run table and PNGs: [`docs/textures-dummy-census.md`](textures-dummy-census.md).
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, X once,
 10 s settle, 6 x 10 s per arm, PIN on, 45 s trace window armed at the first
-A/B switch. Details and PNGs: [`docs/meter-pacing.md`](meter-pacing.md).
+A/B switch. Details and PNGs: [`docs/notes/meter-pacing.md`](notes/meter-pacing.md).
 
 - **Static:** the title never calls `cellGcmSetFlipMode` (import present, no
   call site), does not import `cellGcmGetVBlankCount` /
@@ -3145,7 +3145,7 @@ A/B switch. Details and PNGs: [`docs/meter-pacing.md`](meter-pacing.md).
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. X once at the pitch,
 fixed 10 s settle, 10 s segments, PIN on, x11, 2 s scene thumbnails + contact
-sheets. Details and PNGs: [`docs/meter-scene-baseline.md`](meter-scene-baseline.md).
+sheets. Details and PNGs: [`docs/notes/meter-scene-baseline.md`](notes/meter-scene-baseline.md).
 
 - **Harness:** `ab_live.sh`/`measure_fast.sh` now press X exactly once and
   verify the meter from the frame dump against `ref/pitch_meter*.png`
@@ -3183,7 +3183,7 @@ sheets. Details and PNGs: [`docs/meter-scene-baseline.md`](meter-scene-baseline.
 ## 2026-11-02 (tick + resync): the 16 ms tick caps only NO_DRAW; FAST_WAKE still wedges
 
 Branch `exp/live-ab` (`ps3recomp-play`), `build-play`. Pitch meter, 6 x 10 s
-per arm, PIN on. Details and PNGs: [`docs/tick-and-resync.md`](tick-and-resync.md).
+per arm, PIN on. Details and PNGs: [`docs/notes/tick-and-resync.md`](notes/tick-and-resync.md).
 
 - **A/B band labelling:** the report was right, the PNG was read as game fps.
   MangoHud frametime is the *host present* interval; the bands also included
@@ -3220,7 +3220,7 @@ per arm, PIN on. Details and PNGs: [`docs/tick-and-resync.md`](tick-and-resync.m
 Branch `exp/live-ab` (`ps3recomp-play`, off `play/multiscene`), `build-play`.
 One windowed run per arm pair, control file `PS3RECOMP_CTL` toggled every
 10 s, 6 segments/arm, WALKER_PROF + MangoHud. Details:
-[`docs/live-ab-and-ceilings.md`](live-ab-and-ceilings.md).
+[`docs/notes/live-ab-and-ceilings.md`](notes/live-ab-and-ceilings.md).
 
 - **Harness:** live toggles for `PS3RECOMP_WALKER_FAST`, `PS3RECOMP_WALKER_WAKE`,
   `EXP_NO_DRAW`, `EXP_FAST_WAKE`; opt-in `PS3RECOMP_PIN=1` (walker cpu0,
@@ -3285,7 +3285,7 @@ CSV, 10 s `[flip]` windows, one run per arm plus two ondemand repeats.
 - **Crowd patch:** the recomp applies no equivalent of
   `mlb-show-rpcs3-fixes/patches/MLB16_crowd_fix.yml` (one branch at
   `0x009bd544`); crowd placement still needs it.
-- Details and images: [`docs/visuals-wcb-gamma.md`](visuals-wcb-gamma.md),
+- Details and images: [`docs/notes/visuals-wcb-gamma.md`](notes/visuals-wcb-gamma.md),
   `recomp-work/visuals/compare.png`.
 
 ## 2026-11-02 (window freeze): native-Wayland MAILBOX present stalls; FIFO by default
@@ -3316,8 +3316,8 @@ and the longest `vkQueuePresentKHR` was **49.2 s**.
   333.83 fps for a log whose mean frametime was 35.25 ms; avg is now
   frames/total time (28.37 fps) and a self-check enforces it. MangoHud's fps
   counts window presents (72.8 rows/s at one pitch) while game fps is
-  `[flip]` (35.44); documented in `docs/multiscene-play.md`.
-- Details: [`docs/window-freeze-fix.md`](window-freeze-fix.md).
+  `[flip]` (35.44); documented in `docs/notes/multiscene-play.md`.
+- Details: [`docs/notes/window-freeze-fix.md`](notes/window-freeze-fix.md).
 
 ## 2026-11-02 (overlap): the ref is published 3 us after the walker reaches it; the wait is walker time-to-fence
 
@@ -3346,7 +3346,7 @@ measure the publication path directly.
 - Options: (A) publish at dispatch, **0-0.02 ms** (do not pursue); (B) cut walker time-to-fence,
   0-2.6 ms (existing `PS3RECOMP_WALKER_FAST`); (C) shorten the starved half, 0-2 ms; (D) deeper
   pipeline, guest change only, high risk; (E) env A/B `VK_FRAME_PIPELINE`/`VK_DRAW_BATCH` to size the
-  GPU part of the drain. Details: [`docs/overlap-analysis.md`](overlap-analysis.md).
+  GPU part of the drain. Details: [`docs/notes/overlap-analysis.md`](notes/overlap-analysis.md).
 
 ## 2026-11-02 (walker cuts in-game): 38.52 fps off vs 37.34 fps on, no gain resolved
 
@@ -3364,7 +3364,7 @@ grey levels over the full 640x360 image and **2.3** in the pitch box
 animated crowd and player pose; no missing, black or constant-colour draws. Run
 A (fast off) is 38.52, so the earlier 34.6 no-trace baseline vs 37.07 profiled
 run is a build/session difference, not the `measure6` method and not the cuts.
-Details: [`docs/walker-cuts.md`](walker-cuts.md).
+Details: [`docs/notes/walker-cuts.md`](notes/walker-cuts.md).
 
 ## 2026-11-02 (walker cuts 1+3): fetch -1.63 ms, pipeline -1.09 ms per frame offline
 
@@ -3392,7 +3392,7 @@ cover hits, reference-source and program-byte misses, and the pipeline key.
 Also fixes a latent replay-only staleness: `state_restore` now bumps the texture
 write generations it bypassed. Cut 2 (texture) is not implemented; Vulkan
 recording is untouched. Details and the one-run in-game check:
-[`docs/walker-cuts.md`](walker-cuts.md).
+[`docs/notes/walker-cuts.md`](notes/walker-cuts.md).
 
 ## 2026-11-02 (walker profile): fetch 3.6, texture 3.2, pipeline 1.9 ms per frame
 
@@ -3416,7 +3416,7 @@ an A/B for the texture cut.
 Top cuts (not implemented): fetch/remap caching **1.4–2.1 ms**, texture
 page-dirty generations **1.9–2.6 ms**, pipeline-key/program memo **0.6–0.9 ms**;
 together 3.9–5.6 ms off the 17.2 ms drain (~37 → ~42–44 fps if the producer wait
-does not absorb it). Details and the capture format: `docs/walker-prof.md`.
+does not absorb it). Details and the capture format: `docs/notes/walker-prof.md`.
 
 ## 2026-11-02 (critical path): the frame is walker drain (17.3 ms) + walker producer wait (11.8 ms)
 
@@ -3438,7 +3438,7 @@ poll run at the next block (`ps3recomp-probe` `mlb16-work`, trace-only, off by d
 - **Levers**: (1) cut walker drain CPU ~5 ms → ~42 fps (low–medium risk); (2) deeper ring / pipeline the PPU append,
   hides up to ~8 ms → ~45–48 fps (high risk, the `(id+1)&3` reorder is not enough); (3) c690 earlier/offload,
   −2.7 ms → ~38 fps (medium/high). 1+2 is the ~50–60 fps path; lever 3 alone is not. Full thread map, addresses,
-  overlap/ordering analysis and caveats: [`docs/ppu-critical-path.md`](ppu-critical-path.md).
+  overlap/ordering analysis and caveats: [`docs/notes/ppu-critical-path.md`](notes/ppu-critical-path.md).
 
 ## 2026-11-02 (wake): waking the walker on the slot PUT removes e2 but not the frame time
 
@@ -3457,7 +3457,7 @@ contains the parked `get` (opt-in `PS3RECOMP_WALKER_WAKE=1`, default off; unit t
   writes the JUMP into the mesh ring at **0x00066ae0**; the put register is written by `FUN_00065760` (guest
   0x00065760) at **0x00065af8**. `u_park` waits are p50 11.7 ms and end near a flip/kick: the walker is early, and
   the real fix is to pipeline the PPU producer (`Mesh_WaitPrevJobList`, 0x0006ed24) with it, not just wake on the
-  write. Numbers, tables and the proposed `u` fix: [`docs/walker-wake.md`](walker-wake.md).
+  write. Numbers, tables and the proposed `u` fix: [`docs/notes/walker-wake.md`](notes/walker-wake.md).
 
 ## 2026-11-02 (attribution): the walker's 10 ms wait is mostly PPU/cadence, not c690 throughput
 
@@ -3476,7 +3476,7 @@ overwrites the parked slot and the c690 job that made it.
 - **Implication:** the path to 60 is scheduling/overlap — wake the walker on the slot PUT, pipeline the PPU
   producer with the walker, and shave walker CPU (~37–39 fps for wake-on-PUT; ~44–46 for producer overlap;
   both + the no-trace 14–15 ms walker → ~60). Design B alone measures ~38 fps, not 55–60, because it removes
-  only the c690 part. Full attribution, levers, caveats: [`docs/walker-spu-wait.md`](walker-spu-wait.md),
+  only the c690 part. Full attribution, levers, caveats: [`docs/notes/walker-spu-wait.md`](notes/walker-spu-wait.md),
   analysis `tools/analyse_walker_wait.py`.
 
 ## 2026-11-01 (measure-and-decide): c690 offload verdict — no-go for A; B is the only 60 path
@@ -3486,7 +3486,7 @@ wall **73.5 ms/frame cumulative** (p50 115 µs, p90 239 µs), opcode `0x0A` 30.6
 culls 5.0 %. Fence round trip **41 µs p50 / 74 µs p99** (locked clocks). Design A per-job win 44.5 µs mean but
 −16.5 µs at p50/p99 → **~37–40 fps; no-go**. Design B (whole job on GPU, indirect draws, no CPU wait) → **~55–60
 fps but 2–4 months**. Next lever: tree/leaf lifter codegen (~34 % of the SPU wall). Full numbers + leaf
-cross-check: [`docs/c690-offload-decision.md`](c690-offload-decision.md).
+cross-check: [`docs/notes/c690-offload-decision.md`](notes/c690-offload-decision.md).
 
 ## 2026-11-01 (correction): 0x2A is an assembler; 0x6D68 is a direction unpack
 
@@ -3508,7 +3508,7 @@ cross-check: [`docs/c690-offload-decision.md`](c690-offload-decision.md).
 - **Fence-latency implication**: `0x6D68` is ~0.5 µs/call; a per-call GPU dispatch+fence (~10–20 µs) is a loss.
   The offload must be **job-level** (all streams, one dispatch + one fence per job), which requires the full
   per-vertex pipeline in one shader.
-- Report + constants: `docs/pitch_0x2A_pipeline.md`, `tools/replay/pitch_pipeline_constants.h`.
+- Report + constants: `docs/notes/pitch_0x2A_pipeline.md`, `tools/replay/pitch_pipeline_constants.h`.
 
 ## 2026-11-01 (tooling decision): no Ghidra SPU import, no emulator FP
 
@@ -3531,7 +3531,7 @@ pipeline is a chain of separate commands. To build a job-level shader we need th
    an EA/DMA model to the replay harness, then replay a job from the entry.
 
 Then: build the job-level shader for all streams, validate offline, integrate at the DMA boundary (one dispatch +
-one fence per job), and run the single go/no-go measurement. Function map: `docs/c690_function_map.md`.
+one fence per job), and run the single go/no-go measurement. Function map: `docs/notes/c690_function_map.md`.
 
 ## 2026-11-01 (decision): commit to the whole-pipeline GPU offload
 
@@ -3539,7 +3539,7 @@ Cheap levers are closed (per-function native 1.00×/1.03×; cull bypass loses). 
 c690 **per-vertex math** (unpack `0x6D68`, skin `0xD2B8/0xD4A8/0xC98C`, normalize `0xAF98+B238`, pack `0x7C18/0x8160`)
 to GPU compute, keeping culling/tree/index/ring on the SPU. First step is a 1–2 week go/no-go spike on one format
 (bit-exact vs the offline harness, then measure the fence/sync cost). Full plan, data flow, risks, and milestones:
-[`docs/gpu-offload-plan.md`](gpu-offload-plan.md).
+[`docs/notes/gpu-offload-plan.md`](notes/gpu-offload-plan.md).
 
 ## 2026-11-01 (late, 3): per-function native + cull bypass are both closed
 
@@ -4422,14 +4422,14 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   (queue submit, one-shot/readback fences, pipelined-set fences, present fences/locks, acquire, async shader wait,
   pipeline create, WCB lock, MT spins) and prints one `[walker-waits]` line per `[walker-prof]` report.
   Offline crowded replay: steady frame blocks ~0.9 of 42.6 ms, so the live parse gap needs one live run
-  ([walker-waits.md](walker-waits.md)). Fixtures 34/34. Branch pushed to `fork` only.
+  ([walker-waits.md](notes/walker-waits.md)). Fixtures 34/34. Branch pushed to `fork` only.
 
 ## 2026-11-05: one-shot waits attribution + create batching (exp/oneshot)
 
 - Live finding: walker in-drain blocking is almost all `oneshot` (15-40 ms/frame, 16-165 one-shots/frame). Added
   `[oneshot-by]` (per-caller, `flush:<why>` split) under `WALKER_WAITS=1`, and `PS3RECOMP_VK_BATCH_CREATES` (default 0,
   live key) that records texture/target/snapshot creates into the open batch instead of submit+wait. Replay: cold
-  one-shots 815 -> 5, md5 unchanged, fixtures 34/34; live effect unmeasured ([oneshot-waits.md](oneshot-waits.md)).
+  one-shots 815 -> 5, md5 unchanged, fixtures 34/34; live effect unmeasured ([oneshot-waits.md](notes/oneshot-waits.md)).
 
 
 ## 2026-11-05: WWS native PM head/tail, Stage A contract + native ticket claim (exp/wws-native)
@@ -4444,7 +4444,7 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   claim cost 156.7-164.1 -> 135.4-142.6 ns (1.12-1.21x).
 - Kill criterion: the claim is <1 % of the 4.59 lane-ms head+tail, so the saving is ~0.02 lane-ms/frame. Stage A
   does not reach -50 %, Stage B (native runner) must not start, key stays 0, no live A/B. Contract and the full
-  address map: [`wws-native-pm.md`](wws-native-pm.md).
+  address map: [`wws-native-pm.md`](notes/wws-native-pm.md).
 - Offline: `check_spu_context_abi.sh` PASS (no `spu_context` change); `build-sync` builds; video fixtures 34/34 after
   a test-only weak `g_spu_put_hook`/`ps3_ms_now` stub (the `exp/live-ab` Bink DMA log path broke the fixtures on the
   base commit). Code to `fork` only.
@@ -4459,7 +4459,7 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
 - All copy work together is ~0.8 lane-ms: code re-DMA 0.23, other GET 0.27, output PUT 0.27, atomics 0.30. The
   dominant time is lifted PM/job instruction execution (pm_exit 20.1 us, head_stage 11.7 us), so no safe local
   sub-step saves 1 ms of the burst; the only >1 ms item needs the native PM exit translation. No fix implemented,
-  key stays 0. Details: [`wws-native-pm.md`](wws-native-pm.md) §9.
+  key stays 0. Details: [`wws-native-pm.md`](notes/wws-native-pm.md) §9.
 
 ## 2026-11-05: SPU codegen v2 -- the 3.3x is float semantics, not spills (exp/spu-v2)
 
@@ -4474,7 +4474,7 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   canonicalisation. 0xFDA0 stage 1.36x (268 -> 198 us) and 0x0C018/0xBED0 1.23-1.25x, all four corpus pairs and every
   fncap21 capture bit-identical; `run_tests.sh` 11/11. Kill gate is 1.5x, so the flag stays off, no live A/B and no
   title lift change. Details and the next design (lazy -0 canonicalisation, measured 1.54x upper bound):
-  [`spu-codegen-v2.md`](spu-codegen-v2.md).
+  [`spu-codegen-v2.md`](notes/spu-codegen-v2.md).
 
 ## 2026-11-05: SPU codegen v3 -- FTZ live-switchable and measured (exp/spu-v3)
 
@@ -4489,4 +4489,4 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   (CI covers 0) because the meter is walker/PPU-bound; c690 job wall time fell 204.5 -> 183.1 us/job (1.117x) and
   c690 lane time 3124 -> 2926 ms/s. Second (last) launch captured a real 0x6D68 entry; the other four unmeasured
   kernels did not dispatch in the meter window. No lazy-canonicalisation/scalarisation pass shipped.
-  Details: [`spu-codegen-v3` in spu-codegen-v2.md](spu-codegen-v2.md).
+  Details: [`spu-codegen-v3` in spu-codegen-v2.md](notes/spu-codegen-v2.md).

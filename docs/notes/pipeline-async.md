@@ -10,7 +10,7 @@ Follows [`present-stalls.md`](present-stalls.md) §2 (the 1-2 s first-use
 drains), [`hitch-census.md`](hitch-census.md) §3 (the 5.1 s match load),
 [`shader-disk-cache.md`](shader-disk-cache.md) §6 (why translation was left
 synchronous then), [`walker-per-draw.md`](walker-per-draw.md) and
-[`targets-and-backlog.md`](targets-and-backlog.md).
+[`targets-and-backlog.md`](../targets-and-backlog.md).
 
 ## TL;DR
 
