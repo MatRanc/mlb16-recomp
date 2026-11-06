@@ -37,7 +37,7 @@ is a poor scene for judging single changes.
 | fact | value | source |
 |---|---|---|
 | on-screen frame rate | **12-18 fps, typical frame 65-91 ms**, 72-96 % of time in frames >= 66 ms, spikes to 190 ms | 2026-11-05 22:54:49-22:55:34, MangoHud CSV, `recomp-work/play_20261105_225313` |
-| game's own flip rate, same window | 20 flips/s (400 in 20 s) | same log, `[flip]` |
+| game's own flip rate, same window | 20 flips/s (400 in 20 s), of which 16/s reach the screen (320 blits, all shown) | same log, `[flip]` and `[RSX vulkan] window` |
 | main thread split (per guest flip, ~4.4 ref wakes per flip) | **RSX ref wait ~37 ms**, run ~13, **SPU ~0.7**, other ~0.1 | same log, `[spu-crit]` (per-wake values x 4.4) |
 | walker's own counters, same window | busy 4.67 s + idle 0.51 s of a **20 s** window (11.7 ms busy per flip) | same log, `[walker-prof]` summed |
 | walker on-CPU vs runnable-wait | on-CPU 501 ms/s, run-queue wait 2 ms/s; SPU lanes 121-479 ms/s; main 189 ms/s; 2.9 of 12 CPUs | earlier 2026-11-05 run, `tools/thread_sched.py` |
@@ -48,8 +48,11 @@ is a poor scene for judging single changes.
 
 ## 4. Open conflicts (must be explained, not ignored)
 
-1. **Guest flips vs screen frames:** the game flipped 20/s but MangoHud saw ~14/s in the same window. Either flips
-   are dropped/merged before present, or the two clocks count different things. Unexplained.
+1. **Guest flips vs screen frames (explained 2026-11-05):** in 22:54:50-22:55:10 the game issued **400 flips** but the
+   Vulkan backend made only **320 blits** and showed all 320 (`[RSX vulkan] window` lines: `shown` = `blits`,
+   `dropped 0`); MangoHud counted 313. So nothing is lost at present: ~20 % of guest flips never become a blit
+   (likely several flips handled inside one walker drain, only the last one presented; not yet confirmed in code).
+   **Use MangoHud / `shown` for fps.** `[flip]` counts game flip requests, not frames on screen.
 2. **Walker time does not add up:** in the crowd window its counters cover ~5 of 20 s, yet main waits on it ~37 ms
    per flip. Earlier `thread_sched` showed it ~50 % on-CPU. The missing time is either uncounted walker work, GPU
    waits, or waits for the SPU mesh producer / PPU (as at the meter). Different runs and builds; never measured
