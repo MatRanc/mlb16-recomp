@@ -5,7 +5,7 @@ names its scene, date, build and source. When a new measurement disagrees with a
 same commit and move the old line to "Replaced claims". Detailed write-ups live in [`notes/`](notes/); the running
 logs are [`progress.md`](progress.md) and [`targets-and-backlog.md`](targets-and-backlog.md).
 
-Last updated 2026-11-05.
+Last updated 2026-11-06.
 
 ## 1. The verdict so far (in one paragraph)
 
@@ -141,6 +141,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | `PS3RECOMP_REMAP_DIRECT` + `REMAP_FAST` | 0 | offline walker -4 ms |
 | `PS3RECOMP_BINK_CLOSE_KEEP` | 1 | fixes the green box (shipped) |
 | `PS3RECOMP_C690_STATS` | 1 in play_windowed | ~5 % of SPU-thread CPU; set 0 for A/B |
+| `PS3RECOMP_CROWD_FIX` | 0 | crowds: split a BEGIN/END at each draw-type/vertex-state change (2,170-batch group -> 268 runs in the offline crowded replay); non-crowd captures byte-identical, key off byte-identical ([`notes/crowd.md`](notes/crowd.md)) |
 
 Dead ends (measured, do not retry): SPU register tweaks, inlining callees, cheaper `frsqest`, exact lazy sign-of-zero,
 WWS native ticket claim alone, RSX_SYNC_FIX, frames-in-flight (design shelved).

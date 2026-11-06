@@ -1,5 +1,19 @@
 # Progress log
 
+## 2026-11-06: crowd draws -- sub-draw vertex state (exp/crowd, PS3RECOMP_CROWD_FIX)
+
+- The crowded replay capture holds one `SET_BEGIN_END(QUADS)` group with 2,170 draw batches (392 arrays,
+  1,778 indexed), 536 `SET_VERTEX_DATA_ARRAY_OFFSET` writes = 268 distinct vertex-fetch states, and zero
+  render-state changes inside the group. Our walker fetched the whole group at `END` with the last state,
+  reordered arrays before indexed into one draw, and the 256-entry batch arrays dropped 1,654 batches.
+- New live key `PS3RECOMP_CROWD_FIX` (default 0) splits the group at every draw-type or vertex-state change and
+  replays each run with the state its batches saw. Crowded capture: draws 1,694 -> 1,961, source vertices
+  35,468 -> 106,080. Isolating the crowd group shows a clump at the origin (off) vs rows of fans (on).
+- Key off is byte-identical to `build-play`/`build-prof` (hash `0e8f7c71ca8be27c`, gate
+  `f71ee0f438ed900d` for 3 frames); the non-crowd `meter_frame` capture is byte-identical with the key on or
+  off. Video fixtures 34/34 including `test_rsx_draw_engine`. No game launch. Details:
+  [`notes/crowd.md`](notes/crowd.md).
+
 ## 2026-11-05: reproducibility pass -- tools and SETUP.md, known-good branch `port/stable`
 
 - The uncommitted helpers the build, play and measurement flows call are now in `tools/ab/`
