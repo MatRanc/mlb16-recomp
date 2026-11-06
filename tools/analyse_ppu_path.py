@@ -134,6 +134,8 @@ def main():
     ap.add_argument("--skip-last", type=int, default=0, help="drop these trailing frames")
     ap.add_argument("--md", default=None)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--main-tid", type=int, default=None,
+                    help="ppu main's trace tid when it has no name (a triggered trace can start after it was named)")
     a = ap.parse_args()
 
     names, spans, instants = parse(load_events(a.trace))
@@ -142,7 +144,7 @@ def main():
     def tid(name):
         return tid_of.get(name)
 
-    main_t = tid("ppu main")
+    main_t = a.main_tid if a.main_tid is not None else tid("ppu main")
     flip_t = tid("ppu DisplayFlip")
     walk_t = tid("rsx walker")
     if main_t is None or flip_t is None or walk_t is None:

@@ -9,11 +9,12 @@ Last updated 2026-11-05.
 
 ## 1. The verdict so far (in one paragraph)
 
-In both measured scenes the PPU main thread spends most of each frame **waiting for the RSX walker** (the host thread
-that turns the PS3's GPU command stream into Vulkan), and **almost no time waiting on SPU work**. What is *not* known
-is what the walker itself is doing during the crowded frame: its own counters explain only a fraction of it. So
-"the renderer is the bottleneck" is half proven: we know *who* main waits on, not *why* that thread is slow. Section
-5 is the one measurement that closes this.
+**Crowded scene, measured end to end in one run (2026-11-05 23:16:51, section 3a): the frame is the RSX walker.**
+45.7 ms = walker drain 38.1 ms (83 %) + walker waiting for the PPU main thread 7.6 ms (17 %); the SPU mesh jobs cost
+the walker ~0 ms and the SPU lanes are ~28 % busy. Main is blocked 34.7 of its 45.7 ms on the walker. Inside the drain:
+texture work 10.6, parse/in-drain waits 9.2, draw recording 5.6, other 3.7, vertex fetch 3.3, pipelines 2.7 ms.
+At the pitch meter the walker drain and the SPU producer are back to back (section 2), so there both must shrink.
+**Direction (per the rule set before the run): renderer / walker drain.**
 
 ## 2. Pitch meter (the automated benchmark scene)
 
@@ -32,6 +33,25 @@ back on the path, so speeding up *only one* of them shows ~0 fps. That is the ro
 "SPU won't help" back-and-forth: both statements were measured, and both are true *for one change alone*. The meter
 is a poor scene for judging single changes.
 
+## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
+
+Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
+0 dropped; MangoHud showed 21 fps / 47 ms. Analysis in `recomp-work/captures/crowd_analysis/`
+(`analyse_ppu_path.py --main-tid 7`, `analyse_walker_wait.py`).
+
+| per frame (mean) | ms | check |
+|---|---:|---|
+| frame (flip to flip), 283 frames, 21.9 fps | **45.7** | = MangoHud 47 ms |
+| main running / blocked on walker ref | 11.0 / **34.7** | sums to 45.7 |
+| walker drain / waiting for a producer | **38.1** / 7.6 | sums to 45.7 |
+| producer wait split: PPU append 4.1, PPU park 3.5, **c690 SPU 0.0**, resume 0.0 | 7.6 | 100 % attributed |
+| while main waits: walker draining / waiting | 31.0 / 3.6 | |
+| SPU lanes busy (6 lanes) | 28 % mean (c690 16 %) | jobs 441/frame |
+| walker `[walker-prof]` (flip-weighted) | walker 35.5 = engine 26.3 (tex 10.6, draw 5.6, other 3.7, fetch 3.3, pipe 2.7, bind 0.3) + parse 9.2 | trace drain span 35.3 |
+
+Not split yet: how much of the 38 ms drain is walker CPU vs blocking on the GPU inside the drain (one-shot readbacks).
+An earlier, different run had the walker ~50 % on-CPU; `PS3RECOMP_WALKER_WAITS=1` (build-depth) measures it directly.
+
 ## 3. Crowded scenes (driven by the user)
 
 | fact | value | source |
@@ -39,7 +59,6 @@ is a poor scene for judging single changes.
 | on-screen frame rate | **12-18 fps, typical frame 65-91 ms**, 72-96 % of time in frames >= 66 ms, spikes to 190 ms | 2026-11-05 22:54:49-22:55:34, MangoHud CSV, `recomp-work/play_20261105_225313` |
 | game's own flip rate, same window | 20 flips/s (400 in 20 s), of which 16/s reach the screen (320 blits, all shown) | same log, `[flip]` and `[RSX vulkan] window` |
 | main thread split (per guest flip, ~4.4 ref wakes per flip) | **RSX ref wait ~37 ms**, run ~13, **SPU ~0.7**, other ~0.1 | same log, `[spu-crit]` (per-wake values x 4.4) |
-| walker's own counters, same window | busy 4.67 s + idle 0.51 s of a **20 s** window (11.7 ms busy per flip) | same log, `[walker-prof]` summed |
 | walker on-CPU vs runnable-wait | on-CPU 501 ms/s, run-queue wait 2 ms/s; SPU lanes 121-479 ms/s; main 189 ms/s; 2.9 of 12 CPUs | earlier 2026-11-05 run, `tools/thread_sched.py` |
 | walker blocking inside a drain | one-shot GPU waits 15-40 ms per heavy frame, mostly `eng:wcb_copy_surface` 14.9 ms + flush 6.1 (guest CPU reads of render targets) | earlier 2026-11-05 run, [`notes/oneshot-waits.md`](notes/oneshot-waits.md), [`notes/walker-waits.md`](notes/walker-waits.md) |
 | `WCB_PREFETCH=1 STREAM=1` | one-shot waits 23 -> 15 ms, flips 27.5 -> 32.8/s (rough, 6 reports), no visible change | same session, live keys, 1 run |
@@ -53,14 +72,13 @@ is a poor scene for judging single changes.
    `dropped 0`); MangoHud counted 313. So nothing is lost at present: ~20 % of guest flips never become a blit
    (likely several flips handled inside one walker drain, only the last one presented; not yet confirmed in code).
    **Use MangoHud / `shown` for fps.** `[flip]` counts game flip requests, not frames on screen.
-2. **Walker time does not add up:** in the crowd window its counters cover ~5 of 20 s, yet main waits on it ~37 ms
-   per flip. Earlier `thread_sched` showed it ~50 % on-CPU. The missing time is either uncounted walker work, GPU
-   waits, or waits for the SPU mesh producer / PPU (as at the meter). Different runs and builds; never measured
-   together.
-3. **SPU share in crowds:** main waits ~0.7 ms on SPU, but at the meter the walker waited 2.7 ms (with draws) to
-   16.8 ms (without) on the SPU producer. Whether the walker waits on SPU output in crowds is unmeasured.
+2. **Walker time (resolved 2026-11-05):** the "counters cover ~5 of 20 s" claim was an orchestrator arithmetic error:
+   `[walker-prof]` values are per-flip averages and must be flip-weighted, not summed. Weighted, they give 35.5 ms per
+   flip, matching the trace (section 3a).
+3. **SPU share in crowds (resolved 2026-11-05):** in the 3a trace the walker waits 0.0 ms/frame on c690 output; its
+   whole 7.6 ms producer wait is the PPU main thread. The SPU is off the crowded critical path in this scene.
 
-## 5. Next measurement (one run, user-driven, crowded)
+## 5. Crowd trace recipe (used for 3a; reuse for any scene)
 
 The only tool that has ever made a frame add up to 100 % is the 2026-11-02 trace (all threads, one timeline). Run it
 once in a crowd, nothing else changed:
@@ -91,6 +109,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 |---|---|---|
 | "At the meter the SPU work sets the pace" | orchestrator summary, 2026-11-05 | main waits 0 ms on SPU; walker drain is the longest link (section 2). SPU matters only *together* with the drain. |
 | "Speeding up the renderer will not change anything" | orchestrator, from `EXP_NO_DRAW` = 0 fps | true at the meter for the drain alone; not a statement about crowds, where main waits ~37 ms per flip on the walker |
+| "Walker counters cover only ~5 of 20 s" | orchestrator, summed per-flip averages | flip-weighted they match the trace (35.5 vs 35.3 ms) |
 | "Crowd runs at ~20 fps / 50 ms" | orchestrator, from guest `[flip]` | the screen shows 12-18 fps, 65-91 ms typical (MangoHud) |
 | "SPU codegen is 99 % of the work" | direction set 2026-11-05 evening on the first claim above | on hold until section 5 is measured |
 | "Lifted SPU is slow because of register spills" | spu-regs / audits | float-semantics emulation is ~2/3 of hot SPU time; spills ~19 % ([`notes/spu-codegen-v2.md`](notes/spu-codegen-v2.md)) |
