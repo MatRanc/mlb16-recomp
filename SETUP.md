@@ -21,10 +21,10 @@ branches: the generated SPU modules are tied to the runtime headers.
 - Python packages for ps3recomp: `python3 -m venv .venv && .venv/bin/pip
   install -r requirements.txt`. The lift scripts use `.venv/bin/python` when it
   exists.
-- Disk: about **30 GB free** (a full build is about 17 GB at `-j8`; the game's
-  first-boot data install is about 9.5 GB, plus the ISO). RAM: the build peaks
-  around 1.5-2 GB per clang job; **use `-j4` on a 32 GB machine**, `-j8` only
-  with enough RAM.
+- Disk: about **25-30 GB free** (the game's first-boot data install is about
+  11 GB, the lifted trees and build about 1.5 GB, plus your ISO). RAM: the full
+  build reaches about **17 GB at `-j8`** (about 2 GB per clang job); **use
+  `-j4` on a 32 GB machine**, `-j8` only when you have the headroom.
 - CPU governor `performance` for honest measurements.
 
 ## 2. Layout
@@ -81,10 +81,14 @@ WORK=$PWD/recomp-work
 mkdir -p "$WORK/vfs/game"
 ln -s "$MLB16_ISO_MOUNT" "$WORK/vfs/PS3_GAME"
 cp -a "/path/to/rpcs3/dev_hdd0/game/BCUS01089" "$WORK/vfs/game/"
+# The lifted SPU sources include ../../runtime/... relative to their module,
+# so recomp-work/runtime must exist and point at the checkout you build with.
+ln -sfn "$PWD/../ps3recomp/runtime" "$WORK/runtime"
 ```
 
 Do not point the vfs at RPCS3's own `dev_hdd0`; the port writes its install and
-caches there.
+caches there. Keep `recomp-work/runtime` on the same ps3recomp branch as the
+build; `check_spu_context_abi.sh` guards the one header both trees share.
 
 ## 6. Lift the game code and apply the patches
 
