@@ -170,6 +170,8 @@ FAST_RESCHED=64.
   instrumentation **13 %**, indirect-branch lookups 7.6 % (dispatch cache already on), memcpy 3.8 %.
 - *C690_STATS off in the mound visit: no gain* (2 launches x 4+4 x 10 s, same keys + FTZ): on 27.8 / 28.9 fps,
   off 27.2 / 27.7 fps; same-config arms differ by ~1 fps. The 13 % lane CPU is not on the frame's path.
+  **Weak result:** two launches, and the mound visit varies between launches (user: sometimes 3 players, sometimes
+  ~7). Only paired arms inside one launch compare like with like; record the player count (`n5_mound_visit.png`).
 
 **Real frames vs flips (2026-11-06, review finding confirmed live).** The title re-flips the buffer already on
 screen when its flip handler has not fired within two vblanks (~34.1 ms); MangoHud and `[flip]` count those as
@@ -180,6 +182,7 @@ undercounts, prefer `real=`). **All fps numbers above this line are flip rates a
 | A/B (meter unless noted) | flips/s A -> B | real fps A -> B | real diff |
 |---|---|---|---|
 | `PS3RECOMP_TICK_IN_DRAIN` 0 -> 1, live 2026-11-06 09:48, build-sync = port/stable + counter, play keys, 6+6 x 10 s | 36.98 -> 29.08 | **25.11 -> 29.06** | **+3.95 +/- 0.26** |
+| same, **mound visit** live 2026-11-06 10:03, build-depth, ~7 players, 6+6 x 10 s | 23.72 -> 16.26 | 15.52 -> 16.26 | +0.74 +/- 1.14 (neutral) |
 | same, re-scored 2026-11-04 `pacingfloor` (timing classifier, 4 pairs) | 33.4 -> 25.5 | 21.7 -> 24.7 | +3.0 +/- 2.6 |
 | SPU FTZ, mound (timing classifier) | 25.5 -> 27.8 | 17.9 -> 18.9 | +1.0 +/- 2.0 |
 | REMAP_SHIFT (timing classifier) | 39.4 -> 39.8 | 22.3 -> 22.8 | +0.5 +/- 0.6 |
