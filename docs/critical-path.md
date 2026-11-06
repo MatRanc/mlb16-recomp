@@ -231,6 +231,7 @@ undercounts, prefer `real=`). **All fps numbers above this line are flip rates a
 | `PS3RECOMP_WALKER_WAKE` 0 -> 1 (resume the walker at the covering PUT), meter live 2026-11-06 12:51, build-sync, approx on, 6+6 x 10 s | 30.73 -> 31.55 | **30.73 -> 31.55** | **+0.82 +/- 0.25** |
 | `REMAP_CACHE`+`REMAP_SHIFT` 0 -> 1 with walker wake on, meter live 2026-11-06 12:57 | 31.37 -> 30.78 | 31.37 -> 30.78 | -0.58 +/- 0.43 (small loss; keep off) |
 | `PS3RECOMP_REMAP_DIRECT` 0 -> 1 with walker wake on, meter live 2026-11-06 13:04 | 31.77 -> 32.02 | 31.77 -> 32.02 | +0.25 +/- 0.54 (neutral) |
+| `PS3RECOMP_REMAP_FLAT` 0 -> 1 (`exp/drain-cuts` 3fcb5ade; offline meter_cap -2.5 ms, byte-identical on 4 captures), wake + approx on, meter live 2026-11-06 13:28 | 31.59 -> 32.10 (walker 29.1 -> 26.3 ms/flip) | 31.59 -> 32.10 | +0.51 +/- 0.56 (walker -2.8 ms, frame barely moves: another limit binds near 32 fps) |
 | `SPU_CODE_DMA_MEMO` 0 -> 1 (skip unchanged per-job code GETs), meter live 2026-11-06 12:27, approx on; prior live audit (`SPU_CODE_DMA_MEMO_AUDIT=1`, `exp/pm-overhead`): 7.11 M O(1) skips, 0 mismatches | 30.80 -> 30.50 | 30.80 -> 30.50 | -0.30 +/- 0.32 (neutral) |
 | same approx switch, **mound visit** live 2026-11-06 11:36, build-sync, 4 players, 6+6 x 10 s | 21.20 -> 22.27 | **21.20 -> 22.27** | **+1.07 +/- 0.16** |
 | same, **mound visit** live 2026-11-06 10:03, build-depth, ~7 players, 6+6 x 10 s | 23.72 -> 16.26 | 15.52 -> 16.26 | +0.74 +/- 1.14 (neutral) |
