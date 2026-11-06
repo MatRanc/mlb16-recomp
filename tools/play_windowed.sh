@@ -213,6 +213,13 @@ unset PAD_FILE
 unset PS3RECOMP_RSX_WCB PS3RECOMP_RSX_WCB_STATS
 # Env PS3RECOMP_RSX_CUBE_RT=0 turns the GPU cube render-target path off.
 export PS3RECOMP_RSX_CUBE_RT="${PS3RECOMP_RSX_CUBE_RT:-1}"
+# Renderer cuts + early render-target copies (docs/critical-path.md 3b, 2026-11-05: crowded replay view
+# 15 -> 31-34 fps, no visual change seen). Live-switchable; set any to 0 to A/B. REMAP_* measured no gain.
+export PS3RECOMP_VK_PASS_KEEP="${PS3RECOMP_VK_PASS_KEEP:-1}"
+export PS3RECOMP_VK_VTX_PRE="${PS3RECOMP_VK_VTX_PRE:-1}"
+export PS3RECOMP_VK_DRAW_STATE="${PS3RECOMP_VK_DRAW_STATE:-1}"
+export PS3RECOMP_RSX_WCB_PREFETCH="${PS3RECOMP_RSX_WCB_PREFETCH:-1}"
+export PS3RECOMP_RSX_WCB_STREAM="${PS3RECOMP_RSX_WCB_STREAM:-1}"
 if [ "$WCB" != 0 ]; then
     export PS3RECOMP_RSX_WCB=$WCB
     export PS3RECOMP_RSX_WCB_STATS=60
