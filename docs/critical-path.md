@@ -14,7 +14,7 @@ Last updated 2026-11-05.
 the walker ~0 ms and the SPU lanes are ~28 % busy. Main is blocked 34.7 of its 45.7 ms on the walker. Inside the drain:
 texture work 10.6, parse/in-drain waits 9.2, draw recording 5.6, other 3.7, vertex fetch 3.3, pipelines 2.7 ms.
 At the pitch meter the walker drain and the SPU producer are back to back (section 2), so there both must shrink.
-**Direction (per the rule set before the run): renderer / walker drain.**
+**Direction (per the rule set before the run): renderer / walker drain. Confirmed live: the parked walker-diet + WCB switches double the crowded replay view, 15 -> 31-34 fps (section 3b).**
 
 ## 2. Pitch meter (the automated benchmark scene)
 
@@ -51,6 +51,23 @@ Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRAC
 
 Not split yet: how much of the 38 ms drain is walker CPU vs blocking on the GPU inside the drain (one-shot readbacks).
 An earlier, different run had the walker ~50 % on-CPU; `PS3RECOMP_WALKER_WAITS=1` (build-depth) measures it directly.
+
+## 3b. Renderer switches, live A/B in the same replay view (2026-11-05 23:27 and 23:32, build-depth)
+
+Two user-held runs, switches flipped every 15 s through `PS3RECOMP_CTL`; on-screen fps from MangoHud (first 2 s of
+each window dropped). Visuals: no difference seen by the user at any switch point.
+
+| arm (windows) | on-screen fps | typical frame |
+|---|---|---|
+| all off (6) | 13.9-16.0 | 71-87 ms |
+| WCB_PREFETCH + WCB_STREAM (2) | 20.0, 21.9 | 57, 25 ms |
+| VK_PASS_KEEP + VK_VTX_PRE + VK_DRAW_STATE ("diet", 2) | **30.4, 28.2** | 19, 27 ms |
+| REMAP_DIRECT + REMAP_FAST (2) | 12.7, 16.4 | 86, 71 ms (no gain) |
+| all seven (6) | **30.5-33.9** | 15-21 ms |
+
+The walker-diet trio carries most of the gain; WCB adds ~3 fps on top; REMAP adds nothing here. p90 frames stay
+~60 ms with everything on: the remaining spikes are the next target. Pending before default-on: menus, team select
+(green box), pitch meter, gameplay with diet + WCB on.
 
 ## 3. Crowded scenes (driven by the user)
 
