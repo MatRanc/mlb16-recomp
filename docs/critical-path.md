@@ -86,8 +86,25 @@ Log: recomp-work/ab_live_mound_20261106_021158.{log,csv}.
 Read: the user's ~80 ms mound-visit frames (before the keys) are ~35 ms median now. Unlike the crowded replay view
 (3a), the walker here waits on the PPU main thread for 42 % of each flip, so main is on the path too; a trace is
 needed to split it. Texture work, the crowd view's top row, is small here; vertex fetch is the top engine row.
-The one-shot walker capture taken at 02:15:11 recorded only a frame tail (65 words): capture arms at the next drain
-after a flip, and one drain can cover a whole frame when the walker is behind. Needs a fix before the next capture.
+The one-shot walker capture taken at 02:15:11 recorded only a frame tail (65 words): the capture was bounded at the
+PPU's flip request, not where the walker reaches the flip. Fixed in ps3recomp `exp/wcapfix` a159ed55 (fork); the
+04:31:56 capture holds a whole frame: `recomp-work/captures/mound/m2_cap` (163,846 words, 0 replay misses, 768
+draws, replay 31.8 ms/frame offline).
+
+**Trace (2026-11-06 04:31:39, 13.98 s, 298 frames, build-sync, keys on; `captures/mound/m2_trace.json`,
+`analyse_ppu_path.py --main-tid 8`, main is "host thread 8" in this trace).** Both chains add up to the frame:
+
+| per frame, mean (p50 / p90) ms | |
+|---|---|
+| frame (flip to flip) | **46.9** (36.6 / 71.1) |
+| ppu main = blocked on the walker ref + running | 31.0 + 16.0 = 47.0 |
+| walker = drain + waiting for work (put_wait) | 28.7 + 18.3 = 47.0 |
+| put_wait split: resume lag after the PUT / caught up with PPU put / c690 SPU / park patched | **11.4** / 5.6 / 0.9 / 0.3 |
+
+Read: the walker is the chain main waits on (main blocked 31 of 47 ms), and the walker itself is idle 18 ms a frame,
+11.4 of it *after* its work was already PUT. At the pitch meter that resume lag was ~2.8 ms and the wake fix
+(`PS3RECOMP_WALKER_WAKE`, docs/notes/walker-wake.md) only moved the wait onto the SPU producer; here the SPU
+producer costs 0.9 ms, so the wake fix is retested live in this scene (below). SPU stays off the path.
 
 ## 3. Crowded scenes (driven by the user)
 
