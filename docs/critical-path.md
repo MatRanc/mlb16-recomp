@@ -390,6 +390,12 @@ WWS native ticket claim alone, RSX_SYNC_FIX, frames-in-flight (design shelved).
 Upstream v0.19 #634 caches only (`exp/pr634`, ppu_vmx.h half left out: it rebuilds all PPU code), 2026-11-06 17:3x,
 4 alternating meter launches x 2 arms, play settings: build-depth 34.28/34.68/34.77/34.54 vs #634 34.33/34.31/34.55/35.09
 -> 34.57 vs 34.57 real fps, neutral (main's pre-put PPU time is 7.5 ms of the chain). Not merged.
+v0.19 colour PRs, offline (2026-11-06 17:5x, replay of `meter_cap` with play renderer keys, presented frame dumped,
+A/A bit-identical; `captures/colour/`): #681 (R32F/RGBA32F targets), #658 (current vertex colours), #597 (w = 1 expand),
+#670 (FP input precision; test-file conflict, kept ours) each change **0 pixels** on the meter frame. #693 (depth clamp;
+one define-list conflict, both kept) turns 85 % of the replayed frame near-white, but the replay starts from register
+state captured on a build without the 0x1D78 reset value (reads 0 = "no clip" = clamp on every draw), so this replay
+cannot judge it; it needs a live look. Branches `exp/colour-<n>` (local).
 v0.19 #675 (new-style JUMP): MLB emits none, boot -> meter (`GCM_JUMP_NEW_LOG`, branch `exp/jump-check`). Not needed.
 `--rcp-est` approx twins (2026-11-06 16:xx, build-sync, 4 alternating meter launches x 2 arms): 34.44 vs 34.42 real fps,
 neutral, although offline whole c690 jobs ran ~12 % faster. So **the meter is no longer c690-bound** after approx +
