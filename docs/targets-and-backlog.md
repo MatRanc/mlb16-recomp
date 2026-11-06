@@ -496,6 +496,11 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   self-back-edge goto and roughly halves host dispatches on four captured 0x21 states (identical LS/GPR); it is off
   by default because the live c690 burst effect is unmeasured. Next lever: register-mapped backend / split long live
   ranges, not call summaries.
+- SPU codegen v2 (docs/spu-codegen-v2.md, exp/spu-v2): the 3.3x is not spills. Dynamic attribution on the real
+  0xFDA0 corpus: emulation 63 % (float semantics/FTZ 39, frsqest/fi/LUT 26), spills 12.7 %, LS 3.3 %, shufb 3.7 %.
+  `--spu-ftz-hw` (default off) runs lifted float under MXCSR FTZ|DAZ: 1.36x on 0xFDA0, 1.22-1.24x on the 0x21 loop,
+  bit-identical LS+GPR; below the 1.5x gate, so off and no live A/B. Next: lazy sign-of-zero canonicalisation
+  (1.54x upper bound) + scalarisation.
 - SPEED DECISION FOR THE USER (2026-11-04 morning): the meter frame = the c690 burst (~33 ms), pure compute, on the
   5 lanes the game allows. Neither per-stage native (<= 1.5x) nor codegen (1.2-1.4x) alone gets near 2x. Options:
   (a) codegen work (spills) for all SPU code, 1.2-1.4x; (b) native emit kernels 0x21 sel 1/7 (~3-5 ms);

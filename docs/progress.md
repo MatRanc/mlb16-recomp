@@ -4442,3 +4442,18 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   dominant time is lifted PM/job instruction execution (pm_exit 20.1 us, head_stage 11.7 us), so no safe local
   sub-step saves 1 ms of the burst; the only >1 ms item needs the native PM exit translation. No fix implemented,
   key stays 0. Details: [`wws-native-pm.md`](wws-native-pm.md) §9.
+
+## 2026-11-05: SPU codegen v2 -- the 3.3x is float semantics, not spills (exp/spu-v2)
+
+- Phase 1 (perf `cycles:u` + `perf annotate` per lifted symbol on the real 0xFDA0 stage corpus and the fncap21
+  captures): on the 0xFDA0 stage 63 % of host time is SPU emulation (39 float-semantics/FTZ, 26 frsqest/fi/frest),
+  12.7 % spills, 3.3 % local store, 3.7 % shufb, 0.2 % dispatch. Weighted over the measured hot kernels
+  (four float-bound kernels, 29 % of c690 job time): emulation 66.6 %, register file/spills 18.8 %, LS 3.8 %,
+  branch 0.4 %. Removing all spills buys at most 1.23x; the old 26-37 % spill figure was static and over-counted the interrupt write-back
+  blocks. This explains the 0 % from `--local-regs`/`--precise-regs`/`--inline-direct`.
+- Phase 2 implemented `--spu-ftz-hw` (lift flag, default off) + MXCSR FTZ|DAZ enter/leave in
+  `spu_run_with_halt`: generated float helpers use plain loads, hardware FMA and only result sign-of-zero
+  canonicalisation. 0xFDA0 stage 1.36x (268 -> 198 us) and 0x0C018/0xBED0 1.23-1.25x, all four corpus pairs and every
+  fncap21 capture bit-identical; `run_tests.sh` 11/11. Kill gate is 1.5x, so the flag stays off, no live A/B and no
+  title lift change. Details and the next design (lazy -0 canonicalisation, measured 1.54x upper bound):
+  [`spu-codegen-v2.md`](spu-codegen-v2.md).
