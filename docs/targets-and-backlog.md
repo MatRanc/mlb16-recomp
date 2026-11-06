@@ -490,6 +490,12 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   SPU's 0.31 ns (~3.3x slower); 8.4-12.7 x86 per SPU instruction, 26-37 % of it GPR/stack spills. Realistic codegen
   gain 1.2-1.4x (spills 15-25 %, call dispatch 5-10 %, byteperm/masks 3-6 %). port-local-regs, port-spu-int-simd,
   port-spu-runtime-cuts are already merged; port-lockline-stripes is neutral.
+- SPU regs spike (docs/spu-regs.md, exp/spu-regs): the call-edge share is already removed by `--local-regs`; a new
+  `--precise-regs` is correct but clang -O2 already emitted the same hot functions (0 % x86 change), so the >=30 %
+  emitted-spill kill criterion is NOT met and no live A/B was run. `--ib-goto-starts` does add the `0xC0F4`
+  self-back-edge goto and roughly halves host dispatches on four captured 0x21 states (identical LS/GPR); it is off
+  by default because the live c690 burst effect is unmeasured. Next lever: register-mapped backend / split long live
+  ranges, not call summaries.
 - SPEED DECISION FOR THE USER (2026-11-04 morning): the meter frame = the c690 burst (~33 ms), pure compute, on the
   5 lanes the game allows. Neither per-stage native (<= 1.5x) nor codegen (1.2-1.4x) alone gets near 2x. Options:
   (a) codegen work (spills) for all SPU code, 1.2-1.4x; (b) native emit kernels 0x21 sel 1/7 (~3-5 ms);

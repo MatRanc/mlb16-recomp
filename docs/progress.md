@@ -1,5 +1,19 @@
 # Progress log
 
+## 2026-11-05: SPU lifter register pressure; the 30 % spill target is not reachable this way (exp/spu-regs)
+
+- Roundtable item 4. `--local-regs` already does the per-function write/read bookkeeping (dirty-only write-back,
+  callee-write-set reloads), so the remaining 26-37 % GPR/stack share is intra-function live-set pressure. A new
+  `--precise-regs` (lazy prologue + live-out reload filter) is correct and cuts executed reloads ~50 % on the
+  `test_spu_local_regs.py` torture programs, but clang at -O2 already deletes those loads/reloads: the c690 hot
+  functions are unchanged (0 %). `--ib-goto-starts` adds the documented `0xC0F4` self-back-edge goto
+  (`0xC018` 468 -> 554 x86, +7.1 % module text); on four captured 0x21 kernel states it halves host dispatches
+  (146 -> 79, 153 -> 71, 190 -> 101, 250 -> 187) with identical final LS/GPR. That is a dispatch win, not a spill
+  win. No title lift flag changed; no game launch. Details: [`spu-regs.md`](spu-regs.md).
+- Correctness: 0xFDA0 stage corpus (4 pairs) LS+GPR bit-exact for baseline/precise/goto/both; `run_tests.sh` 11/11;
+  `test_spu_local_regs.py` and `test_spu_ib_known_targets.py` pass; WWS native-PM claim differential passes (test
+  harness now defines `g_spu_direct`/`g_spu_stack_reset_hint` so a PM lifted with `--ib-goto` links).
+
 ## 2026-11-05 (walker diet): keeping the render pass open and hoisting the vertex unpack cuts the draw phase ~4 ms
 
 Branch `exp/walker-diet` (docs/walker-diet.md). Four default-0 live keys; offline Vulkan crowded replay walker
