@@ -631,3 +631,8 @@ Updated 2026-11-03 afternoon. One game-running mission at a time.
   staging+dispatch 1.46 lane-ms/lane/burst. All copies+atomics are ~0.8 lane-ms; the rest is lifted instruction
   execution, so no safe local cut reaches 1 ms. The only >1 ms piece is the PM exit/re-entry chain -> native
   translation (Stage B), not a memo/memcpy/tag fix. [`wws-native-pm.md`](wws-native-pm.md) §9.
+- SPU v3 (2026-11-05, exp/spu-v3): `PS3RECOMP_SPU_FTZ` is a live key (default 0) selecting a bit-exact MXCSR FTZ|DAZ
+  twin of every lifted SPU module; measured live 1.117x on c690 job time (204.5 -> 183.1 us/job), frame rate flat at
+  the walker-bound pitch meter. Next SPU lever: lazy sign-of-zero canonicalisation (1.54x upper bound on 0xFDA0) and
+  preferred-slot scalarisation; capture 0x8160/0xD2B8/0xD4A8/0xE750 entry states first (0x6D68 captured).
+  [`spu-codegen-v2.md`](spu-codegen-v2.md).

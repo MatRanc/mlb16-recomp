@@ -213,3 +213,137 @@ NHL Legacy Native (MIT, (c) 2026 HeckYouMan); the local-register/callee model
 follows the inFAMOUS 2 port (MIT, ThiagoFraga761 and contributors); design
 reference only, no code copied. No RPCS3 or other GPL emulator source was read
 or cited.
+
+---
+
+# v3 (2026-11-05): FTZ live-switchable, measured at the meter
+
+Branch `exp/spu-v3` in `ps3recomp-sync` (off `exp/spu-v2`), build
+`recomp-work/build-sync`. One automated pitch-meter launch. No title lift
+configuration changed; `PS3RECOMP_SPU_FTZ` defaults to 0 and the default arm is
+the old module unchanged.
+
+## What shipped: one binary, two variants, one live key
+
+The v2 flag produced a module whose float helpers only make sense while the host
+thread runs MXCSR FTZ|DAZ. Shipping that as the only code would have made
+`build-play` (which has no FTZ runtime) inexact, and would have made the switch
+relaunch-only. v3 instead keeps **both variants in one binary**:
+
+* `tools/spu_ftz_twin.py` derives `<module>_ftz/spu_recomp.c` from the already
+  generated, already patched base module: the symbol prefix gains `_ftz`, the
+  six helpers `fa/fs/fm/fma/fms/fnms` become the `spu_hw_*` forms, and the
+  registration loop calls `spu_register_function_var(addr, fn, 1)`. Control
+  flow, native hooks and the cull/Pm patches are inherited byte for byte, so the
+  only difference between the arms is the float helper selection. The script
+  also patches `jobmods_register.c`, `jobmods_register_dxt.c` and
+  `spu_workloads.c` to register the twin under the same image id and, for the
+  waypoint images, the twin entry. It is re-runnable and idempotent.
+* The runtime (`spu_channels.c`) stores a `variant` on each registry entry.
+  `spu_lookup` prefers variant 1 when the current run's sampled key is on and
+  otherwise returns the first registered (variant 0) function exactly as before;
+  the lookup memo and the dispatch cache include the variant in their key.
+  `spu_run_with_halt` samples `PS3RECOMP_SPU_FTZ` once per run (live control file
+  or environment), stores it per host thread, sets MXCSR FTZ|DAZ for the run and
+  restores the caller's MXCSR and variant on the way out (nested runs restore the
+  outer variant too). `spu_workload.c` chooses the twin entry when the key is on.
+* `build-play` safety: the twin's registration is behind a **weak**
+  `spu_register_function_var` (absent in the play runtime, so the twin registers
+  nothing) and the generated workload registration behind a weak
+  `spu_workload_register_img_ftz`. With the key off, dispatch never selects
+  variant 1, so the play tree is byte-identical in behaviour. All 14 twins were
+  syntax-checked against the play tree's headers.
+
+`tools/spu_lifter.py --spu-ftz-hw` now emits the same twin shape (no eager
+"enable FTZ" constructor); a fresh twin lift registers itself as variant 1.
+
+## Offline gates
+
+Lifted-old vs lifted-twin, bit-identical in all 256 KiB of LS and all 128 GPRs
+(and final pc / dispatch count), replayed with the twin arm under MXCSR FTZ|DAZ:
+
+| input | cases | result |
+|---|---:|---|
+| 0xFDA0 stage corpus (`corpus_edge1_20261103_012604/stage`) | 4 pairs | identical, and equal to the captured output |
+| `fncap21` captures (0x0A730, 0x0B830, 0x0BED0, 0x0C018, 0x10F78, 0x13140, 0x131A0, 0x13518, 0x13520) | 9 | identical |
+| DXT job entries (`dxt_capA`/`dxt_capB`, entry 0x4030) | 6 | identical |
+| WWS PM claim cases (base vs twin module) | 5 | all PASS, native/lifted agreement unchanged |
+| 0x6D68 (new entry capture, `captures/fncap_v3`) | 1 | identical |
+| `runtime/spu/tests/run_tests.sh` | 11 | 11/11 |
+| `tools/test_spu_local_regs.py`, `tools/test_spu_ib_known_targets.py` | | pass |
+| `check_spu_context_abi.sh` | | pass (no `spu_context` field added) |
+| `tools/test_video_fixtures.py` | 34 | 34/34 |
+
+The differential harness is committed: `tools/spu_ftz_diff.py` +
+`tools/spu_ftz_diff_main.c` (one executable per arm; the twin arm sets MXCSR).
+
+## Live A/B at the pitch meter (one launch)
+
+`ab_live.sh BUILD=build-sync`, 6 alternating 10 s windows inside one launch
+(A = `PS3RECOMP_SPU_FTZ=0`, B = 1), pin 1, WCB 2, meter scene. The live-ctl log
+shows the key flipping `0->1->0->1->0->1` during the run and the A/B band
+self-check passes.
+
+| arm | segments | fps (mean +/- range) | c690 job time | c690 lane time |
+|---|---:|---|---:|---:|
+| A, FTZ off | 3 | 34.60 +/- 1.78 (33.90-35.33) | 204.52 us/job | 3124 ms/s |
+| B, FTZ on | 3 (2 with periodic sample) | 35.09 +/- 1.73 (34.37-35.76) | **183.07 us/job** | **2926 ms/s** |
+
+* **c690 job wall time falls 1.117x** (204.5 -> 183.1 us/job) and c690 lane time
+  falls 6.3 %. This is the FTZ result on real work, measured live: the twin was
+  selected (a fallback to variant 0 would have left the job time unchanged).
+* **Frame rate is flat within the meter's resolution**: paired A-B -0.49 +/- 2.94
+  fps (95 % CI [-3.43, +2.45]). The pitch meter is walker/PPU-bound and the
+  walker's c690 wait is only ~2.7 ms/frame, so a 10 % cut of c690 job time is
+  mostly hidden. At the pitch and in crowded play the producer is longer
+  (`targets-and-backlog.md`), so the same 1.117x should show there.
+* SPU-thread CPU from `tools/thread_sched.py` was not obtained: the sampler
+  attached to the `timeout` wrapper (the documented pgrep trap) instead of the
+  game process, so only the wrapper thread was sampled. The c690 per-job wall
+  time above is the per-arm SPU-lane measure that the frame clock actually sees.
+
+User command to try it in play (crowded scenes):
+
+```sh
+cd /home/m/Documents/mlb16-online/recomp-work && PS3RECOMP_SPU_FTZ=1 \
+  ./build-sync/MyGameRecomp ../EBOOT.elf            # or: play_windowed.sh (env inherited)
+# live toggle: echo PS3RECOMP_SPU_FTZ=1 >> $PS3RECOMP_CTL   (0 to undo, no relaunch)
+```
+
+## Phase B status
+
+Item 3 was partially captured with the second (and last) automated launch:
+`SPU_FN_CAPTURE=0x6D68,0x8160,0xD2B8,0xD4A8,0xE750` at the pitch meter produced a
+real entry state for **0x6D68** (differential passes); the other four did not
+dispatch through `spu_lifted_lookup` in that window, so they remain unmeasured.
+Items 1 (lazy sign-of-zero canonicalisation) and 2 (preferred-slot scalarisation)
+are not implemented: both are a new dataflow/representation pass over the lifter,
+and the v2 measurement already shows the remaining sign-of-zero work (1.54x
+upper bound on 0xFDA0) is smaller than the emulation already removed. Nothing
+non-exact was shipped; the key stays off by default.
+
+## Reproduce
+
+```sh
+# twins + registrations (idempotent; regenerated from the patched base)
+python3 ps3recomp-sync/tools/spu_ftz_twin.py --spu-dir recomp-work/spu_lifted
+
+# exactness (one executable per arm; twin runs MXCSR FTZ|DAZ)
+python3 ps3recomp-sync/tools/spu_ftz_diff.py --module jobmod_c690c2f7b09a_eF5B8 \
+  --entry 0xFDA0 --inputs 'recomp-work/corpus_edge1_*/stage/job_*_in.bin' --want-suffix _out.bin
+python3 ps3recomp-sync/tools/spu_ftz_diff.py --module jobmod_c690c2f7b09a_eF5B8 \
+  --capdirs recomp-work/captures/fncap21 --capdirs recomp-work/captures/fncap_v3
+python3 ps3recomp-sync/tools/spu_ftz_diff.py --module jobmod_647a2bf49000_e0030 \
+  --capdirs /tmp/opencode/dxtcapA
+
+# live A/B (one launch, key alternated in-run)
+cd recomp-work/ab-tools
+TAG=spuv3 BUILD=build-sync N=3 SEG=10 DROP=2 METER=1 SKIP_CINE=1 WCB=2 PIN=1 \
+  ARMS='A=PS3RECOMP_SPU_FTZ=0|B=PS3RECOMP_SPU_FTZ=1' BOOT_ARM='PS3RECOMP_SPU_FTZ=0' \
+  ./ab_live.sh
+```
+
+Clean room unchanged: our own EBOOT, lifted modules, captures and runtime tests.
+The stage/corpus method follows NHL Legacy Native (MIT, (c) 2026 HeckYouMan); the
+local-register model follows the inFAMOUS 2 port (MIT, ThiagoFraga761 and
+contributors). No RPCS3 or other GPL emulator source was read or cited.

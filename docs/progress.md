@@ -4457,3 +4457,18 @@ Also unresolved, not blocking yet: `0x4cef342e`, `cellSpursAttributeEnableSystem
   fncap21 capture bit-identical; `run_tests.sh` 11/11. Kill gate is 1.5x, so the flag stays off, no live A/B and no
   title lift change. Details and the next design (lazy -0 canonicalisation, measured 1.54x upper bound):
   [`spu-codegen-v2.md`](spu-codegen-v2.md).
+
+## 2026-11-05: SPU codegen v3 -- FTZ live-switchable and measured (exp/spu-v3)
+
+- One binary now carries both SPU float variants. `tools/spu_ftz_twin.py` derives a `_ftz` twin for all 14 lifted
+  modules (5 workloads, WWS PM, 7 jobmods, DXT) from the patched base source; the runtime registry keys entries by
+  variant, `spu_run_with_halt` samples the new live key `PS3RECOMP_SPU_FTZ` once per run and sets/restores MXCSR
+  FTZ|DAZ, and dispatch prefers variant 1 while the key is on. Default 0 keeps the old module; the play tree's weak
+  `spu_register_function_var` makes the twins inert there.
+- Exactness: 0xFDA0 stage 4/4, fncap21 9/9, DXT entries 6/6, WWS PM claim 5/5, new 0x6D68 capture 1/1, all
+  LS+GPR bit-identical; `run_tests.sh` 11/11, local-regs/ib-known-targets/context-ABI pass, video fixtures 34/34.
+- One pitch-meter launch, 3 alternating 10 s windows per arm: fps 34.60 (off) vs 35.09 (on), paired -0.49 +/- 2.94
+  (CI covers 0) because the meter is walker/PPU-bound; c690 job wall time fell 204.5 -> 183.1 us/job (1.117x) and
+  c690 lane time 3124 -> 2926 ms/s. Second (last) launch captured a real 0x6D68 entry; the other four unmeasured
+  kernels did not dispatch in the meter window. No lazy-canonicalisation/scalarisation pass shipped.
+  Details: [`spu-codegen-v3` in spu-codegen-v2.md](spu-codegen-v2.md).
