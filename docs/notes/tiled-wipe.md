@@ -33,7 +33,8 @@ other GPL emulator source was read or cited.
   stadium. Key off is byte-identical to the original replay. On
   `captures/walker_replay_fixed` (crowd) and `meter_frame` the null-backend
   gate and the Vulkan dump are **byte-identical** with the key on and off.
-  Video fixtures 34/34 except the known `test_gcm_tick_in_drain` flake.
+  Video fixtures 34/34 in the final run (the known `test_gcm_tick_in_drain`
+  flake failed once in an earlier run of the same tree).
 * **Oddity explained:** the replay prints `draws/frame: 0.0` because that field
   is `rsx_draw_engine_guest_draws()` = `g.last_guest_draws`, which is only
   updated by `eng_present()` on a guest flip. `PS3RECOMP_VK_DUMP` presents
@@ -222,8 +223,9 @@ PS3RECOMP_VK_DUMP=$PWD/captures/wipe/w2/wipefix_1.ppm \
 
 The Vulkan dumps are also byte-identical on the two gate captures (crowd
 `e7b76dba…`, meter `d0cccbb8…`, key on and off). `python3
-tools/test_video_fixtures.py`: **33/34 pass, only the known
-`test_gcm_tick_in_drain` flake fails** (`test_rsx_draw_engine` passes).
+tools/test_video_fixtures.py`: **34/34 pass** in the final run; the known
+`test_gcm_tick_in_drain` flake failed once in an earlier run of the same tree
+(`test_rsx_draw_engine` passes both times).
 
 ### 4.2 Cost
 

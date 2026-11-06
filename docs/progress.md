@@ -17,8 +17,8 @@
   says Morton and reads the bytes as stored. Wipe replay: checkerboard ->
   correct card (`captures/wipe/w2/replay.png` vs `wipefix_1.png`); key off
   byte-identical. Crowd and `meter_frame` null gate and Vulkan dump
-  byte-identical on and off; video fixtures 33/34 (known
-  `test_gcm_tick_in_drain` flake). Details: [`notes/tiled-wipe.md`](notes/tiled-wipe.md).
+  byte-identical on and off; video fixtures 34/34 in the final run (the known
+  `test_gcm_tick_in_drain` flake failed once earlier). Details: [`notes/tiled-wipe.md`](notes/tiled-wipe.md).
 
 ## 2026-11-06: tiled logo wipe -- still present, short; wipe frame not captured (exp/wipe)
 
