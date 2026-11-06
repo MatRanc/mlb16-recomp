@@ -387,6 +387,10 @@ twin-generator `--fast-cfl` / `--rcp-est` (untested live). The table below preda
 
 Dead ends (measured, do not retry): SPU register tweaks, inlining callees, cheaper `frsqest`, exact lazy sign-of-zero,
 WWS native ticket claim alone, RSX_SYNC_FIX, frames-in-flight (design shelved).
+Upstream v0.19 #634 caches only (`exp/pr634`, ppu_vmx.h half left out: it rebuilds all PPU code), 2026-11-06 17:3x,
+4 alternating meter launches x 2 arms, play settings: build-depth 34.28/34.68/34.77/34.54 vs #634 34.33/34.31/34.55/35.09
+-> 34.57 vs 34.57 real fps, neutral (main's pre-put PPU time is 7.5 ms of the chain). Not merged.
+v0.19 #675 (new-style JUMP): MLB emits none, boot -> meter (`GCM_JUMP_NEW_LOG`, branch `exp/jump-check`). Not needed.
 `--rcp-est` approx twins (2026-11-06 16:xx, build-sync, 4 alternating meter launches x 2 arms): 34.44 vs 34.42 real fps,
 neutral, although offline whole c690 jobs ran ~12 % faster. So **the meter is no longer c690-bound** after approx +
 stats off: faster job code does not show there. Twins restored to plain approx. Mound untested (compile-time switch,
