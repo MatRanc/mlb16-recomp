@@ -74,6 +74,10 @@ is mostly `vk_eng_draw_from` (6.7 %): the raw vertex upload `memcpy(raw_vb, gpu-
 `rsx_fp_program_size` (from `eng_guest_programs`), `rsx_vp_analyze_inputs` and the structural hash, per-draw program
 walking is ~2 ms/frame. Exact cut: keep the last programs' bytes and hash, memcmp to reuse (memcmp is far cheaper than a
 byte-wise FNV). `rsx_vertex_remap_build` 13.7 % (~2.8 ms) remains the largest single item.
+`PS3RECOMP_ENG_PROG_MEMO` (live, default off, `exp/prog-memo` f8bff427): reuses the FP size + key hash and the VP input
+analysis while the bytes memcmp equal. Replay: frame and output gate identical on/off; layout 0.565 -> 0.387, pipe lookup
+1.245 -> ~1.14 ms. **Live paired, 6 pairs, play settings: +0.22 +/- 0.23 real fps (34.87 -> 35.09).** The rest of the
+pipe lookup (~1.1 ms) is the texture/render-state part of the key, not the programs.
 Walker MT (M3, `PS3RECOMP_WALKER_MT=1` + `WALKER_MT_WORKERS=N`, live key, in build-depth, exact) moves remap/plan/convert
 to workers; offline -12 % at N=3 (notes/walker-mt-m3.md). **Live A/B 2026-11-06 16:48 (build-depth, play settings,
 paired, 6 pairs per launch): W=3 -9.00 +/- 1.45 real fps (31.3 -> 22.3), W=2 -9.11 +/- 0.78.** No resyncs or hangs.
