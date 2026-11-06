@@ -78,6 +78,13 @@ alone -1.05 (half absorbed by lag), with lag removed -3.37; main 2 ms less befor
 approx float cannot come through the chain (c690 -8 %); likely host-core contention relief (untested). Gap: the
 FIFO put time is not traced (main/walker handoff bounded 0-4 ms).
 
+**Meter chain with the current best config (approx + wake + REMAP_FLAT, 2026-11-06 13:43, `captures/meter_trace3.json`,
+428 frames, every frame sums within 1 us; scripts `captures/meter_analysis3/chain/`):** frame 32.62 ms (traced) =
+main running to put 6.34 + MainMultiTask semaphore 1.34 + **walker drain 20.55** + **walker waits for c690 PUT 2.06**
+(was 0.25) + resume lag 1.13 (was 3.85: wake works) + walker wake/gap 0.89 + small 0.30. Shrinking the drain now
+exposes SPU mesh production behind it, which is why REMAP_FLAT (-2.8 ms walker) gave only +0.5 fps and the memo
+(SPU) alone gave 0: drain and c690 production have to shrink together.
+
 ## 3a. Crowded replay view, one trace that adds up (2026-11-05 23:16:51-23:17:05)
 
 Replay camera, zoomed out over the field and stands, build-sync, `PS3RECOMP_TRACE` 14 s window, 2,481,785 events,
