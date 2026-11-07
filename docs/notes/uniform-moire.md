@@ -290,3 +290,8 @@ Live (2026-11-06 21:27, one mound-visit launch, `build-sync` 5726ebe3, full play
 `PS3RECOMP_VK_DEPTH_BIAS=1`): uniforms are smooth at the mound view, cast shadows on the mound intact
 (`recomp-work/captures/mtrans/r5/mound_*.png`; compare `captures/mtrans/t_08.png`, key off). fps not
 measured (startup key, needs paired launches).
+
+fps (2026-11-06 21:57-22:16, four alternating meter launches on `build-sync`, play key set, real fps, 3 x 15 s
+per arm): VK_DEPTH_BIAS off 34.47 / 34.15, on 34.29 / 34.61, neutral. Within the same launches ENG_SWZ_RT +
+WIPE_FIX=0 vs WIPE_FIX=1: +0.03, +0.26, -0.05, -0.24 (all inside the CI), neutral. Both made play defaults
+(port/stable 5726ebe3, WIPE_FIX now 0).

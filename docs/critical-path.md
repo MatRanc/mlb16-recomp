@@ -401,9 +401,10 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 
 ## 7. Built and parked (switch, default, measured effect)
 
-**Play defaults (2026-11-06 15:13, build-depth = ps3recomp port/stable a03d41b0, play_windowed.sh):** CROWD_FIX,
-WIPE_FIX, SPU_FTZ, TICK_IN_DRAIN, SPU_FLOAT_APPROX (+1.63 real fps meter), WALKER_WAKE (+0.82), REMAP_FLAT
-(walker -2.8 ms, +0.5 n.s.) all 1; C690_STATS 0 (+2.3). Approx and REMAP_FLAT passed the user's visual check.
+**Play defaults (2026-11-06 22:40, build-depth = ps3recomp port/stable 5726ebe3, play_windowed.sh):** CROWD_FIX,
+SPU_FTZ, TICK_IN_DRAIN, SPU_FLOAT_APPROX (+1.63 real fps meter), WALKER_WAKE (+0.82), REMAP_FLAT
+(walker -2.8 ms, +0.5 n.s.), ENG_PROG_MEMO (+0.22), ENG_SWZ_RT and VK_DEPTH_BIAS (visual fixes, fps neutral) all 1;
+WIPE_FIX 0 (replaced by ENG_SWZ_RT); C690_STATS 0 (+2.3). Approx and REMAP_FLAT passed the user's visual check.
 Meter ~34.7 real fps in build-sync with this set (25 this morning). Merged but off: TEXHASH4, SPU_CODE_DMA_MEMO_AUDIT,
 twin-generator `--fast-cfl` / `--rcp-est` (untested live). The table below predates this and lists the original defaults.
 
