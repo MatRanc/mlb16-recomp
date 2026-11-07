@@ -7,9 +7,9 @@ CPU-bound scenes (dugout close-ups, mound visits) and, later, online play throug
 [revival server](https://github.com/MatRanc/mlb16-revival-server).
 
 **Status: early. It boots natively through Vulkan, the menus work, and an exhibition game loads and plays at about
-35 fps at the pitch meter (RPCS3: ~43 on the same PC). Visual fidelity is still behind: jerseys, shadows, crowd
-sprites and close-up faces have missing or wrong pieces, and the windowed presentation can stall when the mouse is
-still. See [docs/progress.md](docs/progress.md) for the current issue list.**
+35 fps at the pitch meter (RPCS3: 46-48 on the same PC). Visuals are close but not finished: close-up faces have
+eye holes, the pants have a texture-filtering bug, one transition (entering a mound visit) still shows a tiled
+pattern, and there is a rare black flash. See [docs/progress.md](docs/progress.md) for the details.**
 
 ## Plan
 
