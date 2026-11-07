@@ -5,7 +5,7 @@ names its scene, date, build and source. When a new measurement disagrees with a
 same commit and move the old line to "Replaced claims". Detailed write-ups live in [`notes/`](notes/); the running
 logs are [`progress.md`](progress.md) and [`targets-and-backlog.md`](targets-and-backlog.md).
 
-Last updated 2026-11-06.
+Last updated 2026-11-06. **The plan and todo list are in [`plan.md`](plan.md).**
 
 ## 1. The verdict so far (in one paragraph)
 
@@ -396,6 +396,7 @@ to the on-screen frame within 10 %. Only then is the direction picked.
 | "TICK_IN_DRAIN loses 8 fps" | meter A/B 2026-11-04, MangoHud | the lost flips were timeout re-flips; real frames +3.95 fps (above) |
 | "Vertex f32 decode is scalar; SIMD byte swap saves 1-1.9 ms" | drain_profile.md, 2026-11-06 | it is already SSE (`vpshufb`), see 3c follow-ups |
 | "C690_STATS costs no fps" | mound A/B, 2 launches, 2026-11-06 morning | weak test (mound varies per launch); at the meter it costs ~2.3 real fps (4+4 launches) |
+| "The three producers are near-equal" (2a-bis) | ceiling study, per-thread busy | true per thread; across the process the SPU lanes take 69 % of all cycles, main 10.5 %, walker 10.1 % ([`plan.md`](plan.md)) |
 | "Lifted SPU is slow because of register spills" | spu-regs / audits | float-semantics emulation is ~2/3 of hot SPU time; spills ~19 % ([`notes/spu-codegen-v2.md`](notes/spu-codegen-v2.md)) |
 
 ## 7. Built and parked (switch, default, measured effect)

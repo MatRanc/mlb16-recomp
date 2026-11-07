@@ -1,6 +1,6 @@
 # Targets and backlog (2026-11-02)
 
-**Start at [`critical-path.md`](critical-path.md)** (what limits the frame, open conflicts, next measurement). Detailed write-ups are in [`notes/`](notes/).
+**The current plan is [`plan.md`](plan.md).** Items below are older backlog. Next: [`critical-path.md`](critical-path.md) (what limits the frame, open conflicts, next measurement). Detailed write-ups are in [`notes/`](notes/).
 
 ## Reference: RPCS3 on the same PC
 
