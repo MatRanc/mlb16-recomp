@@ -198,6 +198,10 @@ and refuse to start if the governor or ISO is wrong.
   modules were generated against a different `spu_context.h`. Re-run
   `lift_spu.sh` against the same ps3recomp checkout, or set
   `SPU_ABI_CHECK=0` only to investigate.
+- **The startup intro video loops forever**: the game cannot read its data
+  files. Check the log for `[fs] open FAIL` on `MLBPS3_*.WAD`. Usually the disc
+  is not mounted, because the ISO mount does not survive a reboot; `vfs/PS3_GAME`
+  then points at a missing folder. Repeat section 3 and start the game again.
 - **Window present stalls on Wayland**: the scripts default to
   `SDL_VIDEODRIVER=x11` (XWayland) and FIFO present mode; keep those defaults.
 - **No thumbnails**: install ImageMagick or ignore the helper; the game and the

@@ -33,6 +33,22 @@ EBOOT, the lifted C++, the build) is produced on your own machine from your own 
 [SETUP.md](SETUP.md) is the full walkthrough: prerequisites, ISO mount, EBOOT decrypt, game file
 extraction, PPU/SPU lift, generated-code patches, CMake/Ninja build, play and measurement.
 
+## Playing
+
+Once it is built, a windowed session needs the game disc mounted and the play script:
+
+```sh
+# The mount does not survive a reboot, so repeat this after restarting.
+udisksctl loop-setup -r -f "/path/to/MLB The Show 16 (USA).iso"
+ls /run/media/$USER/PS3VOLUME/PS3_GAME/USRDIR/MLBPS3_SYS.WAD
+
+tools/play_windowed.sh          # MangoHud overlay
+tools/play_windowed.sh nohud    # no overlay
+```
+
+Close the window or press Ctrl-C to quit. If the startup intro video loops, the disc is not mounted.
+[SETUP.md](SETUP.md) covers paths and other layouts in section 8 and problems in section 10.
+
 ## Trying the probe
 
 You need your own decrypted v01.10 EBOOT (RPCS3: **Utilities → Decrypt PS3 Binaries** on
