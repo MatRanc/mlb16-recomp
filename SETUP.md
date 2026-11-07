@@ -5,7 +5,7 @@ build. Everything game-derived (the decrypted EBOOT, the lifted C++, the build,
 the vfs, the shader cache) is produced on your machine and stays out of git.
 
 The known-good source is branch `port/stable` in the ps3recomp fork
-(`https://github.com/MatRanc/ps3recomp`). Do not mix lifted trees between
+(`https://github.com/MatRanc/ps3recomp`), last confirmed at commit `5726ebe3`. Do not mix lifted trees between
 branches: the generated SPU modules are tied to the runtime headers.
 
 ## 1. Hardware and software
@@ -36,7 +36,7 @@ variables (section 8).
 ~/Documents/mlb16-online/
   mlb16-recomp/       this repo
   ps3recomp/          clone of the fork, branch port/stable
-  recomp-work/        generated: recompiled/, spu_lifted/, build-play/, vfs/
+  recomp-work/        generated: recompiled/, spu_lifted/, build-depth/, vfs/
   EBOOT.elf           decrypted v01.10 EBOOT
 ```
 
@@ -99,7 +99,8 @@ From the `mlb16-recomp` checkout:
 ```sh
 tools/probe.sh ../ps3recomp ../EBOOT.elf ../recomp-work
 tools/lift_spu.sh ../ps3recomp ../EBOOT.elf ../recomp-work
-tools/apply_patches.sh --work ../recomp-work --ps3recomp ../ps3recomp
+tools/apply_patches.sh --work ../recomp-work --ps3recomp ../ps3recomp \
+  --wws-native --ftz --approx
 ```
 
 - `probe.sh` lifts the PPU code and extracts the embedded SPU images.
@@ -109,15 +110,15 @@ tools/apply_patches.sh --work ../recomp-work --ps3recomp ../ps3recomp
   cull hooks, the native screen hook, and the Bink readiness/keep-plane patch.
   It is idempotent; run it again after any relift.
 
-A fresh lift does **not** need the `wws_native_pm.h` header. The optional
-`--wws-native` patch (branch `exp/wws-native` or later) and `--ftz` twin
-(`exp/spu-v4` or later) are off by default; `apply_patches.sh --help` lists
-them.
+- `--wws-native`, `--ftz` and `--approx` match the released play build:
+  the native WWS policy module plus the `_ftz` and `_approx` SPU module twins
+  that `play_windowed.sh` turns on. Without the twins the `PS3RECOMP_SPU_FTZ`
+  and `PS3RECOMP_SPU_FLOAT_APPROX` settings have nothing to select.
 
 ## 7. Configure and build
 
 ```sh
-cmake -B ../recomp-work/build-play -S ../ps3recomp/templates/project -G Ninja \
+cmake -B ../recomp-work/build-depth -S ../ps3recomp/templates/project -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG -march=native" \
@@ -127,11 +128,14 @@ cmake -B ../recomp-work/build-play -S ../ps3recomp/templates/project -G Ninja \
   -DSPU_DIR=$PWD/../recomp-work/spu_lifted \
   -DPS3RECOMP_SPU_FAST_FLOAT=ON -DPS3RECOMP_SPU_FAST_LS=ON \
   -DPS3RECOMP_SPU_WRCH_INLINE=ON -DPS3RECOMP_FFMPEG_RUNTIME=OFF \
+  -DPS3RECOMP_SPU_AVX2=ON -DPS3RECOMP_PPU_X86_64_V3=ON \
+  -DPS3RECOMP_VMX_FAST_ACCESSORS=ON \
   -DPS3RECOMP_RSX_VULKAN=ON -DPS3RECOMP_BUILD_TESTS=ON
-ninja -C ../recomp-work/build-play -j4 MyGameRecomp
+ninja -C ../recomp-work/build-depth -j4 MyGameRecomp
 ```
 
-The result is `recomp-work/build-play/MyGameRecomp` (about 260 MB).
+The result is `recomp-work/build-depth/MyGameRecomp` (about 290 MB). The flags above
+need an AVX2 CPU.
 
 ## 8. Play
 
@@ -142,7 +146,7 @@ tools/play_windowed.sh          # MangoHud overlay + CSV
 tools/play_windowed.sh nohud    # no overlay
 ```
 
-The script uses `recomp-work/build-play`, `../EBOOT.elf` and
+The script uses `recomp-work/build-depth`, `../EBOOT.elf` and
 `recomp-work/vfs`. For another layout, set the variables once:
 
 | variable | default | meaning |
@@ -152,7 +156,7 @@ The script uses `recomp-work/build-play`, `../EBOOT.elf` and
 | `MLB16_EBOOT` | `$MLB16_ROOT/EBOOT.elf` | decrypted EBOOT |
 | `MLB16_ISO_MOUNT` | `/run/media/$USER/PS3VOLUME/PS3_GAME` | mounted disc |
 | `MLB16_PS3RECOMP` (`PS3RECOMP_DIR`) | sibling `ps3recomp-play` | ps3recomp checkout |
-| `MLB16_BUILD` (`BUILD`) | `build-play` | build directory name |
+| `MLB16_BUILD` (`BUILD`) | `build-depth` | build directory name |
 | `REF_DIR` | `tools/ab/ref` | measurement reference screenshots |
 
 A simpler controller-only session without the instrumentation is

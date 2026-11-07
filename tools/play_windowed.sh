@@ -108,7 +108,7 @@ export PS3RECOMP_VK_DUMP_ASYNC="${PS3RECOMP_VK_DUMP_ASYNC:-1}"
 export PS3RECOMP_SHADER_CACHE_STABLE_KEY="${PS3RECOMP_SHADER_CACHE_STABLE_KEY:-1}"
 export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 export PS3_TITLE=BCUS01089 PS3_VFS_ROOT="$W/vfs" PS3_GAMEDATA_ROOT="$W"
-export PS3RECOMP_C690_STATS="${PS3RECOMP_C690_STATS:-1}"  # diagnostic: ~5-6% of SPU-thread CPU in perf; 0 to A/B
+export PS3RECOMP_C690_STATS="${PS3RECOMP_C690_STATS:-0}"  # diagnostic only; on costs ~2.3 real fps at the meter (2026-11-06), set 1 when needed
 export PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_VK_PRESENT_STATS=1
 export PS3RECOMP_PUMP_MS=8
@@ -168,9 +168,9 @@ export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
 export PS3RECOMP_REMAP_FAST="${PS3RECOMP_REMAP_FAST:-1}"
 # Complete a flip whose commands the drain has already executed and whose image
 # the present path has queued, from the top of the drain pass. Implemented and
-# unit-tested, but DEFAULT OFF: completing before the next buffer's ref is
-# ready reproduces the FLIP_ON_DONE buffer-ref block (docs/notes/walker-cuts-2.md).
-export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-0}"
+# unit-tested. DEFAULT ON since 2026-11-06: scored on real frames (buffer changes) it is +3.95 fps;
+# the old -8 fps were the title's 34 ms timeout re-flips (docs/critical-path.md).
+export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-1}"  # 2026-11-06: +3.95 real fps at the meter (no timeout re-flips); MangoHud reads lower
 # Complete a presented flip when the next frame's fence is published (the
 # marker-side design for this title: no in-FIFO flip word exists). DEFAULT OFF:
 # the next frame's fence lands after the guest's 2x17 ms deadline, so completing
@@ -215,6 +215,16 @@ unset PS3RECOMP_RSX_WCB PS3RECOMP_RSX_WCB_STATS
 export PS3RECOMP_RSX_CUBE_RT="${PS3RECOMP_RSX_CUBE_RT:-1}"
 # Renderer cuts + early render-target copies (docs/critical-path.md 3b, 2026-11-05: crowded replay view
 # 15 -> 31-34 fps, no visual change seen). Live-switchable; set any to 0 to A/B. REMAP_* measured no gain.
+# 2026-11-06 merge (user-checked): crowd sub-draw state, swizzled-RT wipe fix, SPU FTZ (bit-exact on the corpus).
+export PS3RECOMP_CROWD_FIX="${PS3RECOMP_CROWD_FIX:-1}"
+export PS3RECOMP_WIPE_FIX="${PS3RECOMP_WIPE_FIX:-0}"  # 2026-11-06: replaced by ENG_SWZ_RT (the heuristic missed the mound-visit entry)
+export PS3RECOMP_SPU_FTZ="${PS3RECOMP_SPU_FTZ:-1}"
+export PS3RECOMP_SPU_FLOAT_APPROX="${PS3RECOMP_SPU_FLOAT_APPROX:-1}"  # 2026-11-06: +1.63 real fps at the meter, user visual check OK
+export PS3RECOMP_WALKER_WAKE="${PS3RECOMP_WALKER_WAKE:-1}"  # 2026-11-06: +0.82 real fps at the meter
+export PS3RECOMP_REMAP_FLAT="${PS3RECOMP_REMAP_FLAT:-1}"  # 2026-11-06: walker -2.8 ms, +0.5 real fps (n.s.), user visual check OK
+export PS3RECOMP_ENG_PROG_MEMO="${PS3RECOMP_ENG_PROG_MEMO:-1}"  # 2026-11-06: exact (replay bit-identical), +0.22 real fps at the meter
+export PS3RECOMP_ENG_SWZ_RT="${PS3RECOMP_ENG_SWZ_RT:-1}"  # 2026-11-06: swizzled render targets stored in Morton order; fixes the tiled wipes, fps neutral
+export PS3RECOMP_VK_DEPTH_BIAS="${PS3RECOMP_VK_DEPTH_BIAS:-1}"  # 2026-11-06: guest polygon offset; fixes the uniform stipple (shadow acne), fps neutral
 export PS3RECOMP_VK_PASS_KEEP="${PS3RECOMP_VK_PASS_KEEP:-1}"
 export PS3RECOMP_VK_VTX_PRE="${PS3RECOMP_VK_VTX_PRE:-1}"
 export PS3RECOMP_VK_DRAW_STATE="${PS3RECOMP_VK_DRAW_STATE:-1}"

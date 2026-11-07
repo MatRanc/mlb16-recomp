@@ -7,11 +7,12 @@
 #   3. tools/patch_bink_ready.py                (this repo, on the PPU lift)
 #
 # Optional, off by default, because each needs a different ps3recomp branch and
-# the key behind it defaults off:
-#   --wws-native  tools/c690_ref/patch_wws_pm_native.py  (exp/wws-native or later;
+# the key behind it defaults off. The play build uses --wws-native --ftz --approx:
+#   --wws-native  tools/c690_ref/patch_wws_pm_native.py  (port/stable or later;
 #                 the runtime header runtime/spu/wws_native_pm.h must exist)
-#   --ftz         tools/spu_ftz_twin.py                  (exp/spu-v4; needs the
+#   --ftz         tools/spu_ftz_twin.py                  (port/stable or later; needs the
 #                 variant registry in runtime/spu/spu_workload.c)
+#   --approx      tools/spu_ftz_twin.py --approx         (port/stable or later)
 #   --native-21   tools/c690_ref/patch_native_21.py      (exp/e1/n21 or later)
 #   --native-2a   tools/c690_ref/patch_native_2a.py      (exp/e1/n2a or later)
 #   --gpu2a       tools/c690_ref/patch_gpu2a.py          (exp/gpu or later)
@@ -39,6 +40,7 @@ WWS_PM="$SPU_DIR/wwsjob_pm/spu_recomp.c"
 DRY=0
 CAPTURE=0
 WWS_NATIVE=0
+APPROX=0
 FTZ=0
 NATIVE_21=0
 NATIVE_2A=0
@@ -51,6 +53,7 @@ while [ $# -gt 0 ]; do
         --dry-run) DRY=1; shift ;;
         --capture) CAPTURE=1; shift ;;
         --wws-native) WWS_NATIVE=1; shift ;;
+        --approx) APPROX=1; shift ;;
         --ftz) FTZ=1; shift ;;
         --native-21) NATIVE_21=1; shift ;;
         --native-2a) NATIVE_2A=1; shift ;;
@@ -135,6 +138,12 @@ if [ "$FTZ" = 1 ]; then
         exit 1
     }
     run "$PY" "$P" --spu-dir "$SPU_DIR"
+fi
+
+if [ "$APPROX" = 1 ]; then
+    P="$PS3RECOMP/tools/spu_ftz_twin.py"
+    need_file "$P" " (ps3recomp port/stable or later)"
+    run "$PY" "$P" --spu-dir "$SPU_DIR" --approx
 fi
 
 echo "apply_patches.sh: done"
