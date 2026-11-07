@@ -252,3 +252,16 @@ sampler-table size and the anisotropy check follow the MIT inFAMOUS 2 port
 filter when minified, #239 all-mip hash, #240 clamp modes). No RPCS3 or other
 GPL emulator source was read or cited, and no code was copied from either
 port.
+
+## 9. 2026-11-06 evening: anisotropy does not fix it; derivative grid still the lead
+
+* `PS3RECOMP_ENG_ANISO` (ps3recomp `exp/visual-fixes` 38b522ba, default 0, live) applies the guest's
+  `CONTROL0[6:4]` max anisotropy in the Vulkan engine sampler (sampler cache 64 -> 256 so the extra states
+  do not fall back to the nearest default). Key off byte-identical on the meter replay.
+* Live mound-visit A/B (one launch, full-res shots, `captures/mtrans/r2/moire_abc.png`): anisotropy on
+  looks the same as off; the stipple stays. In theory missing anisotropy blurs, it does not alias.
+* `PS3RECOMP_FP_AA=1` (the 2x1 derivative scale) visibly smooths the cloth (and the grass). Camera moved
+  between arms, so this is indicative only. Switching it on stalls ~6 s (pipeline rebuilds; ab_live
+  stopped on "no flips") and it cost ~5 fps before.
+* The moire reproduces offline in the mound capture `captures/mtrans/r3/cap` (close players), so a
+  cheaper equivalent of FP_AA can be judged by replay next.

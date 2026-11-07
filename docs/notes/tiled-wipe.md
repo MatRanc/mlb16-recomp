@@ -277,3 +277,26 @@ back to 0 to compare.
 
 Only this repository's runtime, capture format, replay tool and the game's own
 FIFO were used. No RPCS3 source, diff or fork was read or cited.
+
+## 8. 2026-11-06 evening: root cause is swizzled render targets, `PS3RECOMP_ENG_SWZ_RT`
+
+The mound-visit entry transition still tiled in 1 of 3 launches with `WIPE_FIX=1` (`build-sync`,
+`recomp-work/captures/mtrans/r2/f_011.ppm`): the previous view broken into Morton-scrambled blocks while the
+mound view fades in. The heuristic keeps Morton when the snapshot is busy (stadium crowd), so it misses.
+
+Root cause, from the FIFO (`SET_SURFACE_FORMAT` 0x0208, raster type bits [11:8]): the game renders into
+**swizzled colour targets** (raster type 2), e.g. the 512 -> 32 chain at `0x0B36BC00` in `wipe2_cap`. RSX
+stores such a target in Morton order. The engine ignored the raster type and wrote every target back as
+pitch rows, so a texture that declares the (correct) swizzled layout decoded our linear bytes as tiles. The
+`wipe-fix: 512x512 fmt 85 read linear` lines were this same bug being patched by the heuristic.
+
+Fix (ps3recomp `exp/visual-fixes` 38b522ba, live key `PS3RECOMP_ENG_SWZ_RT`, default 0): the surface
+remembers raster type 2, and a whole-target readback (on-demand WCB copy or guest read) is stored in Morton
+order. Partial reads of a swizzled target keep the old store.
+
+* Key off: meter replay Vulkan dump byte-identical to the base dump.
+* Key on, live (one launch, `WIPE_FIX=0`, ab_live defaults incl. WCB=2, not the full play key set):
+  `swz-rt: stored ...` for 1024x512, 512x512 ... 16x8 targets; the batter-intro wipe and the mound-visit
+  entry are clean crossfades in every saved frame (`recomp-work/captures/mtrans/r4/`).
+* Not yet shown: repeat launches (the mound case is intermittent), the full play key set, and whether
+  `WIPE_FIX` can then be retired.
