@@ -285,3 +285,8 @@ for a Z16 zeta). Mound replay: the stipple is gone from jerseys and pants, cast 
 (`captures/mtrans/r3/db_cmp.png`). Meter replay byte-identical with the key on and off; replay frame
 time unchanged. Limit: the host D32F unit equals the guest D24 unit only for depth >= 0.5, so near
 casters get less bias than on RSX. Not yet checked live.
+
+Live (2026-11-06 21:27, one mound-visit launch, `build-sync` 5726ebe3, full play key set +
+`PS3RECOMP_VK_DEPTH_BIAS=1`): uniforms are smooth at the mound view, cast shadows on the mound intact
+(`recomp-work/captures/mtrans/r5/mound_*.png`; compare `captures/mtrans/t_08.png`, key off). fps not
+measured (startup key, needs paired launches).

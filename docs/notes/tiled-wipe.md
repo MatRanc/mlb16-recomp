@@ -300,3 +300,5 @@ order. Partial reads of a swizzled target keep the old store.
   entry are clean crossfades in every saved frame (`recomp-work/captures/mtrans/r4/`).
 * Not yet shown: repeat launches (the mound case is intermittent), the full play key set, and whether
   `WIPE_FIX` can then be retired.
+* Second live launch (21:27, full play key set, `WIPE_FIX=0`, `ENG_SWZ_RT=1`): pregame and mound-visit
+  entry transitions clean again (`captures/mtrans/r5/`). 2 of 2 clean with the key, vs 1 of 3 tiled before.
