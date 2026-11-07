@@ -265,3 +265,23 @@ port.
   stopped on "no flips") and it cost ~5 fps before.
 * The moire reproduces offline in the mound capture `captures/mtrans/r3/cap` (close players), so a
   cheaper equivalent of FP_AA can be judged by replay next.
+
+## 10. 2026-11-06 night: root cause found -- polygon offset was dropped (`PS3RECOMP_VK_DEPTH_BIAS`)
+
+Offline, on the mound capture `recomp-work/captures/mtrans/r3/cap` (the stipple reproduces there):
+
+* A +2 mip LOD bias on every sampler (`PS3RECOMP_ENG_LOD_BIAS=2`) blurs the logo but keeps the stipple:
+  not a mip choice.
+* Replacing the R32F shadow map (`0x06600000`, DEPTH24_D8 read with the emulated PCF compare) by a
+  constant 1.0 (`PS3RECOMP_DBG_DUMMY_VKFMT=100`) removes the stipple; the R8 gloss texture does not.
+  So it is shadow acne.
+* The game sets SET_POLY_OFFSET for its shadow casters (factor 1.1 / 2.2, units 10000 / 20000 in the
+  capture's FIFO). The engine passes it to `set_depth_bias`, but no backend implemented it: the Vulkan
+  pipelines drew every caster unbiased.
+
+Fix: ps3recomp `exp/visual-fixes`, `PS3RECOMP_VK_DEPTH_BIAS=1` (startup key, default 0): engine
+pipelines get `depthBiasEnable` + dynamic depth bias, set per draw from the guest offset (units scaled
+for a Z16 zeta). Mound replay: the stipple is gone from jerseys and pants, cast shadows (strap, arm) stay
+(`captures/mtrans/r3/db_cmp.png`). Meter replay byte-identical with the key on and off; replay frame
+time unchanged. Limit: the host D32F unit equals the guest D24 unit only for depth >= 0.5, so near
+casters get less bias than on RSX. Not yet checked live.
