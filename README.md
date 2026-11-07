@@ -9,7 +9,8 @@ CPU-bound scenes (dugout close-ups, mound visits) and, later, online play throug
 **Status: early. It boots natively through Vulkan, the menus work, and an exhibition game loads and plays at about
 36 fps at the first pitch (RPCS3: ~43 on the same PC). Visual fidelity is still behind: jerseys, shadows, crowd
 sprites and close-up faces have missing or wrong pieces, and the windowed presentation can stall when the mouse is
-still. See [docs/progress.md](docs/progress.md) for the current issue list.**
+still. See [docs/progress.md](docs/progress.md) for the current issue list and
+[docs/plan.md](docs/plan.md) for the plan.**
 
 **This repo contains no game code or data.** Like other ps3recomp ports, everything game-derived (the decrypted
 EBOOT, the lifted C++, the build) is produced on your own machine from your own copy of the game.

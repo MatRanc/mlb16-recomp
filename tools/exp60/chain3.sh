@@ -1,0 +1,13 @@
+#!/bin/bash
+J=/home/m/.claude/jobs/3a167ccc/tmp
+cd /home/m/Documents/mlb16-online/recomp-work/build-depth
+BASE=$(sed -E 's#-MD -MT \S+ -MF \S+ ##; s#-o \S+ ##; s#-c \S+##; s#/usr/lib64/ccache/##' $J/ppu002.cmd)
+CCACHE_DISABLE=1 $BASE -I/home/m/Documents/mlb16-online/recomp-work/recompiled -o $J/bx/ppu_recomp_004.o -c $J/bx/ppu_recomp_004.cpp || exit 1
+bash $J/link.sh || exit 1
+cd ../ab-tools
+export PS3RECOMP_CROWD_FIX=1 PS3RECOMP_ENG_PROG_MEMO=1 PS3RECOMP_REMAP_FLAT=1 PS3RECOMP_RSX_WCB_PREFETCH=1 PS3RECOMP_RSX_WCB_STREAM=1 PS3RECOMP_SPU_FLOAT_APPROX=1 PS3RECOMP_SPU_FTZ=1 PS3RECOMP_TICK_IN_DRAIN=1 PS3RECOMP_VK_DRAW_STATE=1 PS3RECOMP_VK_PASS_KEEP=1 PS3RECOMP_VK_VTX_PRE=1 PS3RECOMP_WALKER_WAKE=1 PS3RECOMP_WIPE_FIX=1 PS3RECOMP_PIN=0 PS3RECOMP_C690_STATS=0
+B=../../../.claude/jobs/3a167ccc/tmp/bx
+E2='PS3RECOMP_ENG_DEPTH_GPU=1;PS3RECOMP_ENG_SHADOW_CONST=1'
+TAG=pz BUILD=$B N=3 SEG=12 DROP=3 METER=1 SKIP_CINE=1 WCB=2 PIN=0 REPORT=0 SCENE_SHOTS=1 LIMIT=660 BOOT_ARM="EXP60_MASK=0;EXP60_SHADOW=0" \
+ ARMS="A=EXP60_SHADOW=0|B=EXP60_SHADOW=0;$E2|C=EXP60_SHADOW=18;$E2|D=EXP60_SHADOW=20;$E2|E=EXP60_SHADOW=20" ./ab_live.sh > $J/out_pz.txt 2>&1
+echo done > $J/chain3.done
