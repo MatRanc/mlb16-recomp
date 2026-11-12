@@ -12,9 +12,9 @@ Do not share the ISO, PKG, EBOOT, VFS, or generated C++.
 | path | what it is | status |
 |---|---|---|
 | D3D12 (ps3recomp's default on Windows) | ps3recomp's reference Windows renderer, `libs/video/rsx_d3d12_backend.c` | **the only renderer that builds on Windows** |
-| Vulkan (`-DPS3RECOMP_RSX_VULKAN=ON`) | our measured backend | **Linux only.** `ps3recomp-probe/CMakeLists.txt:54` stops configure on Windows with "PS3RECOMP_RSX_VULKAN is Linux-only for now" |
+| Vulkan (`-DPS3RECOMP_RSX_VULKAN=ON`) | our measured backend | **Linux only today.** `ps3recomp-probe/CMakeLists.txt:54` stops configure on Windows. The port is planned in [`WINDOWS_VULKAN_SPIKE.md`](WINDOWS_VULKAN_SPIKE.md) and not started |
 
-Use D3D12 on Windows. Do not add `-DPS3RECOMP_RSX_VULKAN=ON`; CMake will stop. A D3D12 build does not have
+Use D3D12 for now. Do not add `-DPS3RECOMP_RSX_VULKAN=ON`; CMake will stop until the Vulkan spike is done. A D3D12 build does not have
 our MLB16 tuning (the `PS3RECOMP_VK_*` and Vulkan-side switches only apply to the Vulkan backend), so its FPS
 is not comparable to our ~35 FPS on Linux. Measure it on its own terms and report the number.
 
