@@ -196,16 +196,17 @@ The game uses **SDL2 GameController** on Windows (`PS3RECOMP_PAD_USE_SDL2=ON`), 
 
 ---
 
-## 8. Performance Overlays (RTSS & MangoHud)
+## 8. Performance Overlay (Native MangoHud)
 
-### RTSS (RivaTuner Statistics Server) on Windows
-- In the launcher GUI, go to the **Diagnostics** tab and check **RTSS overlay (RivaTuner - Windows)**.
-- The launcher automatically activates the RTSS Vulkan layer (`VK_LAYER_RTSS`) and ensures RTSS is running.
-- RTSS displays a real-time on-screen HUD (framerate, frametime graph, hardware statistics) directly inside the game window.
-
-### MangoHud on Linux
-- In the launcher GUI, go to the **Diagnostics** tab and check **MangoHud overlay (Linux)**.
-- If `mangohud` is in your `PATH`, the launcher invokes it and logs frametime CSVs into `launcher_out\<timestamp>\`.
+### Built-in In-Game Overlay (Windows & Linux)
+- In the launcher GUI, go to the **Diagnostics** tab and check **MangoHud / In-Game Overlay (FPS, Frametime, GPU)** (or set `set PS3RECOMP_HUD=1` / `set MANGOHUD=1`).
+- **No external software required!** The game itself renders a sleek, transparent, click-through overlay in the top-left corner:
+  - Title & Title ID (`MLB The Show 16 (BCUS01089)`)
+  - Live Framerate (`FPS 60.0`) in signature MangoHud green
+  - Frametime (`TIME 16.6 ms`) in signature MangoHud cyan
+  - GPU name and Graphics API (`Vulkan | NVIDIA GeForce RTX 3060 Ti`)
+- Clicks pass completely through to the game window; it tracks window repositioning and automatically hides when minimized.
+- On Linux, checking this box also integrates with the system `mangohud` command if installed and writes frametime CSV logs into `launcher_out\<timestamp>\`.
 
 ---
 

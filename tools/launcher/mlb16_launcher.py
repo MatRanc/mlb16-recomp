@@ -98,8 +98,7 @@ TOGGLES = [
     ("present_stats", True, "Diagnostics", "Present stats", "PS3RECOMP_VK_PRESENT_STATS", "bool"),
     ("timeline", True, "Diagnostics", "Hitch timeline recorder", None, "fixed-timeline"),
     ("shader_cache", True, "Diagnostics", "Shader disk cache", "PS3RECOMP_SHADER_DISK_CACHE", "bool"),
-    ("mangohud", False, "Diagnostics", "MangoHud overlay (Linux)", None, "bool"),
-    ("rtss", False, "Diagnostics", "RTSS overlay (RivaTuner - Windows)", None, "bool"),
+    ("mangohud", False, "Diagnostics", "MangoHud / In-Game Overlay (FPS, Frametime, GPU)", None, "bool"),
 ]
 TOGGLE_BY_KEY = {t[0]: t for t in TOGGLES}
 
@@ -177,34 +176,16 @@ def build_env(cfg, out_dir=None):
         env["PS3RECOMP_TIMELINE_HITCH_US"] = "250000"
         env["PS3RECOMP_TIMELINE_RING_MB"] = "16"
         env["PS3RECOMP_TIMELINE_FLUSH_MB"] = "2"
-    # MangoHud overlay and CSV logging
+    # MangoHud / In-game overlay and CSV logging
     if cfg["toggles"].get("mangohud", False):
         env["MANGOHUD"] = "1"
+        env["PS3RECOMP_HUD"] = "1"
+        env["PS3RECOMP_VK_PRESENT_STATS"] = "1"
         env["MANGOHUD_CONFIG"] = (
             f"fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,"
             f"cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,"
             f"output_folder={out_dir},autostart_log=1,log_duration=0,log_interval=0"
         )
-        if IS_WINDOWS:
-            # On Windows where MangoHud is not installed, enable LunarG's Vulkan FPS monitor layer
-            # so live FPS appears in the window title bar.
-            layers = env.get("VK_INSTANCE_LAYERS", "")
-            if "VK_LAYER_LUNARG_monitor" not in layers:
-                env["VK_INSTANCE_LAYERS"] = f"{layers};VK_LAYER_LUNARG_monitor" if layers else "VK_LAYER_LUNARG_monitor"
-    # RTSS overlay (Windows RivaTuner Statistics Server)
-    if IS_WINDOWS and cfg["toggles"].get("rtss", False):
-        for candidate in [
-            r"C:\Program Files (x86)\RivaTuner Statistics Server\Vulkan",
-            r"C:\Program Files\RivaTuner Statistics Server\Vulkan",
-        ]:
-            if os.path.isdir(candidate):
-                layer_path = env.get("VK_LAYER_PATH", "")
-                if candidate not in layer_path:
-                    env["VK_LAYER_PATH"] = f"{layer_path};{candidate}" if layer_path else candidate
-                layers = env.get("VK_INSTANCE_LAYERS", "")
-                if "VK_LAYER_RTSS" not in layers:
-                    env["VK_INSTANCE_LAYERS"] = f"{layers};VK_LAYER_RTSS" if layers else "VK_LAYER_RTSS"
-                break
     # WCB: 0 means off (variable unset), 2 or 3 turn on readback plus stats.
     wcb = str(cfg["toggles"].get("wcb", "2"))
     if wcb in ("2", "3"):
@@ -262,34 +243,6 @@ def check_paths(cfg):
     return problems
 
 
-def ensure_rtss_running(hwnd=None):
-    if not IS_WINDOWS:
-        return
-    try:
-        import subprocess
-        out = subprocess.check_output(["tasklist", "/fi", "imagename eq RTSS.exe"], text=True)
-        if "RTSS.exe" in out:
-            print("[launcher] RTSS is already running.")
-            return
-        import ctypes
-        import time
-        for p in [
-            r"C:\Program Files (x86)\RivaTuner Statistics Server\RTSS.exe",
-            r"C:\Program Files\RivaTuner Statistics Server\RTSS.exe",
-        ]:
-            if os.path.exists(p):
-                print(f"[launcher] Launching RTSS server: {p}")
-                ret = ctypes.windll.shell32.ShellExecuteW(hwnd, "runas", p, None, None, 1)
-                if ret > 32:
-                    print("[launcher] RTSS elevation requested; waiting 2s for server startup...")
-                    time.sleep(2)
-                else:
-                    print(f"[launcher] ShellExecute returned {ret}; if UAC was cancelled, start RTSS from Start Menu")
-                break
-    except Exception as e:
-        print(f"[launcher] Notice: could not auto-start RTSS ({e}); please start RTSS from Start Menu")
-
-
 def launch(cfg, hwnd=None):
     """Start the game with its output captured to out/game.log.
 
@@ -298,8 +251,6 @@ def launch(cfg, hwnd=None):
     problems = check_paths(cfg)
     if problems:
         raise SystemExit("\n".join(problems))
-    if IS_WINDOWS and cfg["toggles"].get("rtss", False):
-        ensure_rtss_running(hwnd=hwnd)
     out = Path(cfg["paths"]["work_dir"]) / "launcher_out" / _stamp()
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.json").write_text(json.dumps(cfg, indent=2))
@@ -307,12 +258,15 @@ def launch(cfg, hwnd=None):
     exe = str(exe_path(cfg))
     cmd = [exe, cfg["paths"]["eboot"]]
     if cfg["toggles"].get("mangohud", False):
-        import shutil
-        mangohud_bin = shutil.which("mangohud")
-        if mangohud_bin:
-            cmd = [mangohud_bin] + cmd
+        if not IS_WINDOWS:
+            import shutil
+            mangohud_bin = shutil.which("mangohud")
+            if mangohud_bin:
+                cmd = [mangohud_bin] + cmd
+            else:
+                print("[launcher] mangohud binary not in PATH; MANGOHUD=1 set in env for Vulkan layer")
         else:
-            print("[launcher] mangohud binary not in PATH; MANGOHUD=1 set in env for Vulkan layer")
+            print("[launcher] Native MangoHud in-game overlay enabled (PS3RECOMP_HUD=1)")
     log_path = out / "game.log"
     print(f"[launcher] output -> {out}")
     print("[launcher] " + " ".join(cmd))
