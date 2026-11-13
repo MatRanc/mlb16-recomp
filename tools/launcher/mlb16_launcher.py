@@ -284,6 +284,16 @@ def _stamp():
 
 # ---- GUI ---------------------------------------------------------------------
 def run_gui(cfg):
+    if IS_WINDOWS:
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            h_desk = user32.OpenDesktopA(b"Default", 0, False, 0x10000000)
+            if h_desk:
+                user32.SetThreadDesktop(h_desk)
+        except Exception:
+            pass
+
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
 
