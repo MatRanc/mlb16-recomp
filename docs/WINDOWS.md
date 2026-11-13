@@ -46,19 +46,34 @@ Create a base folder (e.g., `C:\Users\<you>\mlb16-online\` or directly in your u
 
 ```text
 C:\Users\<you>\
-├── mlb16-recomp/           (this repository)
-├── ps3recomp/              (the ps3recomp fork with Windows Vulkan & SDL2 support)
+├── mlb16-recomp/           (branch: main)
+├── ps3recomp/              (branch: mlb16-windows-vulkan-rebased)
 ├── recomp-work/            (generated: lifted code, vfs, builds, shader cache)
 └── EBOOT.elf               (decrypted v01.10 EBOOT from your game)
 ```
 
-Clone both repositories:
+Clone both repositories into this directory:
 
 ```cmd
+:: 1. Clone mlb16-recomp (main branch)
 git clone https://github.com/MatRanc/mlb16-recomp.git
+
+:: 2. Clone ps3recomp (MUST use branch: mlb16-windows-vulkan-rebased)
 git clone -b mlb16-windows-vulkan-rebased https://github.com/MatRanc/ps3recomp.git
+
+:: 3. Create the working directory
 mkdir recomp-work
 ```
+
+> [!IMPORTANT]
+> **Branch Requirement for `ps3recomp`**:
+> You **must** be on the branch **`mlb16-windows-vulkan-rebased`**. This branch contains the Windows Vulkan presentation engine, the SDL2 DualShock 4 / DualSense / Xbox controller backend, and the native built-in MangoHud overlay.
+> If you previously cloned `ps3recomp` on a different branch, switch to it with:
+> ```cmd
+> cd ps3recomp
+> git checkout mlb16-windows-vulkan-rebased
+> git pull origin mlb16-windows-vulkan-rebased
+> ```
 
 ---
 
