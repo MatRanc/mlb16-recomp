@@ -287,7 +287,14 @@ The Windows build includes a **native, built-in MangoHud overlay** integrated di
 
 ---
 
-## 9. Troubleshooting & FAQ
+## 9. Thread Pinning & Performance Tuning
+
+* **Thread Pinning (`PS3RECOMP_PIN=1`)**: Enabled by default in the launcher. On multi-core CPUs (especially AMD Ryzen with dual CCXs and Intel hybrid CPUs), the runtime automatically maps the RSX Vulkan walker and PPU main threads to isolated physical cores within the **same L3 cache group**, preventing cross-CCX interconnect penalties and keeping L1/L2 caches hot.
+* **Micro-Sleep Optimization**: Sub-millisecond sleep routines are handled via processor yielding rather than Win32 scheduler timer ticks, eliminating 15 ms timer granularity stalls.
+
+---
+
+## 10. Troubleshooting & FAQ
 
 | Symptom | Root Cause | Solution |
 |---|---|---|

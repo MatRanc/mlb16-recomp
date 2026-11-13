@@ -67,7 +67,7 @@ TOGGLES = [
     ("vk_pass_keep", True, "Performance", "Keep render pass open", "PS3RECOMP_VK_PASS_KEEP", "bool"),
     ("wcb_prefetch", True, "Performance", "WCB prefetch", "PS3RECOMP_RSX_WCB_PREFETCH", "bool"),
     ("wcb_stream", True, "Performance", "WCB stream", "PS3RECOMP_RSX_WCB_STREAM", "bool"),
-    ("pin", False, "Performance", "Thread affinity pinning (measured SLOWER)", "PS3RECOMP_PIN", "bool"),
+    ("pin", True, "Performance", "Thread affinity pinning (physical core / CCX isolation)", "PS3RECOMP_PIN", "bool"),
     # SPU
     ("spu_mfc_cache", True, "SPU", "MFC lookup cache", "SPU_MFC_LOOKUP_CACHE", "bool"),
     ("spu_ftz", True, "SPU", "SPU flush-to-zero twin", "PS3RECOMP_SPU_FTZ", "bool"),
