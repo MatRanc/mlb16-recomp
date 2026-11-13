@@ -184,6 +184,12 @@ def build_env(cfg, out_dir=None):
             f"cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,"
             f"output_folder={out_dir},autostart_log=1,log_duration=0,log_interval=0"
         )
+        if IS_WINDOWS:
+            # On Windows where MangoHud is not installed, enable LunarG's Vulkan FPS monitor layer
+            # so live FPS appears in the window title bar.
+            layers = env.get("VK_INSTANCE_LAYERS", "")
+            if "VK_LAYER_LUNARG_monitor" not in layers:
+                env["VK_INSTANCE_LAYERS"] = f"{layers};VK_LAYER_LUNARG_monitor" if layers else "VK_LAYER_LUNARG_monitor"
     # WCB: 0 means off (variable unset), 2 or 3 turn on readback plus stats.
     wcb = str(cfg["toggles"].get("wcb", "2"))
     if wcb in ("2", "3"):
