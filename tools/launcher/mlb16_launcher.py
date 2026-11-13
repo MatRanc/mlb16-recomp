@@ -98,7 +98,8 @@ TOGGLES = [
     ("present_stats", True, "Diagnostics", "Present stats", "PS3RECOMP_VK_PRESENT_STATS", "bool"),
     ("timeline", True, "Diagnostics", "Hitch timeline recorder", None, "fixed-timeline"),
     ("shader_cache", True, "Diagnostics", "Shader disk cache", "PS3RECOMP_SHADER_DISK_CACHE", "bool"),
-    ("mangohud", False, "Diagnostics", "MangoHud overlay (FPS/frametime)", None, "bool"),
+    ("mangohud", False, "Diagnostics", "MangoHud overlay (Linux)", None, "bool"),
+    ("rtss", False, "Diagnostics", "RTSS overlay (RivaTuner - Windows)", None, "bool"),
 ]
 TOGGLE_BY_KEY = {t[0]: t for t in TOGGLES}
 
@@ -190,6 +191,20 @@ def build_env(cfg, out_dir=None):
             layers = env.get("VK_INSTANCE_LAYERS", "")
             if "VK_LAYER_LUNARG_monitor" not in layers:
                 env["VK_INSTANCE_LAYERS"] = f"{layers};VK_LAYER_LUNARG_monitor" if layers else "VK_LAYER_LUNARG_monitor"
+    # RTSS overlay (Windows RivaTuner Statistics Server)
+    if IS_WINDOWS and cfg["toggles"].get("rtss", False):
+        for candidate in [
+            r"C:\Program Files (x86)\RivaTuner Statistics Server\Vulkan",
+            r"C:\Program Files\RivaTuner Statistics Server\Vulkan",
+        ]:
+            if os.path.isdir(candidate):
+                layer_path = env.get("VK_LAYER_PATH", "")
+                if candidate not in layer_path:
+                    env["VK_LAYER_PATH"] = f"{layer_path};{candidate}" if layer_path else candidate
+                layers = env.get("VK_INSTANCE_LAYERS", "")
+                if "VK_LAYER_RTSS" not in layers:
+                    env["VK_INSTANCE_LAYERS"] = f"{layers};VK_LAYER_RTSS" if layers else "VK_LAYER_RTSS"
+                break
     # WCB: 0 means off (variable unset), 2 or 3 turn on readback plus stats.
     wcb = str(cfg["toggles"].get("wcb", "2"))
     if wcb in ("2", "3"):
@@ -247,6 +262,27 @@ def check_paths(cfg):
     return problems
 
 
+def ensure_rtss_running():
+    if not IS_WINDOWS:
+        return
+    try:
+        import subprocess
+        out = subprocess.check_output(["tasklist", "/fi", "imagename eq RTSS.exe"], text=True)
+        if "RTSS.exe" in out:
+            return
+        import ctypes
+        for p in [
+            r"C:\Program Files (x86)\RivaTuner Statistics Server\RTSS.exe",
+            r"C:\Program Files\RivaTuner Statistics Server\RTSS.exe",
+        ]:
+            if os.path.exists(p):
+                print(f"[launcher] Requesting start for RTSS: {p}")
+                ctypes.windll.shell32.ShellExecuteW(None, "runas", p, None, None, 1)
+                break
+    except Exception as e:
+        print(f"[launcher] Notice: could not auto-start RTSS ({e}); please start RTSS from Start Menu")
+
+
 def launch(cfg):
     """Start the game with its output captured to out/game.log.
 
@@ -255,6 +291,8 @@ def launch(cfg):
     problems = check_paths(cfg)
     if problems:
         raise SystemExit("\n".join(problems))
+    if IS_WINDOWS and cfg["toggles"].get("rtss", False):
+        ensure_rtss_running()
     out = Path(cfg["paths"]["work_dir"]) / "launcher_out" / _stamp()
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.json").write_text(json.dumps(cfg, indent=2))

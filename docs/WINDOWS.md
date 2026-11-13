@@ -196,12 +196,16 @@ The game uses **SDL2 GameController** on Windows (`PS3RECOMP_PAD_USE_SDL2=ON`), 
 
 ---
 
-## 8. MangoHud / Performance Monitoring
+## 8. Performance Overlays (RTSS & MangoHud)
 
-MangoHud can be toggled in the launcher:
-- In the launcher GUI, go to the **Diagnostics** tab and check **MangoHud overlay (FPS/frametime)**.
-- If `mangohud.exe` is in your `PATH`, the launcher invokes it automatically.
-- Output frametime CSVs are saved directly into the session folder in `recomp-work\launcher_out\<timestamp>\`.
+### RTSS (RivaTuner Statistics Server) on Windows
+- In the launcher GUI, go to the **Diagnostics** tab and check **RTSS overlay (RivaTuner - Windows)**.
+- The launcher automatically activates the RTSS Vulkan layer (`VK_LAYER_RTSS`) and ensures RTSS is running.
+- RTSS displays a real-time on-screen HUD (framerate, frametime graph, hardware statistics) directly inside the game window.
+
+### MangoHud on Linux
+- In the launcher GUI, go to the **Diagnostics** tab and check **MangoHud overlay (Linux)**.
+- If `mangohud` is in your `PATH`, the launcher invokes it and logs frametime CSVs into `launcher_out\<timestamp>\`.
 
 ---
 
