@@ -98,6 +98,7 @@ TOGGLES = [
     ("present_stats", True, "Diagnostics", "Present stats", "PS3RECOMP_VK_PRESENT_STATS", "bool"),
     ("timeline", True, "Diagnostics", "Hitch timeline recorder", None, "fixed-timeline"),
     ("shader_cache", True, "Diagnostics", "Shader disk cache", "PS3RECOMP_SHADER_DISK_CACHE", "bool"),
+    ("mangohud", False, "Diagnostics", "MangoHud overlay (FPS/frametime)", None, "bool"),
 ]
 TOGGLE_BY_KEY = {t[0]: t for t in TOGGLES}
 
@@ -175,6 +176,14 @@ def build_env(cfg, out_dir=None):
         env["PS3RECOMP_TIMELINE_HITCH_US"] = "250000"
         env["PS3RECOMP_TIMELINE_RING_MB"] = "16"
         env["PS3RECOMP_TIMELINE_FLUSH_MB"] = "2"
+    # MangoHud overlay and CSV logging
+    if cfg["toggles"].get("mangohud", False):
+        env["MANGOHUD"] = "1"
+        env["MANGOHUD_CONFIG"] = (
+            f"fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,"
+            f"cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,"
+            f"output_folder={out_dir},autostart_log=1,log_duration=0,log_interval=0"
+        )
     # WCB: 0 means off (variable unset), 2 or 3 turn on readback plus stats.
     wcb = str(cfg["toggles"].get("wcb", "2"))
     if wcb in ("2", "3"):
@@ -246,6 +255,13 @@ def launch(cfg):
     env = build_env(cfg, out_dir=str(out))
     exe = str(exe_path(cfg))
     cmd = [exe, cfg["paths"]["eboot"]]
+    if cfg["toggles"].get("mangohud", False):
+        import shutil
+        mangohud_bin = shutil.which("mangohud")
+        if mangohud_bin:
+            cmd = [mangohud_bin] + cmd
+        else:
+            print("[launcher] mangohud binary not in PATH; MANGOHUD=1 set in env for Vulkan layer")
     log_path = out / "game.log"
     print(f"[launcher] output -> {out}")
     print("[launcher] " + " ".join(cmd))
@@ -425,7 +441,7 @@ def main(argv=None):
     if args.show_env:
         env = build_env(cfg, out_dir="<out>")
         for k in sorted(env):
-            if k.startswith(("PS3", "SPU", "GCM", "VK_", "SPURS", "__GL")):
+            if k.startswith(("PS3", "SPU", "GCM", "VK_", "SPURS", "__GL", "MANGOHUD")):
                 print(f"{k}={env[k]}")
         return 0
     if args.headless:

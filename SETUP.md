@@ -1,5 +1,8 @@
 # Setting up the MLB The Show 16 native port
 
+> [!TIP]
+> **Windows Users**: For a complete, verified step-by-step setup guide on Windows 10/11 using Visual Studio 2022, `clang-cl`, and Vulkan, see [docs/WINDOWS.md](docs/WINDOWS.md).
+
 This is the start-to-finish path from your own disc or ISO to a running native
 build. Everything game-derived (the decrypted EBOOT, the lifted C++, the build,
 the vfs, the shader cache) is produced on your machine and stays out of git.
