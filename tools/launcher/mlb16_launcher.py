@@ -206,6 +206,14 @@ def check_paths(cfg):
     vfs = Path(cfg["paths"]["work_dir"]) / "vfs"
     if not vfs.exists():
         problems.append(f"vfs folder not found: {vfs}")
+    # The game reads its disc through vfs/PS3_GAME. On Windows that is a junction
+    # to the mounted ISO, so a dangling link means the ISO is not mounted.
+    disc = vfs / "PS3_GAME" / "USRDIR"
+    if not disc.exists():
+        problems.append(f"disc not readable: {disc} (mount the MLB The Show 16 ISO, then retry)")
+    install = vfs / "game" / "BCUS01089"
+    if not install.exists():
+        problems.append(f"installed update not found: {install} (copy BCUS01089 from RPCS3's dev_hdd0)")
     return problems
 
 
