@@ -164,22 +164,24 @@ copy "C:\VulkanSDK\1.4.341.1\Bin\SDL2.dll" ..\recomp-work\build-depth\
 ## 6. Launching the Game
 
 ### Method A: Launcher GUI (Recommended)
-Run the launcher:
+Run the launcher via Python or the generated batch script:
 ```cmd
 python tools\launcher\mlb16_launcher.py
 ```
+*(Or double-click `run_launcher.bat` inside `recomp-work\`)*
+- The launcher defaults to optimal settings with controller input and the native MangoHud overlay enabled.
 - Click **Check paths** to verify your EBOOT, VFS, disc junction, and executable.
 - Click **Launch** to start the game.
 
-### Method B: Headless Launch
-```cmd
-python tools\launcher\mlb16_launcher.py --headless
-```
-
-### Method C: Standalone Batch Script (`run_game.bat`)
-A standalone batch script with all recommended Vulkan flags:
+### Method B: Standalone Batch Script (`run_game.bat`)
+A standalone batch script with all recommended Vulkan environment flags and HUD enabled:
 ```cmd
 C:\Users\<you>\recomp-work\run_game.bat
+```
+
+### Method C: Headless Launch
+```cmd
+python tools\launcher\mlb16_launcher.py --headless
 ```
 
 ---
@@ -199,14 +201,15 @@ The game uses **SDL2 GameController** on Windows (`PS3RECOMP_PAD_USE_SDL2=ON`), 
 ## 8. Performance Overlay (Native MangoHud)
 
 ### Built-in In-Game Overlay (Windows & Linux)
-- In the launcher GUI, go to the **Diagnostics** tab and check **MangoHud / In-Game Overlay (FPS, Frametime, GPU)** (or set `set PS3RECOMP_HUD=1` / `set MANGOHUD=1`).
+- Enabled by default! In the launcher GUI, go to the **Diagnostics** tab and verify **MangoHud / In-Game Overlay (FPS, Frametime, GPU)** (or pass `set PS3RECOMP_HUD=1` / `set MANGOHUD=1`).
 - **No external software required!** The game itself renders a sleek, transparent, click-through overlay in the top-left corner:
-  - Title & Title ID (`MLB The Show 16 (BCUS01089)`)
-  - Live Framerate (`FPS 60.0`) in signature MangoHud green
-  - Frametime (`TIME 16.6 ms`) in signature MangoHud cyan
-  - GPU name and Graphics API (`Vulkan | NVIDIA GeForce RTX 3060 Ti`)
-- Clicks pass completely through to the game window; it tracks window repositioning and automatically hides when minimized.
-- On Linux, checking this box also integrates with the system `mangohud` command if installed and writes frametime CSV logs into `launcher_out\<timestamp>\`.
+  - **Title & Title ID**: `MLB The Show 16 (BCUS01089)`
+  - **Live Framerate**: `FPS 60.0` in signature MangoHud green
+  - **Frametime & Min/Max**: `TIME 16.6ms` with dynamic `min` and `max` frametimes recorded over the current graph window
+  - **GPU & API**: `Vulkan | <your GPU name>`
+  - **Frametime Histogram Graph**: Live 120-sample graph updated at ~30 FPS with a dotted `16.6ms` 60 FPS reference baseline and color-coded hitch bars (green for smooth 60 FPS, lime/yellow for slight variance, orange for frame drops, red for hitches).
+- **Zero Performance Overhead**: Drawn via double-buffered layered Win32 GDI windows (`WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE`). Mouse and controller clicks pass 100% straight through to the game. It snaps smoothly to the game window when moved, and automatically hides when minimized.
+- On Linux, checking this box seamlessly integrates with the system `mangohud` command if installed and writes frametime CSV logs into `launcher_out\<timestamp>\`.
 
 ---
 
