@@ -98,7 +98,7 @@ TOGGLES = [
     ("present_stats", True, "Diagnostics", "Present stats", "PS3RECOMP_VK_PRESENT_STATS", "bool"),
     ("timeline", True, "Diagnostics", "Hitch timeline recorder", None, "fixed-timeline"),
     ("shader_cache", True, "Diagnostics", "Shader disk cache", "PS3RECOMP_SHADER_DISK_CACHE", "bool"),
-    ("mangohud", False, "Diagnostics", "MangoHud / In-Game Overlay (FPS, Frametime, GPU)", None, "bool"),
+    ("mangohud", True, "Diagnostics", "MangoHud / In-Game Overlay (FPS, Frametime, GPU)", None, "bool"),
 ]
 TOGGLE_BY_KEY = {t[0]: t for t in TOGGLES}
 
