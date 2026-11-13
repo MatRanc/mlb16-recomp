@@ -262,28 +262,35 @@ def check_paths(cfg):
     return problems
 
 
-def ensure_rtss_running():
+def ensure_rtss_running(hwnd=None):
     if not IS_WINDOWS:
         return
     try:
         import subprocess
         out = subprocess.check_output(["tasklist", "/fi", "imagename eq RTSS.exe"], text=True)
         if "RTSS.exe" in out:
+            print("[launcher] RTSS is already running.")
             return
         import ctypes
+        import time
         for p in [
             r"C:\Program Files (x86)\RivaTuner Statistics Server\RTSS.exe",
             r"C:\Program Files\RivaTuner Statistics Server\RTSS.exe",
         ]:
             if os.path.exists(p):
-                print(f"[launcher] Requesting start for RTSS: {p}")
-                ctypes.windll.shell32.ShellExecuteW(None, "runas", p, None, None, 1)
+                print(f"[launcher] Launching RTSS server: {p}")
+                ret = ctypes.windll.shell32.ShellExecuteW(hwnd, "runas", p, None, None, 1)
+                if ret > 32:
+                    print("[launcher] RTSS elevation requested; waiting 2s for server startup...")
+                    time.sleep(2)
+                else:
+                    print(f"[launcher] ShellExecute returned {ret}; if UAC was cancelled, start RTSS from Start Menu")
                 break
     except Exception as e:
         print(f"[launcher] Notice: could not auto-start RTSS ({e}); please start RTSS from Start Menu")
 
 
-def launch(cfg):
+def launch(cfg, hwnd=None):
     """Start the game with its output captured to out/game.log.
 
     The returned Popen has an attribute `log_path` so callers can point the user at it.
@@ -292,7 +299,7 @@ def launch(cfg):
     if problems:
         raise SystemExit("\n".join(problems))
     if IS_WINDOWS and cfg["toggles"].get("rtss", False):
-        ensure_rtss_running()
+        ensure_rtss_running(hwnd=hwnd)
     out = Path(cfg["paths"]["work_dir"]) / "launcher_out" / _stamp()
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.json").write_text(json.dumps(cfg, indent=2))
@@ -459,7 +466,7 @@ def run_gui(cfg):
         if problems:
             messagebox.showerror("Not ready", "\n".join(problems))
             return
-        proc = launch(c)
+        proc = launch(c, hwnd=root.winfo_id())
         messagebox.showinfo("Started", f"Game started.\nLog: {proc.log_path}")
 
     bar = ttk.Frame(root, padding=(8, 0, 8, 8))
