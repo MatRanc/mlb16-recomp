@@ -1,4 +1,4 @@
-﻿# MLB 16 on Windows: setup checklist
+# MLB 16 on Windows: setup checklist
 
 Status: **untested on Windows.** Everything below comes from the Linux build and the ps3recomp docs
 (`ps3recomp-probe/docs/BUILDING.md`, `GETTING_STARTED.md`). Record what fails and send it back so the
@@ -53,6 +53,9 @@ Put `recomp-work/` next to `mlb16-recomp/` as on Linux, or set the work folder i
    - Mount the game ISO read-only: `Mount-DiskImage -ImagePath "<iso>" -Access ReadOnly` (no admin needed).
    - Link the disc: `mklink /J recomp-work\vfs\PS3_GAME <drive>:\PS3_GAME` (a junction, no admin needed).
    - Copy the installed update from RPCS3: `robocopy <rpcs3>\dev_hdd0\game\BCUS01089 recomp-work\vfs\game\BCUS01089 /E`.
+   - Copy the installed Game Data from RPCS3: `robocopy <rpcs3>\dev_hdd0\game\BCUS01089_R recomp-work\vfs\game\BCUS01089_R /E`.
+     (Copying this avoids a ~10 GB background data install on first boot. If the game does install it,
+     do NOT close the window or interrupt it, otherwise the data corrupts and boot hangs.)
    - Link the runtime: `mklink /J recomp-work\runtime ps3recomp\runtime`.
 
 The bash helpers (`probe.sh`, `lift_spu.sh`, `apply_patches.sh`) run from Git Bash:

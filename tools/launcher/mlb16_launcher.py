@@ -214,6 +214,21 @@ def check_paths(cfg):
     install = vfs / "game" / "BCUS01089"
     if not install.exists():
         problems.append(f"installed update not found: {install} (copy BCUS01089 from RPCS3's dev_hdd0)")
+    game_data = vfs / "game" / "BCUS01089_R"
+    if game_data.exists():
+        ext = game_data / "USRDIR" / "MLBPS3_EXT.WAD"
+        gd = game_data / "USRDIR" / "MLBPS3_GD.WAD"
+        if not ext.exists() or not gd.exists():
+            problems.append(
+                f"game data incomplete: {game_data} (missing MLBPS3_EXT.WAD or MLBPS3_GD.WAD). "
+                "Delete BCUS01089_R to reinstall, or copy clean BCUS01089_R from RPCS3's dev_hdd0."
+            )
+        elif ext.stat().st_size < 4_000_000_000 or gd.stat().st_size < 4_000_000_000:
+            problems.append(
+                f"game data corrupted/truncated in {game_data} "
+                f"(MLBPS3_EXT.WAD: {ext.stat().st_size} B, MLBPS3_GD.WAD: {gd.stat().st_size} B). "
+                "Delete BCUS01089_R to reinstall, or copy clean BCUS01089_R from RPCS3's dev_hdd0."
+            )
     return problems
 
 
@@ -386,8 +401,8 @@ def run_gui(cfg):
     ]:
         ttk.Button(bar, text=text, command=cmd).pack(side="left", padx=3)
 
-    note = ("Windows uses the D3D12 renderer; Vulkan is Linux-only in ps3recomp. "
-            "The Vulkan toggles (WCB, cube RT, pins, pacer, present mode) do nothing on Windows.")
+    note = ("Windows supports D3D12 (default) and Vulkan (-DPS3RECOMP_RSX_VULKAN=ON). "
+            "The Vulkan toggles (WCB, cube RT, pins, pacer, present mode) apply when running the Vulkan build.")
     ttk.Label(root, text=note, foreground="#555", wraplength=720).pack(padx=8, pady=(0, 8))
     root.mainloop()
 
