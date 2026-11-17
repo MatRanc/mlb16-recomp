@@ -66,6 +66,8 @@ Reflection (512 target) was not measured. All of this is the meter only.
 - [ ] 2. SPU flat dispatch table, coherence holders, inline store cleanup.
 - [ ] 3. Direct vertex path (vertex pulling, SIMD index swap, cheaper descriptors).
 - [ ] 4. Native c690 stages, one at a time on the corpus. Stop if the first stage is under 2x.
+  - First stage done offline (2026-11-17): normals/tangents `0xFA20/FA58/FCB8/FDA0`, bit-exact, 2.5-15.9x on the
+    approx twin ([`soa-kernels.md`](notes/soa-kernels.md)). Not yet run in the game.
 - [ ] 5. Walker split, only if the chain is still main-bound.
 - [ ] Check RAM speed (`sudo dmidecode -t memory | grep -i speed`).
 - [ ] Re-measure crowd and mound scenes: everything here is the meter only.

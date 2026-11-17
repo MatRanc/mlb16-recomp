@@ -13,6 +13,9 @@
 #   --ftz         tools/spu_ftz_twin.py                  (port/stable or later; needs the
 #                 variant registry in runtime/spu/spu_workload.c)
 #   --approx      tools/spu_ftz_twin.py --approx         (port/stable or later)
+#   --soa         tools/c690_ref/patch_native_soa.py     (exp/soa-kernels or later; native
+#                 normal/tangent kernels behind PS3RECOMP_C690_SOA. The hook is
+#                 weak, so an older runtime still links. Applied before the twins)
 #   --native-21   tools/c690_ref/patch_native_21.py      (exp/e1/n21 or later)
 #   --native-2a   tools/c690_ref/patch_native_2a.py      (exp/e1/n2a or later)
 #   --gpu2a       tools/c690_ref/patch_gpu2a.py          (exp/gpu or later)
@@ -42,6 +45,7 @@ CAPTURE=0
 WWS_NATIVE=0
 APPROX=0
 FTZ=0
+SOA=0
 NATIVE_21=0
 NATIVE_2A=0
 GPU2A=0
@@ -55,6 +59,7 @@ while [ $# -gt 0 ]; do
         --wws-native) WWS_NATIVE=1; shift ;;
         --approx) APPROX=1; shift ;;
         --ftz) FTZ=1; shift ;;
+        --soa) SOA=1; shift ;;
         --native-21) NATIVE_21=1; shift ;;
         --native-2a) NATIVE_2A=1; shift ;;
         --gpu2a) GPU2A=1; shift ;;
@@ -126,6 +131,12 @@ fi
 if [ "$GPU2A" = 1 ]; then
     P="$PS3RECOMP/tools/c690_ref/patch_gpu2a.py"
     need_file "$P" " (ps3recomp exp/gpu or later)"
+    run "$PY" "$P" "$C690"
+fi
+
+if [ "$SOA" = 1 ]; then
+    P="$PS3RECOMP/tools/c690_ref/patch_native_soa.py"
+    need_file "$P" " (ps3recomp exp/soa-kernels or later)"
     run "$PY" "$P" "$C690"
 fi
 
