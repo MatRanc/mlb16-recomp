@@ -211,6 +211,11 @@ and refuse to start if the governor or ISO is wrong.
   then points at a missing folder. Repeat section 3 and start the game again.
 - **Window present stalls on Wayland**: the scripts default to
   `SDL_VIDEODRIVER=x11` (XWayland) and FIFO present mode; keep those defaults.
+- **Very low FPS (~10–12 fps) on Linux with an NVIDIA GPU**: check that the
+  proprietary NVIDIA driver is active (`nvidia-smi` succeeds and the log shows
+  `NVIDIA GeForce ...` rather than `(NVK ...)`). Falling back to `nouveau` /
+  Mesa NVK after a kernel update makes the RSX walker's draw and texture
+  recording ~10× slower (~200 ms vs ~20 ms at the pitch meter).
 - **No thumbnails**: install ImageMagick or ignore the helper; the game and the
   logs are unaffected.
 

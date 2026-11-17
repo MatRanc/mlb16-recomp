@@ -9,6 +9,10 @@ case "$dest" in
     /*) ;;
     *) dest="$OUT/$dest" ;;
 esac
+case "$dest" in
+    *.png|*.PNG|*.jpg|*.JPG|*.ppm|*.PPM) ;;
+    *) dest="$dest.png" ;;
+esac
 for i in 1 2 3 4 5; do
   cp "$W/frame.ppm" "$W/cur.ppm"
   python3 -c "from PIL import Image; Image.open('$W/cur.ppm').resize((640,360)).save('$dest')" 2>/dev/null && exit 0
