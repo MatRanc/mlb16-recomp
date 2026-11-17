@@ -342,15 +342,17 @@ for _i in "${!ARM_LABELS[@]}"; do
     log "${ARM_LABELS[$_i]}: $(printf '%s' "${ARM_BODIES[$_i]}" | tr '\n' ';')"
 done
 
-HUD=0
-if command -v mangohud >/dev/null 2>&1; then
-    HUD=1
+HUD=native
+if [ "${AB_EXTERNAL_MANGOHUD:-0}" = 1 ] && command -v mangohud >/dev/null 2>&1; then
+    HUD=mangohud
     export MANGOHUD_CONFIG="fps,frametime,frame_timing,output_folder=$OUT,autostart_log=1,log_duration=0,log_interval=0"
     CMD=(mangohud "$EXE" "$ELF")
 else
+    export PS3RECOMP_HUD="${PS3RECOMP_HUD:-1}"
+    export PS3RECOMP_HUD_CSV="${PS3RECOMP_HUD_CSV:-$OUT}"
     CMD=("$EXE" "$ELF")
 fi
-log "mangohud=$HUD"
+log "hud=$HUD PS3RECOMP_HUD=${PS3RECOMP_HUD:-0}"
 
 # ---- scene thumbnails ------------------------------------------------------
 SHEET_DONE=0

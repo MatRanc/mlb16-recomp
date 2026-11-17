@@ -32,12 +32,14 @@ EXE="$W/$BUILD/$MLB16_BIN"
 DUMP_EVERY=${PLAY_DUMP_EVERY:-30}
 
 HUD=1
+USE_MANGOHUD=${USE_MANGOHUD:-0}
 WCB=2
 for arg in "$@"; do
     case "$arg" in
-        nohud) HUD=0 ;;
-        wcb)   WCB=3 ;;
-        nowcb) WCB=0 ;;
+        nohud)    HUD=0 ;;
+        mangohud) USE_MANGOHUD=1 ;;
+        wcb)      WCB=3 ;;
+        nowcb)    WCB=0 ;;
         -h|--help)
             awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
             exit 0 ;;
@@ -237,17 +239,26 @@ fi
 
 CMD=("$EXE" "$ELF")
 if [ "$HUD" = 1 ]; then
-    if command -v mangohud >/dev/null 2>&1; then
-        export MANGOHUD_CONFIG="fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,output_folder=$OUTDIR,autostart_log=1,log_duration=0,log_interval=0"
-        CMD=(mangohud "$EXE" "$ELF")
-        echo "[play] MangoHud overlay on; CSV -> $OUTDIR"
-    else
-        echo "[play] mangohud not found; running without the overlay (nohud)" >&2
-        HUD=0
+    if [ "$USE_MANGOHUD" = 1 ]; then
+        if command -v mangohud >/dev/null 2>&1; then
+            export MANGOHUD_CONFIG="fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,output_folder=$OUTDIR,autostart_log=1,log_duration=0,log_interval=0"
+            CMD=(mangohud "$EXE" "$ELF")
+            echo "[play] External MangoHud overlay on; CSV -> $OUTDIR"
+        else
+            echo "[play] mangohud not found; falling back to built-in HUD" >&2
+            USE_MANGOHUD=0
+        fi
+    fi
+    if [ "$USE_MANGOHUD" = 0 ]; then
+        export PS3RECOMP_HUD=1
+        export PS3RECOMP_HUD_CSV="$OUTDIR"
+        export PS3RECOMP_VK_PRESENT_STATS=1
+        echo "[play] Native HUD overlay on (PS3RECOMP_HUD=1); CSV -> $OUTDIR"
     fi
 fi
 if [ "$HUD" = 0 ]; then
-    echo "[play] MangoHud off"
+    export PS3RECOMP_HUD=0
+    echo "[play] HUD off"
 fi
 
 # ---- thumbnail helper ------------------------------------------------------

@@ -176,16 +176,18 @@ def build_env(cfg, out_dir=None):
         env["PS3RECOMP_TIMELINE_HITCH_US"] = "250000"
         env["PS3RECOMP_TIMELINE_RING_MB"] = "16"
         env["PS3RECOMP_TIMELINE_FLUSH_MB"] = "2"
-    # MangoHud / In-game overlay and CSV logging
+    # Built-in Vulkan HUD and CSV logging (cross-platform Linux/Windows)
     if cfg["toggles"].get("mangohud", False):
-        env["MANGOHUD"] = "1"
         env["PS3RECOMP_HUD"] = "1"
+        env["PS3RECOMP_HUD_CSV"] = out_dir
         env["PS3RECOMP_VK_PRESENT_STATS"] = "1"
-        env["MANGOHUD_CONFIG"] = (
-            f"fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,"
-            f"cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,"
-            f"output_folder={out_dir},autostart_log=1,log_duration=0,log_interval=0"
-        )
+        if env.get("PS3RECOMP_EXTERNAL_MANGOHUD") == "1":
+            env["MANGOHUD"] = "1"
+            env["MANGOHUD_CONFIG"] = (
+                f"fps,frametime,frame_timing,fps_metrics=avg,0.01,0.001,"
+                f"cpu_stats,gpu_stats,core_load,core_load_change,gpu_load_change,"
+                f"output_folder={out_dir},autostart_log=1,log_duration=0,log_interval=0"
+            )
     else:
         env["MANGOHUD"] = "0"
         env["PS3RECOMP_HUD"] = "0"
@@ -261,15 +263,15 @@ def launch(cfg, hwnd=None):
     exe = str(exe_path(cfg))
     cmd = [exe, cfg["paths"]["eboot"]]
     if cfg["toggles"].get("mangohud", False):
-        if not IS_WINDOWS:
+        if not IS_WINDOWS and os.environ.get("PS3RECOMP_EXTERNAL_MANGOHUD") == "1":
             import shutil
             mangohud_bin = shutil.which("mangohud")
             if mangohud_bin:
                 cmd = [mangohud_bin] + cmd
             else:
-                print("[launcher] mangohud binary not in PATH; MANGOHUD=1 set in env for Vulkan layer")
+                print("[launcher] mangohud binary not in PATH; falling back to native HUD")
         else:
-            print("[launcher] Native MangoHud in-game overlay enabled (PS3RECOMP_HUD=1)")
+            print("[launcher] Native HUD in-game overlay enabled (PS3RECOMP_HUD=1)")
     log_path = out / "game.log"
     print(f"[launcher] output -> {out}")
     print("[launcher] " + " ".join(cmd))
