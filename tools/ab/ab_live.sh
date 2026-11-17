@@ -258,7 +258,7 @@ export PS3RECOMP_PIPE_TIMING=1
 # Per-flip lifecycle log: frame time is computed from `fin` (the walker
 # executed the flip), not from the 10-flip [flip] counter.
 export PS3RECOMP_FLIP_LOG="${PS3RECOMP_FLIP_LOG:-1}"
-export PS3RECOMP_C690_STATS="${PS3RECOMP_C690_STATS:-1}"
+export PS3RECOMP_C690_STATS="${PS3RECOMP_C690_STATS:-0}"
 # Keep the standard play_windowed.sh configuration (docs/cheap-wins.md,
 # docs/texture-dirty.md, docs/walker-quick-wins.md): otherwise an ab_live run
 # would be measured on a different baseline than the play sessions.
@@ -271,6 +271,18 @@ export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
 export PS3RECOMP_REMAP_FAST="${PS3RECOMP_REMAP_FAST:-1}"
 export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-0}"
 export PS3RECOMP_FLIP_FENCE_DONE="${PS3RECOMP_FLIP_FENCE_DONE:-0}"
+export PS3RECOMP_CROWD_FIX="${PS3RECOMP_CROWD_FIX:-1}"
+export PS3RECOMP_ENG_SWZ_RT="${PS3RECOMP_ENG_SWZ_RT:-1}"
+export PS3RECOMP_VK_DEPTH_BIAS="${PS3RECOMP_VK_DEPTH_BIAS:-1}"
+export PS3RECOMP_VK_PASS_KEEP="${PS3RECOMP_VK_PASS_KEEP:-1}"
+export PS3RECOMP_VK_DRAW_STATE="${PS3RECOMP_VK_DRAW_STATE:-1}"
+export PS3RECOMP_ENG_PROG_MEMO="${PS3RECOMP_ENG_PROG_MEMO:-1}"
+export PS3RECOMP_REMAP_FLAT="${PS3RECOMP_REMAP_FLAT:-1}"
+export PS3RECOMP_RSX_WCB_PREFETCH="${PS3RECOMP_RSX_WCB_PREFETCH:-1}"
+export PS3RECOMP_RSX_WCB_STREAM="${PS3RECOMP_RSX_WCB_STREAM:-1}"
+export PS3RECOMP_SPU_FTZ="${PS3RECOMP_SPU_FTZ:-1}"
+export PS3RECOMP_SPU_FLOAT_APPROX="${PS3RECOMP_SPU_FLOAT_APPROX:-1}"
+export PS3RECOMP_WALKER_WAKE="${PS3RECOMP_WALKER_WAKE:-1}"
 # play_windowed.sh's load-time and diagnostic defaults (the meter is unaffected
 # by the shader disk cache; the hitch recorder only stores frames > 250 ms).
 export PS3RECOMP_SHADER_DISK_CACHE="${PS3RECOMP_SHADER_DISK_CACHE:-1}"
