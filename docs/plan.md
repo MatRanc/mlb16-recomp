@@ -35,21 +35,21 @@ After finishing **Item 2** (SPU flat table + coherence holders) and **Item 3** (
 
 ## Next Up (Prioritized Todo)
 
-- [ ] **1. Finish Item 4 — Native AVX2 kernels for remaining hot `c690` functions (`exp/item4-c690`):**
+- [ ] **Item 1 — Half-rate shadows behind a key** *(partner track)*:
+  Gate shadow-caster frame skipping (`0x853C6C`) cleanly behind a runtime key, check image quality and frame pacing at full resolution, and measure the 512 reflection target the same way.
+- [ ] **Item 4 — Finish native AVX2 kernels for remaining hot `c690` functions (`exp/item4-c690`):**
   Gate every kernel on offline corpus (`0` LS/GPR mismatches across base/ftz/approx, **`>=2x`** speedup or skip), live `PS3RECOMP_C690_SOA=2` (`0` mismatches), paired `ab_live.sh` (`MLB16_BUILD=build-soa`, `C690_STATS=0`), and clean visuals:
   - **`0xD080` / `0xD2B8` / `0xD4A8`** (`7.41%` total CPU: `5.28%` + `2.13%`; currently `8.8-12.1 us` for `0xD080/0xD2B8`, `4.5-6.0 us` for `0xD4A8` offline): screen-space cull/occlusion subtree — top single-call target.
   - **`0xAF98` / `0xB268` / `0xA798` / `0xB830`** (`4.63%` perf / `15.1%` exclusive `[c690-stats]`; `op 0x21` is `29.7%` of `c690`): test directly via `CMD21` (`n21/p*_in.bin`, currently `13.96-15.86 us` per `0x21` cmd) + `c690_fn_corpus`.
   - **`0x6D68`** (`3.37%` perf, `1.50-1.70 us` offline): benchmark de-pipelined unaligned 256-bit AVX2 unpack against the `>=2x` bar (skip if `<2x`).
   - **`0xF520` (`1.80%` perf) & `0xE750` (`1.47%` perf)**: wire runtime `<0x3000` helper support for `0xE750` in `test_native_soa`, test both against `>=2x` gate.
   - Visual-check one X11 HUD screenshot on `build-soa`, and promote `PS3RECOMP_C690_SOA=1` to default once Item 4 lands.
-- [ ] **2. Item 5 — Re-evaluate / Repair Walker Split (`PS3RECOMP_WALKER_MT`, `exp/item5-walker-split`):**
+- [ ] **Item 5 — Re-evaluate / Repair Walker Split (`PS3RECOMP_WALKER_MT`, `exp/item5-walker-split`):**
   Re-run critical-path trace + `replay_rsx_engine` (`walker_replay_fixed`, `mcap`, `mound/m2_cap`) once Item 4 lowers SPU stalls. Prior MT attempts failed on sync barriers (`eng_zdepth_snapshot`, `eng_cube_collect`, immediate draws); now that Item 3 removed compute unpack/staging copies, check whether removing worker barriers lets MT cut walker drain (`14.6-18.8 -> <10 ms`) without worker-backlog stalls.
-- [ ] **3. Major Next Levers Beyond Item 4 (SPU runtime & PPU main):**
+- [ ] **Major Next Levers Beyond Item 4 (SPU runtime & PPU main):**
   - **SPURS Policy-Module / Indirect Dispatch (`~10.9%` CPU in `item3_perf.data`):** `spu_lifted_lookup` + `spu_indirect_branch_slow` + `spu_lifted_lookup_full` + `spu_drain_call` (`7.53%`) plus `spu_lockline_lock` (`1.90%`) and per-job PM DMAs (`__memmove` `3.14%`). Caching PM entrypoints / fast MFC list transfers shrinks non-`c690` SPU worker overhead (`20-23%` of worker wall).
   - **PPU Main & Synchronization (`ppu main` `10.46%` + `Kinematics`/`IMFE`/`MainMultiTask` `~5.9%` CPU; `4.74 ms/frame` PPU/park walker waits):** cut pre-PUT PPU critical path (`spu_coh_notify_write`, atomic overhead) and better overlap PPU job pushing (`a_not_pushed` = `68.9%` of slot waits in `item3_hud_trace.pstl`).
   - **Scene Coverage & Hardware Check:** re-measure crowd and mound scenes post-Item 3/4 (all Nov 17 measurements are pitch-meter only); check host RAM speed (`sudo dmidecode -t memory | grep -i speed`) vs L2 miss signature.
-
-*(Note: Roadmap Item 1 — half-rate shadows — is intentionally skipped/deferred per user request on 2026-11-17.)*
 
 ## Historical Baseline (2026-11-06, `build-depth`, Pre-Items 2-4)
 
