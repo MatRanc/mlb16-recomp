@@ -63,7 +63,7 @@ Reflection (512 target) was not measured. All of this is the meter only.
 ## Todo
 
 - [ ] 1. Half-rate shadows behind a key; user checks image and pacing at full resolution. Measure the 512 target the same way.
-- [ ] 2. SPU flat dispatch table, coherence holders, inline store cleanup.
+- [x] 2. SPU flat dispatch table, coherence holders, inline store cleanup (`ps3recomp` `exp/item2`: flat `(image, variant, lsa>>2)` dispatch table in `spu_channels.c`, per-line holder refcounts in `spu_coherency.c` clearing `s_coh_bitmap`, and `PS3RECOMP_STORE_DIAG` compile-out of `g_ww_lo`/`g_ww_hi`/`g_resv_store_active` in `ppu_memory.h`; lockline unit tests + live meter run `39.3-39.9` fps pass).
 - [ ] 3. Direct vertex path (vertex pulling, SIMD index swap, cheaper descriptors).
 - [ ] 4. Native c690 stages, one at a time on the corpus. Stop if the first stage is under 2x.
   - First stage + output writers done and live-verified (2026-11-17): normals/tangents `0xFA20/FA58/FCB8/FDA0` (2.5-15.9x
