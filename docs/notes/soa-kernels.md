@@ -44,8 +44,9 @@ This passes the plan's "first stage at least 2x" gate.
 - No game run: live shadow compare (`=2`) and a meter A/B (`=0` vs `=1`) are the next step. Build dir
   `recomp-work/build-soa` (private lifted tree `recomp-work/spu_lifted_soa`); the shared `spu_lifted` is untouched.
   `tools/apply_patches.sh --soa` applies the hook (weak, so older runtimes still link).
-- Only 4 stage captures, all from one scene. The whole-command replay over the 78 `0x21` captures
-  (`CMD21=` in the gate script) was added but its result was not read before this note.
+- Only 4 stage captures, all from one scene. The whole-command replay over the 78 `0x21` captures (`CMD21=` in the
+  gate script) passes in all three twins but at 1.00x: the `0x21` command does not reach these functions, so it
+  proves nothing about them. Which command calls `0x10190` at the meter is not established.
 - `0xFDA0` is latency-bound (2 sqrt + 4 div per triangle in one chain); batching triangles would roughly halve it
   again but needs an aliasing check between `out` and `pos`/`uv`.
 - A native index-run loop for `0xF520` (1.6 % of cycles) was written and removed: its offline check did not pass
