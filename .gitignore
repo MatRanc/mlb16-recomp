@@ -19,3 +19,7 @@ tools/replay/test_vk_sync
 # measurement references are game screenshots; keep them out of git
 tools/ab/ref/
 __pycache__/
+
+# ab_live/nav run artifacts are game screenshots
+tools/ab/*_nav.png
+tools/ab/ref/

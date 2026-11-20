@@ -243,78 +243,19 @@ if [ "$DRY_RUN" = 1 ]; then
 fi
 
 # ---- game environment ------------------------------------------------------
-export __GL_SYNC_TO_VBLANK=0
+# Game settings shared with play_windowed.sh (one list, ab/game_env.sh).
+. "$S/game_env.sh"
+# Measurement-only settings below.
 export PAD_FILE=$W/pad.txt
-export GCM_HANDLER_THREAD=1 GCM_FLIPCB_ONTICK=1 GCM_FLIPCOUNT=1
-export PS3RECOMP_VK_GUEST_PROGRAMS=1 PS3RECOMP_VK_WINDOW=1 PS3RECOMP_VK_FULLSCREEN=0
-export PS3RECOMP_VK_PRESENT_MODE=fifo PS3RECOMP_VK_PRESENT_STATS=1
-# Present the window only when the guest produced a new frame. Without it the
-# frame clock re-presents on SetPrepareFlip too, which doubled MangoHud's
-# row rate over [flip] and put two presents ~1 ms apart (docs/frame-pacing.md).
-export PS3RECOMP_VK_PRESENT_NEW_ONLY="${PS3RECOMP_VK_PRESENT_NEW_ONLY:-1}"
 export SDL_VIDEODRIVER=$VIDEODRIVER
-export PS3RECOMP_PUMP_MS=8 PS3RECOMP_WALKER_PROF=1
 export PS3RECOMP_PIPE_TIMING=1
 # Per-flip lifecycle log: frame time is computed from `fin` (the walker
 # executed the flip), not from the 10-flip [flip] counter.
 export PS3RECOMP_FLIP_LOG="${PS3RECOMP_FLIP_LOG:-1}"
-export PS3RECOMP_C690_STATS="${PS3RECOMP_C690_STATS:-0}"
-# Keep the standard play_windowed.sh configuration (docs/cheap-wins.md,
-# docs/texture-dirty.md, docs/walker-quick-wins.md): otherwise an ab_live run
-# would be measured on a different baseline than the play sessions.
-export SPU_MFC_LOOKUP_CACHE="${SPU_MFC_LOOKUP_CACHE:-1}"
-export GCM_NOP_SKIP="${GCM_NOP_SKIP:-1}"
-export GCM_REF_IMMEDIATE="${GCM_REF_IMMEDIATE:-1}"
-export PS3RECOMP_RSX_TEX_PIN="${PS3RECOMP_RSX_TEX_PIN:-1}"
-export PS3RECOMP_TEX_DIRTY="${PS3RECOMP_TEX_DIRTY:-1}"
-export PS3RECOMP_PIPE_MEMO="${PS3RECOMP_PIPE_MEMO:-1}"
-export PS3RECOMP_REMAP_FAST="${PS3RECOMP_REMAP_FAST:-1}"
-export PS3RECOMP_TICK_IN_DRAIN="${PS3RECOMP_TICK_IN_DRAIN:-0}"
-export PS3RECOMP_FLIP_FENCE_DONE="${PS3RECOMP_FLIP_FENCE_DONE:-0}"
-export PS3RECOMP_CROWD_FIX="${PS3RECOMP_CROWD_FIX:-1}"
-export PS3RECOMP_ENG_SWZ_RT="${PS3RECOMP_ENG_SWZ_RT:-1}"
-export PS3RECOMP_VK_DEPTH_BIAS="${PS3RECOMP_VK_DEPTH_BIAS:-1}"
-export PS3RECOMP_VK_PASS_KEEP="${PS3RECOMP_VK_PASS_KEEP:-1}"
-export PS3RECOMP_VK_DRAW_STATE="${PS3RECOMP_VK_DRAW_STATE:-1}"
-export PS3RECOMP_ENG_PROG_MEMO="${PS3RECOMP_ENG_PROG_MEMO:-1}"
-export PS3RECOMP_REMAP_FLAT="${PS3RECOMP_REMAP_FLAT:-1}"
-export PS3RECOMP_RSX_WCB_PREFETCH="${PS3RECOMP_RSX_WCB_PREFETCH:-1}"
-export PS3RECOMP_RSX_WCB_STREAM="${PS3RECOMP_RSX_WCB_STREAM:-1}"
-export PS3RECOMP_SPU_FTZ="${PS3RECOMP_SPU_FTZ:-1}"
-export PS3RECOMP_SPU_FLOAT_APPROX="${PS3RECOMP_SPU_FLOAT_APPROX:-1}"
-export PS3RECOMP_WALKER_WAKE="${PS3RECOMP_WALKER_WAKE:-1}"
-# play_windowed.sh's load-time and diagnostic defaults (the meter is unaffected
-# by the shader disk cache; the hitch recorder only stores frames > 250 ms).
-export PS3RECOMP_SHADER_DISK_CACHE="${PS3RECOMP_SHADER_DISK_CACHE:-1}"
 export PS3RECOMP_TIMELINE="${PS3RECOMP_TIMELINE:-$OUT/hitches.pstl}"
 export PS3RECOMP_TIMELINE_HITCH_US="${PS3RECOMP_TIMELINE_HITCH_US:-250000}"
 export PS3RECOMP_TIMELINE_RING_MB="${PS3RECOMP_TIMELINE_RING_MB:-16}"
 export PS3RECOMP_TIMELINE_FLUSH_MB="${PS3RECOMP_TIMELINE_FLUSH_MB:-2}"
-export PS3RECOMP_PREPARE_FLIP_RET="${PS3RECOMP_PREPARE_FLIP_RET:-1}"
-# Library fixes batch 1 (docs/hle-fixes-batch1.md). The A/B arms normally
-# override these through the control file; these keep a plain run on the same
-# tested configuration.
-export PS3_LWCOND_REAL="${PS3_LWCOND_REAL:-1}"
-export PS3RECOMP_AUDIO_PACE="${PS3RECOMP_AUDIO_PACE:-1}"
-export PS3RECOMP_FS_WRITE_CHECK="${PS3RECOMP_FS_WRITE_CHECK:-1}"
-export PS3RECOMP_SPURS_TEARDOWN="${PS3RECOMP_SPURS_TEARDOWN:-1}"
-export PS3RECOMP_GCM_OFFSET_SYNC="${PS3RECOMP_GCM_OFFSET_SYNC:-1}"
-export SPURS_PM_FAST_RESCHED="${SPURS_PM_FAST_RESCHED:-64}"
-# native c690 dispatch for MeshJobs0/1 (wids 1,2); docs/c690-native-dispatch.md
-export SPURS_PM_NATIVE_DISPATCH="${SPURS_PM_NATIVE_DISPATCH:-6}"
-# menu flip fix: tick completes from our own request state (docs/menu-34ms.md, menu-flip-fix.md)
-export PS3RECOMP_FLIP_TICK_OWN_STATE="${PS3RECOMP_FLIP_TICK_OWN_STATE:-1}"
-# character shaders: translate TXD/DDX/DDY so jersey torsos draw (docs/jersey-transparent.md)
-export PS3RECOMP_FP_TXD="${PS3RECOMP_FP_TXD:-1}"
-# the user's Better depth of field blur, applied at ELF load (docs/dof-patch.md)
-export PS3RECOMP_DOF_PATCH="${PS3RECOMP_DOF_PATCH:-1}"
-# write the frame dump off the walker thread (0.5-0.7 s hitches otherwise; docs/present-stalls.md)
-export PS3RECOMP_VK_DUMP_ASYNC="${PS3RECOMP_VK_DUMP_ASYNC:-1}"
-# shader disk cache survives rebuilds (was 0 hits after every rebuild; docs/boot-gaps.md)
-export PS3RECOMP_SHADER_CACHE_STABLE_KEY="${PS3RECOMP_SHADER_CACHE_STABLE_KEY:-1}"
-export PS3RECOMP_RSX_CUBE_RT="${PS3RECOMP_RSX_CUBE_RT:-1}"
-export PS3RECOMP_VK_PACE="${PS3RECOMP_VK_PACE:-1}"
-export VK_DRAW_BATCH=1 VK_FRAME_PIPELINE=1
 if [ "$DUMMY_BLACK" = 1 ]; then export VK_DUMMY_BLACK=1; else unset VK_DUMMY_BLACK; fi
 [ "$IGNORE_MAGENTA" = 1 ] && export NAV_IGNORE_MAGENTA=1 PITCH_IGNORE_MAGENTA=1 IGNORE_MAGENTA=1
 [ -n "$CAPTURE_PREFIX" ] && export PS3RECOMP_WALKER_CAPTURE=$CAPTURE_PREFIX
@@ -326,8 +267,6 @@ if [ -n "$TAIL_TRIGGER" ]; then
     export PS3RECOMP_C690_TAIL_TRIGGER=$TAIL_TRIGGER
     rm -f "$TAIL_TRIGGER"     # a stale file from an earlier run
 fi
-export SPURS_READY_LEVEL=1 SPURS_NO_IDLE_PROBE=1
-export PS3_TITLE=BCUS01089 PS3_VFS_ROOT=$W/vfs PS3_GAMEDATA_ROOT=$W
 export PS3RECOMP_VK_DUMP=$W/frame.ppm PS3RECOMP_VK_DUMP_EVERY=10
 export PS3RECOMP_CTL=$CTL
 [ "$PIN" = 1 ] && export PS3RECOMP_PIN=1

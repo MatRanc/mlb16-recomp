@@ -14,7 +14,7 @@ The runtime has a generic per-function capture (`ps3recomp`, off by default):
 ```sh
 cd ~/Documents/mlb16-online/recomp-work
 mkdir -p /tmp/opencode/fncap
-EXTRA="SPU_FN_CAPTURE=0x6D68:/tmp/opencode/fncap" ab-tools/measure_fast.sh fncap.log
+EXTRA="SPU_FN_CAPTURE=0x6D68:/tmp/opencode/fncap" tools/ab/measure_fast.sh
 ```
 
 This dumps, the first time `0x6D68` is dispatched:

@@ -56,7 +56,9 @@ TOGGLES = [
     ("cube_rt", True, "Performance", "GPU cube render targets", "PS3RECOMP_RSX_CUBE_RT", "bool"),
     ("tex_pin", True, "Performance", "Texture pin (never evict this frame)", "PS3RECOMP_RSX_TEX_PIN", "bool"),
     ("tex_dirty", True, "Performance", "Texture dirty tracking (no hashing)", "PS3RECOMP_TEX_DIRTY", "bool"),
-    ("tick_in_drain", True, "Performance", "Complete flips inside drain", "PS3RECOMP_TICK_IN_DRAIN", "bool"),
+    ("tick_in_drain", False, "Performance", "Complete flips inside drain", "PS3RECOMP_TICK_IN_DRAIN", "bool"),
+    ("flip_on_done", True, "Performance", "Complete flips when presented (even frame pacing)", "PS3RECOMP_FLIP_ON_DONE", "bool"),
+    ("vk_pipeline_cache", True, "Performance", "Keep compiled pipelines between sessions", "PS3RECOMP_VK_PIPELINE_CACHE", "bool"),
     ("walker_wake", True, "Performance", "Walker wake fix", "PS3RECOMP_WALKER_WAKE", "bool"),
     ("remap_flat", True, "Performance", "Flat remap (walker)", "PS3RECOMP_REMAP_FLAT", "bool"),
     ("remap_fast", True, "Performance", "Remap recent-reference memo", "PS3RECOMP_REMAP_FAST", "bool"),
@@ -71,6 +73,7 @@ TOGGLES = [
     # SPU
     ("spu_mfc_cache", True, "SPU", "MFC lookup cache", "SPU_MFC_LOOKUP_CACHE", "bool"),
     ("spu_ftz", True, "SPU", "SPU flush-to-zero twin", "PS3RECOMP_SPU_FTZ", "bool"),
+    ("c690_soa", True, "SPU", "Native c690 mesh kernels (SoA)", "PS3RECOMP_C690_SOA", "bool"),
     ("spu_float_approx", True, "SPU", "SPU float approximation", "PS3RECOMP_SPU_FLOAT_APPROX", "bool"),
     ("spurs_pm_fast", True, "SPU", "SPURS fast reschedule (64)", None, "fixed:SPURS_PM_FAST_RESCHED=64"),
     ("spurs_native", True, "SPU", "Native c690 dispatch (6)", None, "fixed:SPURS_PM_NATIVE_DISPATCH=6"),
