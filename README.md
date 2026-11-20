@@ -1,66 +1,84 @@
 # MLB The Show 16: native PC port (work in progress)
 
-An attempt to run *MLB The Show 16* (PS3, BCUS01089, update v01.10) natively on PC by static recompilation with
-[ps3recomp](https://github.com/sp00nznet/ps3recomp): the game's PowerPC and SPU code is translated to C++ ahead of
+*MLB The Show 16* (PS3, BCUS01089, update v01.10) running natively on PC through static recompilation with
+[ps3recomp](https://github.com/sp00nznet/ps3recomp). The game's PowerPC and SPU code is translated to C++ ahead of
 time and compiled for your machine, instead of being emulated by RPCS3. The goal is better frame rates in the
-CPU-bound scenes (dugout close-ups, mound visits) and, later, online play through the
+CPU-bound scenes and, later, online play through the
 [revival server](https://github.com/MatRanc/mlb16-revival-server).
 
-**Status: early. It boots natively through Vulkan, the menus work, and an exhibition game loads and plays at about
-35 fps at the pitch meter (RPCS3: 46-48 on the same PC). Visuals are close but not finished: close-up faces have
-eye holes, the pants have a texture-filtering bug, one transition (entering a mound visit) still shows a tiled
-pattern, and there is a rare black flash. See [docs/progress.md](docs/progress.md) for the details.**
+**This repo contains no game code or data.** Everything game-derived (the decrypted EBOOT, the lifted C++, the
+build, shader caches, screenshots) is produced on your own machine from your own copy of the game and never
+committed.
 
-## Plan
+## Status (2026-11)
 
-Work now follows [docs/plan.md](docs/plan.md), the main plan and todo list for the road to 60 fps. In short: a
-locked 60 fps is not realistic on the test PC (Ryzen 5 2600X) with the current design; ~45-50 fps at the meter is
-the estimated target. The steps, in order:
+| | |
+|---|---|
+| Platforms | Linux (Vulkan) and Windows (Vulkan, clang-cl; see [docs/WINDOWS.md](docs/WINDOWS.md)) |
+| Playable | Boots, menus work, an exhibition game loads and plays |
+| Speed (Ryzen 5 2600X + RTX 3060 Ti) | ~44 fps at the pitch meter with even frame pacing; ~27-29 fps in the heavy mound visit. RPCS3 on the same PC: 46-48 at the meter |
+| Known visual issues | eye holes in close-up faces, a pants texture-filtering bug, a tiled pattern entering a mound visit, a rare black flash |
+| First play of a scene | can stutter once while its shaders compile; they are cached on disk after that |
 
-1. Half-rate shadow casters behind a switch (+2 fps measured), checked by eye.
-2. Smaller runtime costs: a flat SPU dispatch table and cheaper SPU coherence tracking.
-3. A direct vertex path in the renderer (vertex pulling, SIMD index swap, cheaper descriptors).
-4. Native rewrites of the hottest SPU mesh-job stages, one at a time.
-5. Splitting the renderer thread in two, only if the frame is still bound by the main thread.
+The day-by-day log is [docs/progress.md](docs/progress.md); where the frame time goes is
+[docs/critical-path.md](docs/critical-path.md); the plan is [docs/plan.md](docs/plan.md).
 
-Where the frame time goes is in [docs/critical-path.md](docs/critical-path.md).
+## Play
 
-**This repo contains no game code or data.** Like other ps3recomp ports, everything game-derived (the decrypted
-EBOOT, the lifted C++, the build) is produced on your own machine from your own copy of the game.
-
-## Building from your own disc
-
-[SETUP.md](SETUP.md) is the full walkthrough: prerequisites, ISO mount, EBOOT decrypt, game file
-extraction, PPU/SPU lift, generated-code patches, CMake/Ninja build, play and measurement.
-
-## Playing
-
-Once it is built, a windowed session needs the game disc mounted and the play script:
+Build it first from your own disc: [SETUP.md](SETUP.md) walks through prerequisites, the ISO mount, EBOOT
+decryption, the PPU/SPU lift, the patches and the CMake/Ninja build. Windows players can use the launcher
+(`tools/launcher/`).
 
 ```sh
-# The mount does not survive a reboot, so repeat this after restarting.
+# The ISO mount does not survive a reboot; repeat after restarting.
 udisksctl loop-setup -r -f "/path/to/MLB The Show 16 (USA).iso"
-ls /run/media/$USER/PS3VOLUME/PS3_GAME/USRDIR/MLBPS3_SYS.WAD
 
-tools/play_windowed.sh          # MangoHud overlay
-tools/play_windowed.sh nohud    # no overlay
+tools/play_windowed.sh          # built-in HUD (fps, frame time, graph) + frametime CSV
+tools/play_windowed.sh nohud    # no HUD
 ```
 
-Close the window or press Ctrl-C to quit. If the startup intro video loops, the disc is not mounted.
-[SETUP.md](SETUP.md) covers paths and other layouts in section 8 and problems in section 10.
+Close the window or press Ctrl-C to quit. If the intro video loops, the disc is not mounted.
 
-## Trying the probe
+## What's where
 
-You need your own decrypted v01.10 EBOOT (RPCS3: **Utilities → Decrypt PS3 Binaries** on
-`dev_hdd0/game/BCUS01089/USRDIR/EBOOT.BIN`) and a ps3recomp checkout with its Python requirements installed.
+| Path | What |
+|---|---|
+| [SETUP.md](SETUP.md) | Build from your own disc, step by step |
+| `tools/play_windowed.sh` | Play launcher (Linux) |
+| `tools/ab/game_env.sh` | **Every game setting**, each with why it is on and what it measured. Used by play and all tests |
+| `tools/ab/common.sh` | Paths and which build to run (`MLB16_BUILD`, default `build-soa`) |
+| `tools/ab/` | Automated tests: `measure_fast.sh`, `ab_live.sh` (A/B), menu driver `nav3.py` |
+| `tools/launcher/` | Cross-platform launcher with the same defaults |
+| `tools/replay/`, `tools/hitch_table.py` | Offline frame replay and frame-time analysis |
+| [docs/automated-testing.md](docs/automated-testing.md) | How to measure: pitch meter, quick check, mound visit |
+| [docs/notes/](docs/notes/) | One note per investigation (what was tried, numbers, verdict) |
 
-```sh
-tools/probe.sh /path/to/ps3recomp /path/to/EBOOT.elf work
-```
+The runtime itself (graphics, SPU, system libraries) lives in the ps3recomp fork
+[MatRanc/ps3recomp](https://github.com/MatRanc/ps3recomp):
 
-It loads the EBOOT, lifts the PPU code to C++ in `work/recompiled/`, generates the firmware import table and
-extracts the embedded SPU programs. Keep `work/` out of git. `tools/lift_spu.sh` lifts the SPU code (including the
-job manager), and `tools/run.sh` runs a build; see [docs/progress.md](docs/progress.md) for the build steps.
+| Branch | Role |
+|---|---|
+| `mlb16-windows-linux-stable` | Stable, the default branch: what the play build uses |
+| `exp/item4-c690` | Development: new work lands here, then is promoted to stable |
+| `archive/*` tags | Old experiments, kept for reference |
+
+## Contributing
+
+Fixes and measurements are welcome, from a one-line HLE fix to a renderer change.
+
+1. **Runtime changes** go to [MatRanc/ps3recomp](https://github.com/MatRanc/ps3recomp) as a PR against
+   `exp/item4-c690`. Keep each PR to one change, say which platform you built and ran it on, and include what you
+   measured. Generic fixes can also go upstream to sp00nznet/ps3recomp.
+2. **Settings** live only in `tools/ab/game_env.sh`. A new default needs a one-line reason and its measurement next
+   to it, so the next person knows why it is on.
+3. **Measure before and after**, in one launch: `tools/ab/ab_live.sh` alternates two settings while the game sits
+   at the pitch meter. `tools/ab/measure_fast.sh` gives one number for a build. Both use the same settings as
+   play, so the numbers mean the same thing. See [docs/automated-testing.md](docs/automated-testing.md).
+4. **Check visuals by playing**, not just the numbers: the HUD's frametime graph shows stutter, and some changes
+   (like skipping draws) only show up as wrong colours later in a match.
+5. **Write it down:** a short note in `docs/notes/` (what, why, numbers, verdict) and a line in
+   `docs/progress.md`. A failed experiment is worth a note too: it saves the next person the same week.
+6. **Never commit game data**: no EBOOT, lifted code, screenshots or caches. `.gitignore` covers the usual ones.
 
 ## Related
 

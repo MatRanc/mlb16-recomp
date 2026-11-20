@@ -39,7 +39,7 @@ keeps a value that is already set.
 | Piece | Where | What |
 |---|---|---|
 | `nav3.py` | `tools/ab/` | Closed-loop menu driver: matches `frame.ppm` against screen references, writes `pad.txt`, skips cinematics with X. |
-| Screen references | `recomp-work/ab-tools/ref/*.png` | Game screenshots, never committed. `common.sh` uses `tools/ab/ref` if it exists, else this folder. Without them nav fails with "missing screen references" and the script closes the game. |
+| Screen references | `tools/ab/ref/*.png` (git-ignored) | Game screenshots, never committed; take your own (SETUP.md). `common.sh` uses `tools/ab/ref`, else `recomp-work/ab-tools/ref`. Without them nav fails with "missing screen references" and the script closes the game. |
 | `meter_lib.sh` | `tools/ab/` | Confirms the pitch meter from the frame dump (`REF_DIR/pitch_meter.png`). |
 | Pad codes | `pad.txt` = `<buttons hex> <frames>` | `0x4000` X, `0x0008` Start, `0x0020` Right, `0x0040` Down. |
 
